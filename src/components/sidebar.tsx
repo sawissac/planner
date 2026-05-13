@@ -59,7 +59,7 @@ function isTodo(v: unknown): v is Todo {
 }
 
 function fileNameFromPath(name: string): string {
-  return name.replace(/\.json$/i, "");
+  return name.replace(/\.(json|plan)$/i, "");
 }
 
 function exportFile(file: TodoFile, users: User[]) {
@@ -70,7 +70,7 @@ function exportFile(file: TodoFile, users: User[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${file.name}.json`;
+  a.download = `${file.name}.plan`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -290,7 +290,7 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
               <input
                 ref={fileRef}
                 type="file"
-                accept="application/json"
+                accept="application/json,.plan"
                 multiple
                 className="hidden"
                 onChange={(e) => {

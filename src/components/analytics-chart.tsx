@@ -14,24 +14,50 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AnalyticsHeatmap } from "@/components/analytics-heatmap";
 
-const RANGES = [
+export const RANGES = [
   { label: "Last 7 days", days: 7 },
   { label: "Last 30 days", days: 30 },
   { label: "Last 180 days", days: 180 },
   { label: "Last 365 days", days: 365 },
 ];
 
+export function RangeFilter({
+  rangeDays,
+  onChange,
+}: {
+  rangeDays: number;
+  onChange: (days: number) => void;
+}) {
+  const rangeLabel =
+    RANGES.find((r) => r.days === rangeDays)?.label ?? "Last 7 days";
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
+      >
+        <Calendar className="size-4" />
+        {rangeLabel}
+        <ChevronDown className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {RANGES.map((r) => (
+          <DropdownMenuItem key={r.days} onClick={() => onChange(r.days)}>
+            {r.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 type DayDatum = {
   date: Date;
   doneCount: number;
-  assigneeCount: number;
+  ticketCount: number;
 };
 
-export function AnalyticsChart() {
-  const [rangeDays, setRangeDays] = useState(7);
+export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
   const [containerWidth, setContainerWidth] = useState(0);
-  const rangeLabel =
-    RANGES.find((r) => r.days === rangeDays)?.label ?? "Last 7 days";
   const files = useAppSelector((s) => {
     const id = s.todos.activeFileId;
     const f = s.todos.files.find((x) => x.id === id);
@@ -60,8 +86,8 @@ export function AnalyticsChart() {
       const dayStart = d.getTime();
       const dayEnd = dayStart + 86_400_000 - 1;
 
-      const assignees = new Set<string>();
       let doneCount = 0;
+      let ticketCount = 0;
 
       for (const file of files) {
         for (const todo of file.todos) {
@@ -73,12 +99,12 @@ export function AnalyticsChart() {
             doneCount++;
           }
           if (todo.completedFrom >= dayStart && todo.completedFrom <= dayEnd) {
-            for (const a of todo.assignees) assignees.add(a);
+            ticketCount++;
           }
         }
       }
 
-      return { date: d, doneCount, assigneeCount: assignees.size };
+      return { date: d, doneCount, ticketCount };
     });
   }, [files, rangeDays]);
 
@@ -106,16 +132,17 @@ export function AnalyticsChart() {
       .range([0, iW]);
 
     const maxDone = Math.max(d3.max(data, (d) => d.doneCount) ?? 0, 1);
-    const maxAssignee = Math.max(d3.max(data, (d) => d.assigneeCount) ?? 0, 1);
+    const maxAssignee = Math.max(d3.max(data, (d) => d.ticketCount) ?? 0, 1);
+    const sharedMax = Math.max(maxDone, maxAssignee);
 
     const yL = d3
       .scaleLinear()
-      .domain([0, maxDone * 1.25])
+      .domain([0, sharedMax * 1.25])
       .range([iH, 0])
       .nice();
     const yR = d3
       .scaleLinear()
-      .domain([0, maxAssignee * 1.25])
+      .domain([0, sharedMax * 1.25])
       .range([iH, 0])
       .nice();
 
@@ -166,7 +193,7 @@ export function AnalyticsChart() {
 
     // y left
     g.append("g")
-      .call(d3.axisLeft(yL).ticks(5))
+      .call(d3.axisLeft(yL).ticks(Math.min(sharedMax, 5)).tickFormat(d3.format("d")))
       .call((g) => g.select(".domain").remove())
       .call((g) => g.selectAll(".tick line").remove())
       .call((g) =>
@@ -225,7 +252,7 @@ export function AnalyticsChart() {
           .area<DayDatum>()
           .x((d) => x(d.date))
           .y0(iH)
-          .y1((d) => yR(d.assigneeCount))
+          .y1((d) => yR(d.ticketCount))
           .curve(curve),
       );
 
@@ -239,7 +266,7 @@ export function AnalyticsChart() {
         d3
           .line<DayDatum>()
           .x((d) => x(d.date))
-          .y((d) => yR(d.assigneeCount))
+          .y((d) => yR(d.ticketCount))
           .curve(curve),
       );
 
@@ -294,7 +321,7 @@ export function AnalyticsChart() {
           .html(
             `<div style="font-weight:600;margin-bottom:2px">${d3.timeFormat("%A, %B %-d")(d.date)}</div>` +
               `<div><span style="color:#10b981">●</span>&nbsp; Done: <b>${d.doneCount}</b></div>` +
-              `<div><span style="color:#d97706">●</span>&nbsp; Active Assignees: <b>${d.assigneeCount}</b></div>`,
+              `<div><span style="color:#d97706">●</span>&nbsp; Ticket Count: <b>${d.ticketCount}</b></div>`,
           );
       })
       .on("mouseleave", function () {
@@ -309,32 +336,10 @@ export function AnalyticsChart() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className={cn(buttonVariants({ variant: "outline" }), "gap-2")}
-          >
-            <Calendar className="size-4" />
-            {rangeLabel}
-            <ChevronDown className="size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {RANGES.map((r) => (
-              <DropdownMenuItem
-                key={r.days}
-                onClick={() => setRangeDays(r.days)}
-              >
-                {r.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
       <div className="rounded-xl border bg-card p-6">
         <div className="text-base font-bold">Activity Contributions By Day</div>
         <div className="mt-0.5 mb-5 text-sm text-muted-foreground">
-          Daily done todos and active assignees
+          Daily done todos and ticket count
         </div>
         <div ref={containerRef}>
           <svg ref={svgRef} className="w-full overflow-visible" />
@@ -364,7 +369,7 @@ export function AnalyticsChart() {
                 strokeWidth="2.5"
               />
             </svg>
-            Active Assignees (right)
+            Ticket Count (right)
           </div>
         </div>
       </div>

@@ -33,6 +33,7 @@ function endOfDay(ts: number): number {
 export type TodoFile = {
   id: string
   name: string
+  icon?: string
   groups: Group[]
   todos: Todo[]
 }
@@ -74,6 +75,10 @@ const todoSlice = createSlice({
     renameFile(state, action: PayloadAction<{ id: string; name: string }>) {
       const f = state.files.find((x) => x.id === action.payload.id)
       if (f) f.name = action.payload.name
+    },
+    setFileIcon(state, action: PayloadAction<{ id: string; icon: string }>) {
+      const f = state.files.find((x) => x.id === action.payload.id)
+      if (f) f.icon = action.payload.icon
     },
     deleteFile(state, action: PayloadAction<string>) {
       state.files = state.files.filter((f) => f.id !== action.payload)
@@ -154,6 +159,8 @@ const todoSlice = createSlice({
         id: string
         title?: string
         done?: boolean
+        createdAt?: number
+        doneAt?: number | null
         completedFrom?: number
         completedTo?: number
         priority?: string | null
@@ -168,6 +175,9 @@ const todoSlice = createSlice({
       if (action.payload.title !== undefined) t.title = action.payload.title
       if (action.payload.done !== undefined) t.done = action.payload.done
       if (action.payload.assignees !== undefined) t.assignees = action.payload.assignees
+      if (action.payload.createdAt !== undefined)
+        t.createdAt = action.payload.createdAt
+      if (action.payload.doneAt !== undefined) t.doneAt = action.payload.doneAt
       if (action.payload.completedFrom !== undefined)
         t.completedFrom = action.payload.completedFrom
       if (action.payload.completedTo !== undefined)
@@ -227,6 +237,7 @@ const todoSlice = createSlice({
 export const {
   createFile,
   renameFile,
+  setFileIcon,
   deleteFile,
   setActiveFile,
   importFiles,

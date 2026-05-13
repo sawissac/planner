@@ -5,15 +5,17 @@ import { PageHeading } from "@/components/page-heading";
 import { TitleStyleControls } from "@/components/title-font-dropdown";
 import { TodoTable } from "@/components/todo-table";
 import { UserTable } from "@/components/user-table";
-import { AnalyticsChart } from "@/components/analytics-chart";
+import { AnalyticsChart, RangeFilter } from "@/components/analytics-chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { setFocusMode } from "@/lib/settingsSlice";
 import { Switch } from "@/components/ui/switch";
-import { BadgeCheck, UsersRound, BarChart2, ChartArea } from "lucide-react";
+import { BadgeCheck, UsersRound, BarChart2, ChartArea, CalendarRange } from "lucide-react";
+import { TimelineView } from "@/components/timeline-view";
 
 export function MainContent() {
   const [tab, setTab] = useState("todo");
+  const [rangeDays, setRangeDays] = useState(7);
   const focusMode = useAppSelector((s) => s.settings.focusMode);
   const dispatch = useAppDispatch();
 
@@ -35,6 +37,10 @@ export function MainContent() {
               {tab === "analytics" && <ChartArea className="size-4" />}
               Analytics
             </TabsTrigger>
+            <TabsTrigger value="timeline" className="gap-1">
+              {tab === "timeline" && <CalendarRange className="size-4" />}
+              Timeline
+            </TabsTrigger>
           </TabsList>
         </div>
         <div className="flex items-center gap-3">
@@ -48,6 +54,9 @@ export function MainContent() {
             </label>
           )}
           {tab === "todo" && <TitleStyleControls />}
+          {tab === "analytics" && (
+            <RangeFilter rangeDays={rangeDays} onChange={setRangeDays} />
+          )}
         </div>
       </div>
       <TabsContent value="todo">
@@ -57,7 +66,10 @@ export function MainContent() {
         <UserTable />
       </TabsContent>
       <TabsContent value="analytics">
-        <AnalyticsChart />
+        <AnalyticsChart rangeDays={rangeDays} />
+      </TabsContent>
+      <TabsContent value="timeline">
+        <TimelineView />
       </TabsContent>
     </Tabs>
   );

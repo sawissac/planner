@@ -11,7 +11,6 @@ import {
   type ColumnDef,
   type ColumnSizingState,
   type PaginationState,
-  type Row,
   type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -31,7 +30,6 @@ import {
   CornerDownLeft,
   Delete,
   Folder,
-  FolderPlus,
   GripVertical,
   Plus,
   Search,
@@ -52,7 +50,6 @@ import {
   deleteGroup,
   deleteTodo,
   reorder,
-  renameGroup,
   toggleTodo,
   updateTodo,
   type Group,
@@ -66,9 +63,11 @@ import {
 } from "@/lib/settingsSlice";
 import { cn } from "@/lib/utils";
 import { DateRangeCell } from "@/components/date-range-cell";
+import { Button } from "@/components/ui/button";
 import { PriorityCell } from "@/components/priority-cell";
 import { AssigneeCell } from "@/components/assignee-cell";
 import { TodoRowActions } from "@/components/todo-row-actions";
+import { PromptDialog, type PromptState } from "@/components/prompt-dialog";
 
 type RowMeta = {
   editingId: string | null;
@@ -197,16 +196,98 @@ function TitleCell({ todo, meta }: { todo: Todo; meta: RowMeta }) {
   );
 }
 
+function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
+  const dispatch = useAppDispatch();
+  const currentGroup = groups.find((g) => g.id === todo.groupId) ?? null;
+  const [prompt, setPrompt] = useState<PromptState>({ open: false, title: "" });
+
+  const openNewGroup = () =>
+    setPrompt({
+      open: true,
+      title: "New group",
+      placeholder: "Group name",
+      confirmLabel: "Create",
+      onConfirm: (name) => {
+        const action = dispatch(createGroup(name));
+        dispatch(updateTodo({ id: todo.id, groupId: action.payload.id }));
+      },
+    });
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => e.stopPropagation()}
+              className="h-7 w-full justify-between gap-1 px-2 text-xs font-normal"
+            >
+              {currentGroup ? (
+                <span className="flex items-center gap-1 truncate">
+                  <Folder className="size-3 shrink-0 text-muted-foreground" />
+                  {currentGroup.name}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+              <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuItem
+            onClick={() => dispatch(updateTodo({ id: todo.id, groupId: null }))}
+            className="flex items-center gap-2"
+          >
+            <span className="flex-1 text-muted-foreground">No group</span>
+            {!todo.groupId && <Check className="size-3" />}
+          </DropdownMenuItem>
+          {groups.length > 0 && <DropdownMenuSeparator />}
+          {groups.map((g) => (
+            <DropdownMenuItem
+              key={g.id}
+              onClick={() => dispatch(updateTodo({ id: todo.id, groupId: g.id }))}
+              className="flex items-center gap-2"
+            >
+              <Folder className="size-3 text-muted-foreground shrink-0" />
+              <span className="flex-1 truncate">{g.name}</span>
+              {todo.groupId === g.id && <Check className="size-3 shrink-0" />}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); dispatch(deleteGroup(g.id)); }}
+                className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={openNewGroup} className="flex items-center gap-2">
+            <Plus className="size-3 shrink-0 text-muted-foreground" />
+            <span>New group…</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <PromptDialog state={prompt} onOpenChange={(open) => setPrompt((s) => ({ ...s, open }))} />
+    </>
+  );
+}
+
 export function TodoTable() {
   const activeFile = useAppSelector((s) => {
     const id = s.todos.activeFileId;
     return s.todos.files.find((f) => f.id === id) ?? null;
   });
-  const tableFont = useAppSelector((s) => s.settings.tableFont);
-  const titleFontSize = useAppSelector((s) => s.settings.titleFontSize);
-  const titleFontWeight = useAppSelector((s) => s.settings.titleFontWeight);
+  const rawTableFont = useAppSelector((s) => s.settings.tableFont);
+  const rawTitleFontSize = useAppSelector((s) => s.settings.titleFontSize);
+  const rawTitleFontWeight = useAppSelector((s) => s.settings.titleFontWeight);
   const persistedSizing = useAppSelector((s) => s.settings.columnSizing);
   const focusMode = useAppSelector((s) => s.settings.focusMode);
+  const tableFont = focusMode ? "poppins" : rawTableFont;
+  const titleFontSize: FontSize = focusMode ? 28 : rawTitleFontSize;
+  const titleFontWeight: FontWeight = focusMode ? 500 : rawTitleFontWeight;
   const dispatch = useAppDispatch();
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -220,12 +301,11 @@ export function TodoTable() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [newTitle, setNewTitle] = useState("");
-  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [groupDraft, setGroupDraft] = useState("");
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const todos = activeFile?.todos ?? [];
+  const todos = useMemo(() => activeFile?.todos ?? [], [activeFile]);
+  const groups = useMemo(() => activeFile?.groups ?? [], [activeFile]);
   const fontFamily = FONT_VAR[tableFont];
 
   const commitEdit = () => {
@@ -336,6 +416,15 @@ export function TodoTable() {
         ),
       },
       {
+        id: "group",
+        header: "Group",
+        size: 140,
+        minSize: 80,
+        cell: ({ row }) => (
+          <GroupCell todo={row.original} groups={groups} />
+        ),
+      },
+      {
         id: "assignees",
         header: ({ table }) => {
           const m = table.options.meta as RowMeta;
@@ -408,7 +497,7 @@ export function TodoTable() {
         ),
       },
     ],
-    [dispatch],
+    [dispatch, groups],
   );
 
   const table = useReactTable({
@@ -429,40 +518,19 @@ export function TodoTable() {
     },
   });
 
-  const groups = activeFile?.groups ?? [];
-
-  type FlatItem = { type: "group"; group: Group } | { type: "todo"; row: Row<Todo> };
-
   const filteredRows = table.getFilteredRowModel().rows;
-
-  const flatItems = useMemo<FlatItem[]>(() => {
-    const byGroup = new Map<string | null, Row<Todo>[]>();
-    byGroup.set(null, []);
-    for (const g of groups) byGroup.set(g.id, []);
-    for (const row of filteredRows) {
-      const gid = row.original.groupId ?? null;
-      byGroup.get(byGroup.has(gid) ? gid : null)!.push(row);
-    }
-    const items: FlatItem[] = [];
-    for (const row of byGroup.get(null) ?? []) items.push({ type: "todo", row });
-    for (const g of groups) {
-      items.push({ type: "group", group: g });
-      for (const row of byGroup.get(g.id) ?? []) items.push({ type: "todo", row });
-    }
-    return items;
-  }, [filteredRows, groups]);
 
   const pageStart = pagination.pageIndex * pagination.pageSize;
   const pageEnd = pageStart + pagination.pageSize;
-  const paginatedItems = useMemo(() => flatItems.slice(pageStart, pageEnd), [flatItems, pageStart, pageEnd]);
+  const paginatedRows = useMemo(() => filteredRows.slice(pageStart, pageEnd), [filteredRows, pageStart, pageEnd]);
   const canPrev = pagination.pageIndex > 0;
-  const canNext = pageEnd < flatItems.length;
+  const canNext = pageEnd < filteredRows.length;
   const todoCount = filteredRows.length;
 
   const rowVirtualizer = useVirtualizer({
-    count: paginatedItems.length,
+    count: paginatedRows.length,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: (i) => paginatedItems[i]?.type === "group" ? 36 : 41,
+    estimateSize: () => 41,
     overscan: 12,
   });
 
@@ -481,6 +549,7 @@ export function TodoTable() {
 
   const handleRowKey = (e: React.KeyboardEvent, todo: Todo, index: number) => {
     if (editingId) return;
+    if (e.target !== e.currentTarget) return;
     if (e.key === "Enter" || e.key === "F2") {
       e.preventDefault();
       setDraft(todo.title);
@@ -535,177 +604,140 @@ export function TodoTable() {
   }
 
   return (
-    <div ref={scrollContainerRef} className="rounded-lg border border-border overflow-auto max-h-[calc(100vh-7rem)]">
-      <table
-        className="text-sm border-separate border-spacing-0 [&_th]:border-r [&_th]:border-b [&_th]:border-border [&_td]:border-r [&_td]:border-b [&_td]:border-border [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_tbody_tr:last-child_td]:border-b-0"
-        style={{ width: table.getTotalSize(), minWidth: "100%" }}
-      >
-        <thead className="bg-muted sticky top-0 z-10">
-          <tr>
-            <th colSpan={columns.length} className="px-3 py-1.5 border-b border-border font-normal">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Search className="size-3.5 shrink-0" />
-                <input
-                  value={globalFilter}
-                  onChange={(e) => { setGlobalFilter(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })); }}
-                  placeholder="Search tasks…"
-                  className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-                />
-                {globalFilter && <button type="button" onClick={() => setGlobalFilter("")} className="text-xs hover:text-foreground">✕</button>}
-              </div>
-            </th>
-          </tr>
-          {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id}>
-              {hg.headers.map((h) => (
-                <th
-                  key={h.id}
-                  style={{ width: h.getSize() }}
-                  className={cn(
-                    "relative text-left font-medium px-3 py-2 text-muted-foreground select-none transition-opacity",
-                    focusMode && ["priority", "assignees", "completedIn"].includes(h.id) && "opacity-30",
-                    h.id === "actions" && "sticky right-0 bg-muted z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
-                  )}
-                >
-                  {h.isPlaceholder
-                    ? null
-                    : flexRender(h.column.columnDef.header, h.getContext())}
-                  {h.column.getCanResize() && (
-                    <div
-                      onMouseDown={h.getResizeHandler()}
-                      onTouchStart={h.getResizeHandler()}
-                      className={cn(
-                        "absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none touch-none",
-                        h.column.getIsResizing()
-                          ? "bg-primary"
-                          : "hover:bg-primary/30",
-                      )}
-                    />
-                  )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {/* Add-todo row */}
-          <tr className="bg-muted/20">
-            <td className="px-3 py-2 align-middle">
-              <Plus className="size-4 text-muted-foreground" />
-            </td>
-            <td className="px-3 py-2 align-middle" />
-            <td className="px-3 py-2 align-middle" colSpan={5}>
-              <input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submitNew();
-                  }
-                }}
-                placeholder="Add a task… (Press Enter)"
-                style={{
-                  fontFamily,
-                  fontSize: `${titleFontSize}px`,
-                  fontWeight: titleFontWeight,
-                }}
-                className="w-full bg-transparent p-0 outline-none placeholder:text-muted-foreground placeholder:font-normal"
-              />
-            </td>
-          </tr>
+    <div className="rounded-lg border border-border flex flex-col max-h-[calc(100vh-7rem)] w-full">
+      {/* Search bar — outside scroll, never clips */}
+      <div className="bg-muted border-b border-border px-3 py-1.5 shrink-0 flex items-center gap-2 text-muted-foreground">
+        <Search className="size-3.5 shrink-0" />
+        <input
+          value={globalFilter}
+          onChange={(e) => { setGlobalFilter(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })); }}
+          placeholder="Search tasks…"
+          className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        />
+        {globalFilter && <button type="button" onClick={() => setGlobalFilter("")} className="text-xs hover:text-foreground">✕</button>}
+      </div>
 
-          {paginatedItems.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="px-3 py-8 text-center text-muted-foreground">
-                Start typing and press Enter
+      {/* Horizontal + vertical scroll area — only the table */}
+      <div ref={scrollContainerRef} className="overflow-auto flex-1 min-h-0">
+        <table
+          className="text-sm border-separate border-spacing-0 [&_th]:border-r [&_th]:border-b [&_th]:border-border [&_td]:border-r [&_td]:border-b [&_td]:border-border [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_tbody_tr:last-child_td]:border-b-0"
+          style={{ width: table.getTotalSize(), minWidth: "100%" }}
+        >
+          <thead className="bg-muted sticky top-0 z-10">
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id}>
+                {hg.headers.map((h) => (
+                  <th
+                    key={h.id}
+                    style={{ width: h.getSize() }}
+                    className={cn(
+                      "relative text-left font-medium px-3 py-2 text-muted-foreground select-none transition-opacity",
+                      focusMode && ["priority", "group", "assignees", "completedIn"].includes(h.id) && "opacity-30",
+                      h.id === "drag" && "sticky left-0 bg-muted z-20",
+                      h.id === "done" && "sticky left-[32px] bg-muted z-20",
+                      h.id === "actions" && "sticky right-0 bg-muted z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
+                    )}
+                  >
+                    {h.isPlaceholder
+                      ? null
+                      : flexRender(h.column.columnDef.header, h.getContext())}
+                    {h.column.getCanResize() && (
+                      <div
+                        onMouseDown={h.getResizeHandler()}
+                        onTouchStart={h.getResizeHandler()}
+                        className={cn(
+                          "absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none touch-none",
+                          h.column.getIsResizing()
+                            ? "bg-primary"
+                            : "hover:bg-primary/30",
+                        )}
+                      />
+                    )}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {/* Add-todo row */}
+            <tr className="bg-muted/20">
+              <td className="px-3 py-2 align-middle sticky left-0 bg-muted z-1">
+                <Plus className="size-4 text-muted-foreground" />
+              </td>
+              <td className="px-3 py-2 align-middle sticky left-[32px] bg-muted z-1" />
+              <td className="px-3 py-2 align-middle" colSpan={columns.length - 2}>
+                <input
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submitNew();
+                    }
+                  }}
+                  placeholder="Add a task… (Press Enter)"
+                  style={{
+                    fontFamily,
+                    fontSize: `${titleFontSize}px`,
+                    fontWeight: titleFontWeight,
+                  }}
+                  className="w-full bg-transparent p-0 outline-none placeholder:text-muted-foreground placeholder:font-normal"
+                />
               </td>
             </tr>
-          ) : (
-            <>
-              {paddingTop > 0 && <tr><td colSpan={columns.length} style={{ height: paddingTop }} /></tr>}
-              {virtualItems.map((virtualRow) => {
-                const item = paginatedItems[virtualRow.index];
-                if (item.type === "group") {
-                  const { group } = item;
-                  const isEditingGroup = editingGroupId === group.id;
-                  const gCount = flatItems.filter((i) => i.type === "todo" && i.row.original.groupId === group.id).length;
+
+            {paginatedRows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-3 py-8 text-center text-muted-foreground">
+                  Start typing and press Enter
+                </td>
+              </tr>
+            ) : (
+              <>
+                {paddingTop > 0 && <tr><td colSpan={columns.length} style={{ height: paddingTop }} /></tr>}
+                {virtualItems.map((virtualRow) => {
+                  const row = paginatedRows[virtualRow.index];
+                  const id = row.original.id;
+                  const isFocused = focusedId === id;
                   return (
-                    <tr key={`group-${group.id}`}>
-                      <td colSpan={columns.length} className="px-3 py-1.5 bg-muted/50 border-y border-border">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Folder className="size-3.5 text-muted-foreground shrink-0" />
-                          {isEditingGroup ? (
-                            <input
-                              autoFocus
-                              value={groupDraft}
-                              onChange={(e) => setGroupDraft(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") { e.preventDefault(); if (groupDraft.trim()) dispatch(renameGroup({ id: group.id, name: groupDraft.trim() })); setEditingGroupId(null); }
-                                if (e.key === "Escape") { e.preventDefault(); setEditingGroupId(null); }
-                                e.stopPropagation();
-                              }}
-                              onBlur={() => { if (groupDraft.trim()) dispatch(renameGroup({ id: group.id, name: groupDraft.trim() })); setEditingGroupId(null); }}
-                              className="flex-1 bg-transparent outline-none font-medium"
-                            />
-                          ) : (
-                            <span className="font-medium cursor-text flex-1" onClick={() => { setGroupDraft(group.name); setEditingGroupId(group.id); }}>
-                              {group.name}
-                            </span>
+                    <tr
+                      key={row.id}
+                      ref={(el) => { if (el) rowRefs.current.set(id, el); else rowRefs.current.delete(id); }}
+                      tabIndex={editingId === id ? -1 : 0}
+                      onFocus={() => setFocusedId(id)}
+                      onKeyDown={(e) => handleRowKey(e, row.original, todos.indexOf(row.original))}
+                      draggable={editingId !== id && sorting.length === 0}
+                      onDragStart={(e) => { if (sorting.length > 0) return; setDragId(id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", id); }}
+                      onDragOver={(e) => { if (sorting.length > 0) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (overId !== id) setOverId(id); }}
+                      onDragLeave={() => { if (overId === id) setOverId(null); }}
+                      onDrop={(e) => { if (sorting.length > 0) return; e.preventDefault(); const fromId = e.dataTransfer.getData("text/plain") || dragId; if (fromId && fromId !== id) dispatch(reorder({ fromId, toId: id })); setDragId(null); setOverId(null); }}
+                      onDragEnd={() => { setDragId(null); setOverId(null); }}
+                      className={cn("transition-colors outline-none", dragId === id && "opacity-40", overId === id && dragId !== id && "bg-primary/10", isFocused && "shadow-[inset_1.5px_0_0_#3b82f6]")}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} style={{ width: cell.column.getSize() }}
+                          className={cn("px-3 py-2 align-middle truncate transition-opacity",
+                            focusMode && ["priority", "group", "assignees", "completedIn"].includes(cell.column.id) && "opacity-30",
+                            cell.column.id === "drag" && "sticky left-0 bg-background z-1",
+                            cell.column.id === "done" && "sticky left-[32px] bg-background z-1",
+                            cell.column.id === "actions" && "sticky right-0 bg-background z-1 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
                           )}
-                          <span className="text-xs text-muted-foreground">{gCount}</span>
-                          <div className="flex items-center gap-0.5">
-                            <button type="button" title="Add task to group"
-                              onClick={() => { const action = addTodo("New task", group.id); dispatch(action); setDraft("New task"); setEditingId(action.payload.id); }}
-                              className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                            ><Plus className="size-3.5" /></button>
-                            <button type="button" title="Delete group"
-                              onClick={() => dispatch(deleteGroup(group.id))}
-                              className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                            ><Trash2 className="size-3.5" /></button>
-                          </div>
-                        </div>
-                      </td>
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
                     </tr>
                   );
-                }
-                const { row } = item;
-                const id = row.original.id;
-                const isFocused = focusedId === id;
-                return (
-                  <tr
-                    key={row.id}
-                    ref={(el) => { if (el) rowRefs.current.set(id, el); else rowRefs.current.delete(id); }}
-                    tabIndex={editingId === id ? -1 : 0}
-                    onFocus={() => setFocusedId(id)}
-                    onKeyDown={(e) => handleRowKey(e, row.original, todos.indexOf(row.original))}
-                    draggable={editingId !== id && sorting.length === 0}
-                    onDragStart={(e) => { if (sorting.length > 0) return; setDragId(id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", id); }}
-                    onDragOver={(e) => { if (sorting.length > 0) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (overId !== id) setOverId(id); }}
-                    onDragLeave={() => { if (overId === id) setOverId(null); }}
-                    onDrop={(e) => { if (sorting.length > 0) return; e.preventDefault(); const fromId = e.dataTransfer.getData("text/plain") || dragId; if (fromId && fromId !== id) dispatch(reorder({ fromId, toId: id })); setDragId(null); setOverId(null); }}
-                    onDragEnd={() => { setDragId(null); setOverId(null); }}
-                    className={cn("transition-colors outline-none", dragId === id && "opacity-40", overId === id && dragId !== id && "bg-primary/10", isFocused && "shadow-[inset_1.5px_0_0_#3b82f6]")}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} style={{ width: cell.column.getSize() }}
-                        className={cn("px-3 py-2 align-middle truncate transition-opacity",
-                          focusMode && ["priority", "assignees", "completedIn"].includes(cell.column.id) && "opacity-30",
-                          cell.column.id === "actions" && "sticky right-0 bg-background z-1 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
-                        )}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })}
-              {paddingBottom > 0 && <tr><td colSpan={columns.length} style={{ height: paddingBottom }} /></tr>}
-            </>
-          )}
-        </tbody>
-      </table>
-      <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground bg-muted flex gap-3 flex-wrap items-center sticky bottom-0 z-10">
+                })}
+                {paddingBottom > 0 && <tr><td colSpan={columns.length} style={{ height: paddingBottom }} /></tr>}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Bottom bar — outside scroll, never clips */}
+      <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground bg-muted flex gap-3 flex-wrap items-center shrink-0">
         <span className="inline-flex items-center gap-1">
           <kbd className="inline-flex items-center px-1 border border-border rounded">
             <ArrowUpDown className="size-3" />
@@ -760,18 +792,12 @@ export function TodoTable() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <span>{pageStart + 1}–{Math.min(pageEnd, flatItems.length)} of {todoCount} tasks</span>
+          <span>{pageStart + 1}–{Math.min(pageEnd, filteredRows.length)} of {todoCount} tasks</span>
           <button type="button" onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))} disabled={!canPrev} className="p-0.5 rounded disabled:opacity-30 hover:text-foreground">
             <ChevronLeft className="size-3.5" />
           </button>
           <button type="button" onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))} disabled={!canNext} className="p-0.5 rounded disabled:opacity-30 hover:text-foreground">
             <ChevronRight className="size-3.5" />
-          </button>
-          <button type="button" onClick={() => dispatch(createGroup("New group"))}
-            className="flex items-center gap-1 border border-border rounded px-1.5 py-0.5 hover:bg-background transition-colors"
-            title="New group"
-          >
-            <FolderPlus className="size-3.5" /> Group
           </button>
         </div>
       </div>
