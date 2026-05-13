@@ -1,3 +1,5 @@
+import { AppShell } from "@/components/app-shell";
+
 export default function Home() {
-  return null;
+  return <AppShell />;
 }

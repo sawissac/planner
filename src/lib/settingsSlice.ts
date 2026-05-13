@@ -1,0 +1,125 @@
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
+
+export const FONTS = ["roboto", "poppins", "caveat"] as const
+export type FontKey = (typeof FONTS)[number]
+
+export const FONT_LABEL: Record<FontKey, string> = {
+  roboto: "Roboto",
+  poppins: "Poppins",
+  caveat: "Caveat",
+}
+
+export const FONT_VAR: Record<FontKey, string> = {
+  roboto: "var(--font-roboto)",
+  poppins: "var(--font-poppins)",
+  caveat: "var(--font-caveat)",
+}
+
+export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32] as const
+export type FontSize = (typeof FONT_SIZES)[number]
+
+export const FONT_WEIGHTS = [300, 400, 500, 600, 700] as const
+export type FontWeight = (typeof FONT_WEIGHTS)[number]
+
+export const FONT_WEIGHT_LABEL: Record<FontWeight, string> = {
+  300: "Light",
+  400: "Regular",
+  500: "Medium",
+  600: "Semibold",
+  700: "Bold",
+}
+
+export const DEFAULT_PRIORITY_OPTIONS = [
+  "high",
+  "highest",
+  "critical",
+  "must",
+  "deferred",
+] as const
+
+export type SettingsState = {
+  tableFont: FontKey
+  titleFontSize: FontSize
+  titleFontWeight: FontWeight
+  sidebarWidth: number
+  columnSizing: Record<string, number>
+  userColumnSizing: Record<string, number>
+  priorityOptions: string[]
+  focusMode: boolean
+}
+
+const initialState: SettingsState = {
+  tableFont: "roboto",
+  titleFontSize: 14,
+  titleFontWeight: 400,
+  sidebarWidth: 320,
+  columnSizing: {},
+  userColumnSizing: {},
+  priorityOptions: [...DEFAULT_PRIORITY_OPTIONS],
+  focusMode: false,
+}
+
+const settingsSlice = createSlice({
+  name: "settings",
+  initialState,
+  reducers: {
+    setFont(state, action: PayloadAction<FontKey>) {
+      state.tableFont = action.payload
+    },
+    setFontSize(state, action: PayloadAction<FontSize>) {
+      state.titleFontSize = action.payload
+    },
+    setFontWeight(state, action: PayloadAction<FontWeight>) {
+      state.titleFontWeight = action.payload
+    },
+    setSidebarWidth(state, action: PayloadAction<number>) {
+      state.sidebarWidth = Math.max(200, Math.min(640, action.payload))
+    },
+    setColumnSizing(state, action: PayloadAction<Record<string, number>>) {
+      state.columnSizing = action.payload
+    },
+    setUserColumnSizing(state, action: PayloadAction<Record<string, number>>) {
+      state.userColumnSizing = action.payload
+    },
+    addPriorityOption(state, action: PayloadAction<string>) {
+      const v = action.payload.trim()
+      if (!v) return
+      if (!state.priorityOptions.some((p) => p.toLowerCase() === v.toLowerCase())) {
+        state.priorityOptions.push(v)
+      }
+    },
+    removePriorityOption(state, action: PayloadAction<string>) {
+      if ((DEFAULT_PRIORITY_OPTIONS as readonly string[]).includes(action.payload)) return
+      state.priorityOptions = state.priorityOptions.filter(
+        (p) => p !== action.payload,
+      )
+    },
+    setFocusMode(state, action: PayloadAction<boolean>) {
+      state.focusMode = action.payload
+    },
+    replaceSettings(state, action: PayloadAction<SettingsState>) {
+      state.tableFont = action.payload.tableFont
+      state.titleFontSize = action.payload.titleFontSize
+      state.titleFontWeight = action.payload.titleFontWeight
+      state.sidebarWidth = action.payload.sidebarWidth
+      state.columnSizing = action.payload.columnSizing
+      state.userColumnSizing = action.payload.userColumnSizing ?? {}
+      state.priorityOptions = action.payload.priorityOptions
+      state.focusMode = action.payload.focusMode ?? false
+    },
+  },
+})
+
+export const {
+  setFont,
+  setFontSize,
+  setFontWeight,
+  setSidebarWidth,
+  setColumnSizing,
+  setUserColumnSizing,
+  addPriorityOption,
+  removePriorityOption,
+  setFocusMode,
+  replaceSettings,
+} = settingsSlice.actions
+export default settingsSlice.reducer

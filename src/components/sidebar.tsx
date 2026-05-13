@@ -1,0 +1,457 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  CircleCheck,
+  Download,
+  Eraser,
+  FileText,
+  ListTodo,
+  PanelRight,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import {
+  clearAll,
+  createFile,
+  deleteFile,
+  importFiles,
+  renameFile,
+  setActiveFile,
+  type Todo,
+  type TodoFile,
+} from "@/lib/todoSlice";
+import { type User } from "@/lib/userSlice";
+import { setSidebarWidth } from "@/lib/settingsSlice";
+import { isTodoFile } from "@/lib/persistence";
+import { cn } from "@/lib/utils";
+import { nanoid } from "@reduxjs/toolkit";
+import { ConfirmDialog, type ConfirmState } from "./confirm-dialog";
+import { PromptDialog, type PromptState } from "./prompt-dialog";
+
+type ExportBundle = { file: TodoFile; users: User[] }
+
+function isUser(v: unknown): v is User {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return typeof o.id === "string" && typeof o.name === "string" && typeof o.agenda === "string";
+}
+
+function isExportBundle(v: unknown): v is ExportBundle {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return isTodoFile(o.file) && Array.isArray(o.users) && o.users.every(isUser);
+}
+
+function isTodo(v: unknown): v is Todo {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.id === "string" &&
+    typeof o.title === "string" &&
+    typeof o.done === "boolean" &&
+    typeof o.createdAt === "number"
+  );
+}
+
+function fileNameFromPath(name: string): string {
+  return name.replace(/\.json$/i, "");
+}
+
+function exportFile(file: TodoFile, users: User[]) {
+  const bundle: ExportBundle = { file, users };
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${file.name}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: () => void }) {
+  const files = useAppSelector((s) => s.todos.files);
+  const activeFileId = useAppSelector((s) => s.todos.activeFileId);
+  const users = useAppSelector((s) => s.users.users);
+  const width = useAppSelector((s) => s.settings.sidebarWidth);
+  const dispatch = useAppDispatch();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    open: false,
+    title: "",
+  });
+  const [promptState, setPromptState] = useState<PromptState>({
+    open: false,
+    title: "",
+  });
+
+  const totalTodos = files.reduce((acc, f) => acc + f.todos.length, 0);
+  const totalDone = files.reduce(
+    (acc, f) => acc + f.todos.filter((t) => t.done).length,
+    0,
+  );
+  const totalOpen = totalTodos - totalDone;
+
+  const onImport = async (fileList: FileList) => {
+    const parsed: TodoFile[] = [];
+    for (const file of Array.from(fileList)) {
+      try {
+        const text = await file.text();
+        const data: unknown = JSON.parse(text);
+        if (isExportBundle(data)) {
+          parsed.push({ ...data.file, id: nanoid() });
+          for (const u of data.users) {
+            if (!users.some((x) => x.id === u.id)) {
+              dispatch({ type: "users/addUser", payload: u });
+            }
+          }
+        } else if (isTodoFile(data)) {
+          parsed.push({ ...data, id: nanoid() });
+        } else if (Array.isArray(data) && data.every(isTodo)) {
+          parsed.push({
+            id: nanoid(),
+            name: fileNameFromPath(file.name),
+            groups: [],
+            todos: data,
+          });
+        } else {
+          alert(`Skipped ${file.name}: invalid format`);
+        }
+      } catch (e) {
+        alert(`Failed ${file.name}: ${(e as Error).message}`);
+      }
+    }
+    if (parsed.length > 0) dispatch(importFiles(parsed));
+  };
+
+  const dragRef = useRef<{ startX: number; startW: number } | null>(null);
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!dragRef.current) return;
+      const dx = dragRef.current.startX - e.clientX;
+      dispatch(setSidebarWidth(dragRef.current.startW + dx));
+    }
+    function onUp() {
+      dragRef.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [dispatch]);
+
+  const startResize = (e: React.MouseEvent) => {
+    dragRef.current = { startX: e.clientX, startW: width };
+    document.body.style.cursor = "ew-resize";
+    document.body.style.userSelect = "none";
+  };
+
+  const toggleBtn = (
+    <Button
+      size="icon-sm"
+      variant="ghost"
+      onClick={onToggle}
+      aria-label={open ? "Close sidebar" : "Open sidebar"}
+      title={open ? "Close sidebar" : "Open sidebar"}
+    >
+      <PanelRight className={open ? "" : "rotate-180"} />
+    </Button>
+  );
+
+  if (!open) {
+    return (
+      <aside
+        style={{ width: 48 }}
+        className="shrink-0 border-l border-border bg-sidebar text-sidebar-foreground flex flex-col items-center py-3 gap-3 overflow-hidden transition-[width] duration-300 ease-in-out"
+      >
+        {toggleBtn}
+        <div className="w-px h-4 bg-border" />
+        <span title={`${totalTodos} total`} className="flex flex-col items-center gap-0.5">
+          <ListTodo className="size-3.5 text-muted-foreground" />
+          <span className="text-[10px] font-semibold leading-none">{totalTodos}</span>
+        </span>
+        <span title={`${totalOpen} open`} className="flex flex-col items-center gap-0.5">
+          <ListTodo className="size-3.5 text-muted-foreground" />
+          <span className="text-[10px] font-semibold leading-none">{totalOpen}</span>
+        </span>
+        <span title={`${totalDone} done`} className="flex flex-col items-center gap-0.5">
+          <CircleCheck className="size-3.5 text-muted-foreground" />
+          <span className="text-[10px] font-semibold leading-none">{totalDone}</span>
+        </span>
+        <div className="w-px h-4 bg-border" />
+        {files.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => dispatch(setActiveFile(f.id))}
+            title={f.name}
+            className={cn(
+              "p-1.5 rounded-md transition-colors",
+              f.id === activeFileId
+                ? "bg-primary/15 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <FileText className="size-4" />
+          </button>
+        ))}
+        <ConfirmDialog
+          state={confirmState}
+          onOpenChange={(o) => setConfirmState((s) => ({ ...s, open: o }))}
+        />
+        <PromptDialog
+          state={promptState}
+          onOpenChange={(o) => setPromptState((s) => ({ ...s, open: o }))}
+        />
+      </aside>
+    );
+  }
+
+  return (
+    <aside
+      style={{ width }}
+      className="shrink-0 border-l border-border bg-sidebar text-sidebar-foreground flex flex-col relative overflow-hidden transition-[width] duration-300 ease-in-out"
+    >
+      <div
+        onMouseDown={startResize}
+        className="absolute left-0 top-0 h-full w-1.5 -translate-x-1/2 cursor-ew-resize hover:bg-primary/30 z-10"
+      />
+      <div className="flex items-center px-2 pt-3 pb-1 shrink-0">
+        {toggleBtn}
+      </div>
+
+      <div className="flex-1 p-4 pt-1 flex flex-col gap-4 overflow-auto min-w-0">
+        {/* Stats */}
+        <div className="flex items-center gap-4 text-sm">
+          <span className="flex items-center gap-1">
+            <ListTodo className="size-3.5 text-muted-foreground" />
+            <span className="font-semibold">{totalTodos}</span>
+            <span className="text-muted-foreground text-xs">total</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <ListTodo className="size-3.5 text-muted-foreground" />
+            <span className="font-semibold">{totalOpen}</span>
+            <span className="text-muted-foreground text-xs">open</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <CircleCheck className="size-3.5 text-muted-foreground" />
+            <span className="font-semibold">{totalDone}</span>
+            <span className="text-muted-foreground text-xs">done</span>
+          </span>
+        </div>
+
+        {/* Files */}
+        <div className="flex flex-col gap-1 min-w-0">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1">Files</span>
+            <div className="flex gap-0.5">
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={() => fileRef.current?.click()}
+                aria-label="Import files"
+                title="Import JSON files"
+              >
+                <Upload />
+              </Button>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={() => {
+                  setPromptState({
+                    open: true,
+                    title: "New file",
+                    description: "Name the new file.",
+                    defaultValue: "Untitled",
+                    placeholder: "File name",
+                    confirmLabel: "Create",
+                    onConfirm: (name) => dispatch(createFile(name)),
+                  });
+                }}
+                aria-label="New file"
+                title="New file"
+              >
+                <Plus />
+              </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    onImport(e.target.files);
+                  }
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          </div>
+
+          {files.length === 0 && (
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+              <ListTodo className="size-8 text-muted-foreground/40" />
+              <p className="text-xs text-muted-foreground">No files yet.<br />Create one to get started.</p>
+            </div>
+          )}
+
+          {files.map((f) => {
+            const active = f.id === activeFileId;
+            const renaming = renamingId === f.id;
+            const done = f.todos.filter((t) => t.done).length;
+            const total = f.todos.length;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            return (
+              <div
+                key={f.id}
+                onClick={() => !renaming && dispatch(setActiveFile(f.id))}
+                className={cn(
+                  "group relative flex flex-col gap-0.5 rounded-lg px-2 py-1.5 cursor-pointer transition-colors min-w-0",
+                  active ? "bg-primary/10" : "hover:bg-muted",
+                )}
+              >
+                {active && (
+                  <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-primary" />
+                )}
+                {renaming ? (
+                  <input
+                    autoFocus
+                    value={renameDraft}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onBlur={() => {
+                      const n = renameDraft.trim();
+                      if (n) dispatch(renameFile({ id: f.id, name: n }));
+                      setRenamingId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const n = renameDraft.trim();
+                        if (n) dispatch(renameFile({ id: f.id, name: n }));
+                        setRenamingId(null);
+                      }
+                      if (e.key === "Escape") setRenamingId(null);
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full h-7 rounded-md border border-border bg-background px-2 text-sm outline-none"
+                  />
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className={cn("size-3.5 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
+                      <span className="flex-1 min-w-0 truncate text-sm">{f.name}</span>
+                      <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRenameDraft(f.name);
+                            setRenamingId(f.id);
+                          }}
+                          aria-label="Rename"
+                          title="Rename"
+                        >
+                          <Pencil />
+                        </Button>
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          onClick={(e) => { e.stopPropagation(); exportFile(f, users); }}
+                          aria-label="Export"
+                          title="Export JSON"
+                        >
+                          <Download />
+                        </Button>
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (f.todos.length === 0) return;
+                            setConfirmState({
+                              open: true,
+                              title: "Clear todos?",
+                              description: `Remove all todos in "${f.name}".`,
+                              confirmLabel: "Clear",
+                              destructive: true,
+                              onConfirm: () => {
+                                dispatch(setActiveFile(f.id));
+                                dispatch(clearAll());
+                              },
+                            });
+                          }}
+                          disabled={f.todos.length === 0}
+                          aria-label="Clear todos"
+                          title="Clear todos"
+                        >
+                          <Eraser />
+                        </Button>
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmState({
+                              open: true,
+                              title: "Delete file?",
+                              description: `"${f.name}" will be removed permanently.`,
+                              confirmLabel: "Delete",
+                              destructive: true,
+                              onConfirm: () => dispatch(deleteFile(f.id)),
+                            });
+                          }}
+                          aria-label="Delete file"
+                          title="Delete file"
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
+                      <span className={cn(
+                        "text-xs tabular-nums shrink-0 group-hover:hidden",
+                        active ? "text-primary font-medium" : "text-muted-foreground",
+                      )}>
+                        {done}/{total}
+                      </span>
+                    </div>
+                    {total > 0 && (
+                      <div className="h-0.5 rounded-full bg-muted overflow-hidden ml-5">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <ConfirmDialog
+        state={confirmState}
+        onOpenChange={(open) => setConfirmState((s) => ({ ...s, open }))}
+      />
+      <PromptDialog
+        state={promptState}
+        onOpenChange={(open) => setPromptState((s) => ({ ...s, open }))}
+      />
+    </aside>
+  );
+}

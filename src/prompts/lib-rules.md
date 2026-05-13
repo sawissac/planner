@@ -25,6 +25,10 @@ Data Visualization:
 
 - d3 (+ @types/d3 for TypeScript)
 
+Client-Side Persistence:
+
+- localforage (IndexedDB/WebSQL/localStorage wrapper; connect to Redux via store.subscribe + hydrate on mount)
+
 Do NOT propose alternatives unless explicitly asked.
 
 Before generating code, you must:
@@ -38,4 +42,5 @@ Before generating code, you must:
    - Tables → React Table
    - Charts → D3
    - Icons → Lucide
+   - Client persistence → localForage (wired to Redux)
 3. Only then proceed to implementation
