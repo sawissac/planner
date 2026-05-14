@@ -58,11 +58,20 @@ type DayDatum = {
 
 export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
   const [containerWidth, setContainerWidth] = useState(0);
+  const isDark = useAppSelector((s) => s.settings.darkMode);
+  const activeFileId = useAppSelector((s) => s.todos.activeFileId);
   const files = useAppSelector((s) => {
-    const id = s.todos.activeFileId;
-    const f = s.todos.files.find((x) => x.id === id);
+    const f = s.todos.files.find((x) => x.id === activeFileId);
     return f ? [f] : [];
   });
+
+  if (!activeFileId) {
+    return (
+      <div className="rounded-xl border bg-card p-12 text-center text-muted-foreground">
+        No file selected. Create or import one from the sidebar.
+      </div>
+    );
+  }
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -112,6 +121,13 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
     const svgEl = svgRef.current;
     if (!svgEl || containerWidth === 0) return;
 
+    const c1 = isDark ? "#34d399" : "#10b981";
+    const c2 = isDark ? "#fbbf24" : "#d97706";
+    const gridColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)";
+    const axisColor = isDark ? "#9ca3af" : "#6b7280";
+    const domainColor = isDark ? "rgba(255,255,255,0.12)" : "#e5e7eb";
+    const tipBg = isDark ? "#1f2937" : "#111827";
+
     const svg = d3.select(svgEl);
     svg.selectAll("*").remove();
 
@@ -159,7 +175,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       .call((g) =>
         g
           .selectAll(".tick line")
-          .attr("stroke", "#e5e7eb")
+          .attr("stroke", gridColor)
           .attr("stroke-dasharray", "4,4"),
       );
 
@@ -185,10 +201,10 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
           .ticks(tickCount)
           .tickFormat((d) => xFmt(d as Date)),
       )
-      .call((g) => g.select(".domain").attr("stroke", "#e5e7eb"))
+      .call((g) => g.select(".domain").attr("stroke", domainColor))
       .call((g) => g.selectAll(".tick line").remove())
       .call((g) =>
-        g.selectAll("text").attr("fill", "#6b7280").attr("font-size", "12"),
+        g.selectAll("text").attr("fill", axisColor).attr("font-size", "12"),
       );
 
     // y left
@@ -197,7 +213,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       .call((g) => g.select(".domain").remove())
       .call((g) => g.selectAll(".tick line").remove())
       .call((g) =>
-        g.selectAll("text").attr("fill", "#10b981").attr("font-size", "12"),
+        g.selectAll("text").attr("fill", c1).attr("font-size", "12"),
       );
 
     // y right
@@ -207,16 +223,16 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       .call((g) => g.select(".domain").remove())
       .call((g) => g.selectAll(".tick line").remove())
       .call((g) =>
-        g.selectAll("text").attr("fill", "#d97706").attr("font-size", "12"),
+        g.selectAll("text").attr("fill", c2).attr("font-size", "12"),
       );
 
     const curve = d3.curveMonotoneX;
 
-    // area + line done (teal)
+    // area + line done
     g.append("path")
       .datum(data)
-      .attr("fill", "#10b981")
-      .attr("fill-opacity", 0.1)
+      .attr("fill", c1)
+      .attr("fill-opacity", 0.12)
       .attr(
         "d",
         d3
@@ -230,7 +246,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
     g.append("path")
       .datum(data)
       .attr("fill", "none")
-      .attr("stroke", "#10b981")
+      .attr("stroke", c1)
       .attr("stroke-width", 2.5)
       .attr(
         "d",
@@ -241,11 +257,11 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
           .curve(curve),
       );
 
-    // area + line assignees (amber)
+    // area + line tickets
     g.append("path")
       .datum(data)
-      .attr("fill", "#d97706")
-      .attr("fill-opacity", 0.1)
+      .attr("fill", c2)
+      .attr("fill-opacity", 0.12)
       .attr(
         "d",
         d3
@@ -259,7 +275,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
     g.append("path")
       .datum(data)
       .attr("fill", "none")
-      .attr("stroke", "#d97706")
+      .attr("stroke", c2)
       .attr("stroke-width", 2.5)
       .attr(
         "d",
@@ -275,7 +291,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       .select("body")
       .append("div")
       .style("position", "fixed")
-      .style("background", "#111827")
+      .style("background", tipBg)
       .style("color", "#f9fafb")
       .style("padding", "10px 14px")
       .style("border-radius", "10px")
@@ -290,7 +306,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
 
     const vline = g
       .append("line")
-      .attr("stroke", "#9ca3af")
+      .attr("stroke", axisColor)
       .attr("stroke-width", 1)
       .attr("stroke-dasharray", "4,2")
       .attr("y1", 0)
@@ -320,8 +336,8 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
           .style("top", `${event.clientY - 12}px`)
           .html(
             `<div style="font-weight:600;margin-bottom:2px">${d3.timeFormat("%A, %B %-d")(d.date)}</div>` +
-              `<div><span style="color:#10b981">●</span>&nbsp; Done: <b>${d.doneCount}</b></div>` +
-              `<div><span style="color:#d97706">●</span>&nbsp; Ticket Count: <b>${d.ticketCount}</b></div>`,
+              `<div><span style="color:${c1}">●</span>&nbsp; Done: <b>${d.doneCount}</b></div>` +
+              `<div><span style="color:${c2}">●</span>&nbsp; Ticket Count: <b>${d.ticketCount}</b></div>`,
           );
       })
       .on("mouseleave", function () {
@@ -332,7 +348,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
     return () => {
       tip.remove();
     };
-  }, [data, containerWidth]);
+  }, [data, containerWidth, isDark]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -347,27 +363,13 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
         <div className="mt-4 flex items-center justify-end gap-6 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <svg width="24" height="8">
-              <line
-                x1="0"
-                y1="4"
-                x2="24"
-                y2="4"
-                stroke="#10b981"
-                strokeWidth="2.5"
-              />
+              <line x1="0" y1="4" x2="24" y2="4" stroke={isDark ? "#34d399" : "#10b981"} strokeWidth="2.5" />
             </svg>
             Done Count (left)
           </div>
           <div className="flex items-center gap-2">
             <svg width="24" height="8">
-              <line
-                x1="0"
-                y1="4"
-                x2="24"
-                y2="4"
-                stroke="#d97706"
-                strokeWidth="2.5"
-              />
+              <line x1="0" y1="4" x2="24" y2="4" stroke={isDark ? "#fbbf24" : "#d97706"} strokeWidth="2.5" />
             </svg>
             Ticket Count (right)
           </div>

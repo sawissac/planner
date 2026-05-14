@@ -37,6 +37,8 @@ export const DEFAULT_PRIORITY_OPTIONS = [
   "deferred",
 ] as const
 
+export type TableSort = { id: string; desc: boolean }
+
 export type SettingsState = {
   tableFont: FontKey
   titleFontSize: FontSize
@@ -46,6 +48,10 @@ export type SettingsState = {
   userColumnSizing: Record<string, number>
   priorityOptions: string[]
   focusMode: boolean
+  darkMode: boolean
+  pageSize: number
+  sorting: TableSort[]
+  globalFilter: string
 }
 
 const initialState: SettingsState = {
@@ -57,6 +63,10 @@ const initialState: SettingsState = {
   userColumnSizing: {},
   priorityOptions: [...DEFAULT_PRIORITY_OPTIONS],
   focusMode: false,
+  darkMode: false,
+  pageSize: 30,
+  sorting: [],
+  globalFilter: "",
 }
 
 const settingsSlice = createSlice({
@@ -97,6 +107,18 @@ const settingsSlice = createSlice({
     setFocusMode(state, action: PayloadAction<boolean>) {
       state.focusMode = action.payload
     },
+    setDarkMode(state, action: PayloadAction<boolean>) {
+      state.darkMode = action.payload
+    },
+    setPageSize(state, action: PayloadAction<number>) {
+      state.pageSize = action.payload
+    },
+    setSorting(state, action: PayloadAction<TableSort[]>) {
+      state.sorting = action.payload
+    },
+    setGlobalFilter(state, action: PayloadAction<string>) {
+      state.globalFilter = action.payload
+    },
     replaceSettings(state, action: PayloadAction<SettingsState>) {
       state.tableFont = action.payload.tableFont
       state.titleFontSize = action.payload.titleFontSize
@@ -106,6 +128,10 @@ const settingsSlice = createSlice({
       state.userColumnSizing = action.payload.userColumnSizing ?? {}
       state.priorityOptions = action.payload.priorityOptions
       state.focusMode = action.payload.focusMode ?? false
+      state.darkMode = action.payload.darkMode ?? false
+      state.pageSize = action.payload.pageSize ?? 30
+      state.sorting = action.payload.sorting ?? []
+      state.globalFilter = action.payload.globalFilter ?? ""
     },
   },
 })
@@ -120,6 +146,10 @@ export const {
   addPriorityOption,
   removePriorityOption,
   setFocusMode,
+  setDarkMode,
+  setPageSize,
+  setSorting,
+  setGlobalFilter,
   replaceSettings,
 } = settingsSlice.actions
 export default settingsSlice.reducer

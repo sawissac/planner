@@ -6,10 +6,13 @@ import {
   Download,
   Eraser,
   FileText,
+  ListChecks,
   ListTodo,
+  Moon,
   PanelRight,
   Pencil,
   Plus,
+  Sun,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -26,7 +29,7 @@ import {
   type TodoFile,
 } from "@/lib/todoSlice";
 import { type User } from "@/lib/userSlice";
-import { setSidebarWidth } from "@/lib/settingsSlice";
+import { setSidebarWidth, setDarkMode } from "@/lib/settingsSlice";
 import { isTodoFile } from "@/lib/persistence";
 import { cn } from "@/lib/utils";
 import { nanoid } from "@reduxjs/toolkit";
@@ -82,6 +85,7 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
   const activeFileId = useAppSelector((s) => s.todos.activeFileId);
   const users = useAppSelector((s) => s.users.users);
   const width = useAppSelector((s) => s.settings.sidebarWidth);
+  const darkMode = useAppSelector((s) => s.settings.darkMode);
   const dispatch = useAppDispatch();
   const fileRef = useRef<HTMLInputElement>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -134,15 +138,22 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
     if (parsed.length > 0) dispatch(importFiles(parsed));
   };
 
-  const dragRef = useRef<{ startX: number; startW: number } | null>(null);
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const dragRef = useRef<{ startX: number; startW: number; currentW: number } | null>(null);
   useEffect(() => {
     function onMove(e: MouseEvent) {
       if (!dragRef.current) return;
       const dx = dragRef.current.startX - e.clientX;
-      dispatch(setSidebarWidth(dragRef.current.startW + dx));
+      const clamped = Math.max(200, Math.min(640, dragRef.current.startW + dx));
+      dragRef.current.currentW = clamped;
+      setDragWidth(clamped);
     }
     function onUp() {
+      if (dragRef.current) {
+        dispatch(setSidebarWidth(dragRef.current.currentW));
+      }
       dragRef.current = null;
+      setDragWidth(null);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     }
@@ -155,7 +166,7 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
   }, [dispatch]);
 
   const startResize = (e: React.MouseEvent) => {
-    dragRef.current = { startX: e.clientX, startW: width };
+    dragRef.current = { startX: e.clientX, startW: width, currentW: width };
     document.body.style.cursor = "ew-resize";
     document.body.style.userSelect = "none";
   };
@@ -172,6 +183,18 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
     </Button>
   );
 
+  const darkToggleBtn = (
+    <Button
+      size="icon-sm"
+      variant="ghost"
+      onClick={() => dispatch(setDarkMode(!darkMode))}
+      aria-label={darkMode ? "Light mode" : "Dark mode"}
+      title={darkMode ? "Light mode" : "Dark mode"}
+    >
+      {darkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    </Button>
+  );
+
   if (!open) {
     return (
       <aside
@@ -179,13 +202,14 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
         className="shrink-0 border-l border-border bg-sidebar text-sidebar-foreground flex flex-col items-center py-3 gap-3 overflow-hidden transition-[width] duration-300 ease-in-out"
       >
         {toggleBtn}
+        {darkToggleBtn}
         <div className="w-px h-4 bg-border" />
         <span title={`${totalTodos} total`} className="flex flex-col items-center gap-0.5">
           <ListTodo className="size-3.5 text-muted-foreground" />
           <span className="text-[10px] font-semibold leading-none">{totalTodos}</span>
         </span>
         <span title={`${totalOpen} open`} className="flex flex-col items-center gap-0.5">
-          <ListTodo className="size-3.5 text-muted-foreground" />
+          <ListChecks className="size-3.5 text-muted-foreground" />
           <span className="text-[10px] font-semibold leading-none">{totalOpen}</span>
         </span>
         <span title={`${totalDone} done`} className="flex flex-col items-center gap-0.5">
@@ -223,15 +247,21 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
 
   return (
     <aside
-      style={{ width }}
-      className="shrink-0 border-l border-border bg-sidebar text-sidebar-foreground flex flex-col relative overflow-hidden transition-[width] duration-300 ease-in-out"
+      style={{ width: dragWidth ?? width }}
+      className={cn(
+        "shrink-0 border-l border-border bg-sidebar text-sidebar-foreground flex flex-col relative overflow-hidden",
+        dragWidth === null && "transition-[width] duration-300 ease-in-out",
+      )}
     >
       <div
         onMouseDown={startResize}
-        className="absolute left-0 top-0 h-full w-1.5 -translate-x-1/2 cursor-ew-resize hover:bg-primary/30 z-10"
-      />
-      <div className="flex items-center px-2 pt-3 pb-1 shrink-0">
+        className="absolute left-0 top-0 h-full w-3 -translate-x-1/2 cursor-ew-resize group z-10 flex items-center justify-center"
+      >
+        <div className="w-0.5 h-8 rounded-full bg-border group-hover:bg-primary/50 transition-colors" />
+      </div>
+      <div className="flex items-center justify-between px-2 pt-3 pb-1 shrink-0">
         {toggleBtn}
+        {darkToggleBtn}
       </div>
 
       <div className="flex-1 p-4 pt-1 flex flex-col gap-4 overflow-auto min-w-0">
@@ -243,7 +273,7 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
             <span className="text-muted-foreground text-xs">total</span>
           </span>
           <span className="flex items-center gap-1">
-            <ListTodo className="size-3.5 text-muted-foreground" />
+            <ListChecks className="size-3.5 text-muted-foreground" />
             <span className="font-semibold">{totalOpen}</span>
             <span className="text-muted-foreground text-xs">open</span>
           </span>
@@ -352,7 +382,7 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
                   />
                 ) : (
                   <>
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0 h-6">
                       <FileText className={cn("size-3.5 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
                       <span className="flex-1 min-w-0 truncate text-sm">{f.name}</span>
                       <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
@@ -429,14 +459,12 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
                         {done}/{total}
                       </span>
                     </div>
-                    {total > 0 && (
-                      <div className="h-0.5 rounded-full bg-muted overflow-hidden ml-5">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    )}
+                    <div className="h-1 rounded-full bg-muted overflow-hidden ml-5">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${pct}%`, opacity: total > 0 ? 1 : 0 }}
+                      />
+                    </div>
                   </>
                 )}
               </div>

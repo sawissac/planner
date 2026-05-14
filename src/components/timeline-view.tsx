@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import { useAppSelector } from "@/lib/hooks";
 
+
 type GroupRow = {
   id: string;
   name: string;
@@ -30,6 +31,7 @@ export function TimelineView() {
     const id = s.todos.activeFileId;
     return s.todos.files.find((f) => f.id === id) ?? null;
   });
+  const isDark = useAppSelector((s) => s.settings.darkMode);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -132,6 +134,15 @@ export function TimelineView() {
     const svgEl = svgRef.current;
     if (!svgEl || containerWidth === 0 || !domain || rows.length === 0) return;
 
+    const axisText = isDark ? "#9ca3af" : "#374151";
+    const trackBg = isDark ? "#374151" : "#e5e7eb";
+    const labelPrimary = isDark ? "#f3f4f6" : "#111827";
+    const labelSecondary = isDark ? "#9ca3af" : "#6b7280";
+    const barFill = isDark ? "#34d399" : "#0f766e";
+    const barText = isDark ? "#111827" : "#ffffff";
+    const tipBg = isDark ? "#1f2937" : "#111827";
+    const c1 = isDark ? "#34d399" : "#10b981";
+
     const svg = d3.select(svgEl);
     svg.selectAll("*").remove();
 
@@ -166,7 +177,7 @@ export function TimelineView() {
       .call((g) =>
         g
           .selectAll("text")
-          .attr("fill", "#374151")
+          .attr("fill", axisText)
           .attr("font-size", "13")
           .attr("font-weight", "500"),
       );
@@ -181,7 +192,7 @@ export function TimelineView() {
         .attr("width", innerWidth)
         .attr("height", BAR_HEIGHT)
         .attr("rx", 6)
-        .attr("fill", "#e5e7eb");
+        .attr("fill", trackBg);
 
       svg
         .append("text")
@@ -189,7 +200,7 @@ export function TimelineView() {
         .attr("y", y + ROW_HEIGHT / 2 - 2)
         .attr("font-size", "14")
         .attr("font-weight", "600")
-        .attr("fill", "#111827")
+        .attr("fill", labelPrimary)
         .text(row.name);
 
       svg
@@ -197,7 +208,7 @@ export function TimelineView() {
         .attr("x", 16)
         .attr("y", y + ROW_HEIGHT / 2 + 14)
         .attr("font-size", "12")
-        .attr("fill", "#6b7280")
+        .attr("fill", labelSecondary)
         .text(`${row.count} ${row.count === 1 ? "task" : "tasks"}`);
 
       const barX = LEFT_LABEL + x(new Date(row.from));
@@ -209,7 +220,7 @@ export function TimelineView() {
         .attr("width", barW)
         .attr("height", BAR_HEIGHT)
         .attr("rx", 6)
-        .attr("fill", "#0f766e");
+        .attr("fill", barFill);
 
       svg
         .append("text")
@@ -217,15 +228,14 @@ export function TimelineView() {
         .attr("y", y + ROW_HEIGHT / 2 + 5)
         .attr("font-size", "13")
         .attr("font-weight", "600")
-        .attr("fill", "#ffffff")
+        .attr("fill", barText)
         .text(`${row.count} ${row.count === 1 ? "Task" : "Tasks"}`);
     });
 
     const vline = svg
       .append("line")
-      .attr("stroke", "#0f766e")
+      .attr("stroke", barFill)
       .attr("stroke-width", 1.5)
-      .attr("stroke-dasharray", "0")
       .attr("y1", TOP_AXIS - 16)
       .attr("y2", height)
       .style("opacity", 0)
@@ -234,7 +244,7 @@ export function TimelineView() {
     const vdot = svg
       .append("circle")
       .attr("r", 4)
-      .attr("fill", "#0f766e")
+      .attr("fill", barFill)
       .attr("cy", TOP_AXIS - 16)
       .style("opacity", 0)
       .style("pointer-events", "none");
@@ -243,7 +253,7 @@ export function TimelineView() {
       .select("body")
       .append("div")
       .style("position", "fixed")
-      .style("background", "#111827")
+      .style("background", tipBg)
       .style("color", "#f9fafb")
       .style("padding", "10px 14px")
       .style("border-radius", "10px")
@@ -283,8 +293,8 @@ export function TimelineView() {
           .style("top", `${event.clientY - 12}px`)
           .html(
             `<div style="font-weight:600;margin-bottom:2px">${d3.timeFormat("%b %-d, %Y")(d.date)}</div>` +
-              `<div><span style="color:#10b981">●</span>&nbsp; Done: <b>${d.doneCount}</b></div>` +
-              `<div><span style="color:#0f766e">●</span>&nbsp; Tickets: <b>${d.ticketCount}</b></div>`,
+              `<div><span style="color:${c1}">●</span>&nbsp; Done: <b>${d.doneCount}</b></div>` +
+              `<div><span style="color:${barFill}">●</span>&nbsp; Tickets: <b>${d.ticketCount}</b></div>`,
           );
       })
       .on("mouseleave", function () {
@@ -296,7 +306,7 @@ export function TimelineView() {
     return () => {
       tip.remove();
     };
-  }, [containerWidth, rows, dailyData, domain, height]);
+  }, [containerWidth, rows, dailyData, domain, height, isDark]);
 
   if (rows.length === 0) {
     return (

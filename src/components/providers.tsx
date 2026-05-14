@@ -1,9 +1,21 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 import { Provider } from "react-redux"
 import { makeStore } from "@/lib/store"
 import { hydrate, subscribePersist } from "@/lib/persistence"
+import { useAppSelector } from "@/lib/hooks"
+
+export const HydrationContext = createContext(false)
+export const useHydrated = () => useContext(HydrationContext)
+
+function ThemeApplier() {
+  const darkMode = useAppSelector((s) => s.settings.darkMode)
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode)
+  }, [darkMode])
+  return null
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [store] = useState(makeStore)
@@ -25,9 +37,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <Provider store={store}>
-      <div data-hydrated={ready} className="contents">
-        {children}
-      </div>
+      <HydrationContext.Provider value={ready}>
+        <ThemeApplier />
+        <div data-hydrated={ready} className="contents">
+          {children}
+        </div>
+      </HydrationContext.Provider>
     </Provider>
   )
 }

@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { setFocusMode } from "@/lib/settingsSlice";
 import { Switch } from "@/components/ui/switch";
-import { BadgeCheck, UsersRound, BarChart2, ChartArea, CalendarRange } from "lucide-react";
+import { BadgeCheck, UsersRound, ChartArea, CalendarRange } from "lucide-react";
 import { TimelineView } from "@/components/timeline-view";
 
 export function MainContent() {
@@ -22,24 +22,25 @@ export function MainContent() {
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <img src="/logo.svg" alt="Logo" className="size-8 shrink-0" />
           <PageHeading />
-          <TabsList className="w-max">
+          <TabsList className="w-max shrink-0">
             <TabsTrigger value="todo" className="gap-1">
-              {tab === "todo" && <BadgeCheck className="size-4" />}
+              <BadgeCheck className="size-4" />
               Todo
             </TabsTrigger>
-            <TabsTrigger value="users" className="gap-1">
-              {tab === "users" && <UsersRound className="size-4" />}
-              Users
-            </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-1">
-              {tab === "analytics" && <ChartArea className="size-4" />}
+              <ChartArea className="size-4" />
               Analytics
             </TabsTrigger>
             <TabsTrigger value="timeline" className="gap-1">
-              {tab === "timeline" && <CalendarRange className="size-4" />}
+              <CalendarRange className="size-4" />
               Timeline
+            </TabsTrigger>
+            <TabsTrigger value="users" className="gap-1">
+              <UsersRound className="size-4" />
+              Users
             </TabsTrigger>
           </TabsList>
         </div>

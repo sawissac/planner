@@ -12,7 +12,6 @@ import {
   FONT_SIZES,
   FONT_WEIGHTS,
   replaceSettings,
-  type FontKey,
   type SettingsState,
 } from "./settingsSlice"
 import { type UsersState } from "./userSlice"
@@ -153,6 +152,20 @@ function migrateSettings(v: Partial<SettingsState>): SettingsState {
         ? v.priorityOptions
         : [...DEFAULT_PRIORITY_OPTIONS],
     focusMode: typeof v.focusMode === "boolean" ? v.focusMode : false,
+    darkMode: typeof v.darkMode === "boolean" ? v.darkMode : false,
+    pageSize: typeof v.pageSize === "number" ? v.pageSize : 30,
+    sorting:
+      Array.isArray(v.sorting) &&
+      v.sorting.every(
+        (s) =>
+          s &&
+          typeof s === "object" &&
+          typeof (s as { id?: unknown }).id === "string" &&
+          typeof (s as { desc?: unknown }).desc === "boolean",
+      )
+        ? v.sorting
+        : [],
+    globalFilter: typeof v.globalFilter === "string" ? v.globalFilter : "",
   }
 }
 
@@ -230,9 +243,6 @@ export function subscribePersist(appStore: AppStore, delayMs = 300): () => void 
   let settingsTimer: ReturnType<typeof setTimeout> | null = null
   let lastTodos: TodosState | null = null
   let lastSettings: SettingsState | null = null
-  let lastFont: FontKey | null = null
-  let lastWidth: number | null = null
-  let lastCols: Record<string, number> | null = null
 
   let lastUsers: UsersState | null = null
   let usersTimer: ReturnType<typeof setTimeout> | null = null
@@ -253,20 +263,11 @@ export function subscribePersist(appStore: AppStore, delayMs = 300): () => void 
         void saveUsers(state.users)
       }, delayMs)
     }
-    const s = state.settings
-    if (
-      s !== lastSettings &&
-      (s.tableFont !== lastFont ||
-        s.sidebarWidth !== lastWidth ||
-        s.columnSizing !== lastCols)
-    ) {
-      lastSettings = s
-      lastFont = s.tableFont
-      lastWidth = s.sidebarWidth
-      lastCols = s.columnSizing
+    if (state.settings !== lastSettings) {
+      lastSettings = state.settings
       if (settingsTimer) clearTimeout(settingsTimer)
       settingsTimer = setTimeout(() => {
-        void saveSettings(s)
+        void saveSettings(state.settings)
       }, delayMs)
     }
   })

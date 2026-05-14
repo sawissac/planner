@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Background -->
+  <rect width="64" height="64" rx="14" fill="#5a4de6"/>
+
+  <!-- White page -->
+  <rect x="11" y="13" width="42" height="38" rx="5" fill="#ffffff"/>
+
+  <!-- Page header bar -->
+  <rect x="11" y="13" width="42" height="10" rx="5" fill="#4b3fd4"/>
+  <rect x="11" y="18" width="42" height="5" fill="#4b3fd4"/>
+
+  <!-- Header text lines -->
+  <rect x="16" y="16" width="18" height="2.5" rx="1.25" fill="rgba(255,255,255,0.85)"/>
+  <rect x="37" y="16" width="9" height="2.5" rx="1.25" fill="rgba(255,255,255,0.4)"/>
+
+  <!-- Task row 1 — done -->
+  <rect x="15" y="28" width="7" height="7" rx="2" fill="#5a4de6"/>
+  <!-- checkmark -->
+  <polyline points="16.2,31.5 18,33.5 21.5,28.8" stroke="white" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="25" y="30" width="22" height="3" rx="1.5" fill="#e8e6fb"/>
+
+  <!-- Task row 2 — pending -->
+  <rect x="15" y="38" width="7" height="7" rx="2" fill="none" stroke="#c4bef7" stroke-width="1.5"/>
+  <rect x="25" y="40" width="17" height="3" rx="1.5" fill="#eeecfd"/>
+</svg>

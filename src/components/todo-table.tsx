@@ -27,13 +27,10 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CornerDownLeft,
-  Delete,
   Folder,
   GripVertical,
   Plus,
   Search,
-  Space,
   Trash2,
 } from "lucide-react";
 import {
@@ -58,6 +55,9 @@ import {
 import {
   FONT_VAR,
   setColumnSizing,
+  setGlobalFilter as setPersistedGlobalFilter,
+  setPageSize as setPersistedPageSize,
+  setSorting as setPersistedSorting,
   type FontSize,
   type FontWeight,
 } from "@/lib/settingsSlice";
@@ -80,6 +80,7 @@ type RowMeta = {
   fontWeight: FontWeight;
   sorting: SortingState;
   setSort: (id: string, desc: boolean | null) => void;
+  focusMode: boolean;
 };
 
 type SortOption = { label: string; desc: boolean; icon: React.ReactNode };
@@ -182,12 +183,13 @@ function TitleCell({ todo, meta }: { todo: Todo; meta: RowMeta }) {
   return (
     <span
       style={style}
-      onClick={() => {
+      onDoubleClick={() => {
         meta.setDraft(todo.title);
         meta.setEditing(todo.id);
       }}
       className={cn(
-        "truncate block leading-tight cursor-text",
+        "block leading-tight cursor-default",
+        meta.focusMode ? "whitespace-nowrap" : "truncate",
         todo.done && "text-muted-foreground line-through",
       )}
     >
@@ -248,7 +250,9 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
           {groups.map((g) => (
             <DropdownMenuItem
               key={g.id}
-              onClick={() => dispatch(updateTodo({ id: todo.id, groupId: g.id }))}
+              onClick={() =>
+                dispatch(updateTodo({ id: todo.id, groupId: g.id }))
+              }
               className="flex items-center gap-2"
             >
               <Folder className="size-3 text-muted-foreground shrink-0" />
@@ -256,7 +260,10 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
               {todo.groupId === g.id && <Check className="size-3 shrink-0" />}
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); dispatch(deleteGroup(g.id)); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch(deleteGroup(g.id));
+                }}
                 className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               >
                 <Trash2 className="size-3" />
@@ -264,13 +271,19 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={openNewGroup} className="flex items-center gap-2">
+          <DropdownMenuItem
+            onClick={openNewGroup}
+            className="flex items-center gap-2"
+          >
             <Plus className="size-3 shrink-0 text-muted-foreground" />
             <span>New group…</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <PromptDialog state={prompt} onOpenChange={(open) => setPrompt((s) => ({ ...s, open }))} />
+      <PromptDialog
+        state={prompt}
+        onOpenChange={(open) => setPrompt((s) => ({ ...s, open }))}
+      />
     </>
   );
 }
@@ -280,21 +293,39 @@ export function TodoTable() {
     const id = s.todos.activeFileId;
     return s.todos.files.find((f) => f.id === id) ?? null;
   });
-  const rawTableFont = useAppSelector((s) => s.settings.tableFont);
-  const rawTitleFontSize = useAppSelector((s) => s.settings.titleFontSize);
-  const rawTitleFontWeight = useAppSelector((s) => s.settings.titleFontWeight);
+  const tableFont = useAppSelector((s) => s.settings.tableFont);
+  const titleFontSize = useAppSelector((s) => s.settings.titleFontSize);
+  const titleFontWeight = useAppSelector((s) => s.settings.titleFontWeight);
   const persistedSizing = useAppSelector((s) => s.settings.columnSizing);
   const focusMode = useAppSelector((s) => s.settings.focusMode);
-  const tableFont = focusMode ? "poppins" : rawTableFont;
-  const titleFontSize: FontSize = focusMode ? 28 : rawTitleFontSize;
-  const titleFontWeight: FontWeight = focusMode ? 500 : rawTitleFontWeight;
+  const globalFilter = useAppSelector((s) => s.settings.globalFilter);
+  const sorting = useAppSelector((s) => s.settings.sorting) as SortingState;
+  const persistedPageSize = useAppSelector((s) => s.settings.pageSize);
   const dispatch = useAppDispatch();
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const setGlobalFilter = useCallback(
+    (updater: string | ((prev: string) => string)) => {
+      const next =
+        typeof updater === "function" ? updater(globalFilter) : updater;
+      dispatch(setPersistedGlobalFilter(next));
+    },
+    [dispatch, globalFilter],
+  );
+  const setSorting = useCallback(
+    (updater: SortingState | ((prev: SortingState) => SortingState)) => {
+      const next = typeof updater === "function" ? updater(sorting) : updater;
+      dispatch(setPersistedSorting(next));
+    },
+    [dispatch, sorting],
+  );
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 30,
+    pageSize: persistedPageSize,
   });
+  useEffect(() => {
+    if (pagination.pageSize !== persistedPageSize) {
+      dispatch(setPersistedPageSize(pagination.pageSize));
+    }
+  }, [pagination.pageSize, persistedPageSize, dispatch]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -318,14 +349,18 @@ export function TodoTable() {
     setEditingId(null);
   };
 
-  const setSort = useCallback((id: string, desc: boolean | null) => {
-    setSorting((prev) => {
-      if (desc === null) return prev.filter((s) => s.id !== id);
-      const existing = prev.find((s) => s.id === id);
-      if (existing) return prev.map((s) => (s.id === id ? { ...s, desc } : s));
-      return [...prev, { id, desc }];
-    });
-  }, []);
+  const setSort = useCallback(
+    (id: string, desc: boolean | null) => {
+      setSorting((prev) => {
+        if (desc === null) return prev.filter((s) => s.id !== id);
+        const existing = prev.find((s) => s.id === id);
+        if (existing)
+          return prev.map((s) => (s.id === id ? { ...s, desc } : s));
+        return [...prev, { id, desc }];
+      });
+    },
+    [setSorting],
+  );
 
   const sortedTodos = useMemo(() => {
     if (sorting.length === 0) return todos;
@@ -345,6 +380,7 @@ export function TodoTable() {
   const meta: RowMeta = {
     editingId,
     draft,
+    focusMode,
     setEditing: setEditingId,
     setDraft,
     commit: commitEdit,
@@ -360,7 +396,7 @@ export function TodoTable() {
       {
         id: "drag",
         header: "",
-        size: 32,
+        size: 40,
         enableResizing: false,
         cell: () => (
           <GripVertical className="size-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
@@ -372,13 +408,26 @@ export function TodoTable() {
         size: 40,
         enableResizing: false,
         cell: ({ row }) => (
-          <input
-            type="checkbox"
-            checked={row.original.done}
-            onChange={() => dispatch(toggleTodo(row.original.id))}
-            onClick={(e) => e.stopPropagation()}
-            className="size-4 cursor-pointer accent-primary"
-          />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              dispatch(toggleTodo(row.original.id));
+            }}
+            className={cn(
+              "size-4 rounded border-2 flex items-center justify-center transition-colors shrink-0 cursor-pointer",
+              row.original.done
+                ? "bg-primary border-primary"
+                : "border-muted-foreground/40 hover:border-primary",
+            )}
+          >
+            {row.original.done && (
+              <Check
+                className="size-3 text-primary-foreground"
+                strokeWidth={3}
+              />
+            )}
+          </button>
         ),
       },
       {
@@ -409,7 +458,7 @@ export function TodoTable() {
       {
         id: "priority",
         header: "Priority",
-        size: 140,
+        size: 200,
         minSize: 100,
         cell: ({ row }) => (
           <PriorityCell id={row.original.id} priority={row.original.priority} />
@@ -418,11 +467,9 @@ export function TodoTable() {
       {
         id: "group",
         header: "Group",
-        size: 140,
+        size: 200,
         minSize: 80,
-        cell: ({ row }) => (
-          <GroupCell todo={row.original} groups={groups} />
-        ),
+        cell: ({ row }) => <GroupCell todo={row.original} groups={groups} />,
       },
       {
         id: "assignees",
@@ -441,7 +488,7 @@ export function TodoTable() {
             />
           );
         },
-        size: 160,
+        size: 200,
         minSize: 100,
         cell: ({ row }) => (
           <AssigneeCell
@@ -475,7 +522,7 @@ export function TodoTable() {
             />
           );
         },
-        size: 240,
+        size: 330,
         minSize: 160,
         cell: ({ row }) => (
           <DateRangeCell
@@ -507,7 +554,20 @@ export function TodoTable() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     columnResizeMode: "onChange",
-    state: { columnSizing: persistedSizing, pagination, globalFilter },
+    state: {
+      columnSizing: persistedSizing,
+      pagination,
+      globalFilter,
+      columnVisibility: focusMode
+        ? {
+            priority: false,
+            group: false,
+            assignees: false,
+            completedIn: false,
+            actions: false,
+          }
+        : {},
+    },
     onGlobalFilterChange: setGlobalFilter,
     meta,
     onPaginationChange: setPagination,
@@ -522,7 +582,10 @@ export function TodoTable() {
 
   const pageStart = pagination.pageIndex * pagination.pageSize;
   const pageEnd = pageStart + pagination.pageSize;
-  const paginatedRows = useMemo(() => filteredRows.slice(pageStart, pageEnd), [filteredRows, pageStart, pageEnd]);
+  const paginatedRows = useMemo(
+    () => filteredRows.slice(pageStart, pageEnd),
+    [filteredRows, pageStart, pageEnd],
+  );
   const canPrev = pagination.pageIndex > 0;
   const canNext = pageEnd < filteredRows.length;
   const todoCount = filteredRows.length;
@@ -536,9 +599,11 @@ export function TodoTable() {
 
   const virtualItems = rowVirtualizer.getVirtualItems();
   const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
-  const paddingBottom = virtualItems.length > 0
-    ? rowVirtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end
-    : 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? rowVirtualizer.getTotalSize() -
+        virtualItems[virtualItems.length - 1].end
+      : 0;
 
   // Refocus row when editing exits
   useEffect(() => {
@@ -604,26 +669,61 @@ export function TodoTable() {
   }
 
   return (
-    <div className="rounded-lg border border-border flex flex-col max-h-[calc(100vh-7rem)] w-full">
+    <div
+      className={cn(
+        "rounded-lg border flex flex-col max-h-[calc(100vh-7rem)] w-full transition-colors",
+        focusMode ? "border-transparent" : "border-border",
+      )}
+    >
       {/* Search bar — outside scroll, never clips */}
-      <div className="bg-muted border-b border-border px-3 py-1.5 shrink-0 flex items-center gap-2 text-muted-foreground">
+      <div
+        className={cn(
+          "bg-muted border-b border-border px-3 py-1.5 shrink-0 flex items-center gap-2 text-muted-foreground transition-opacity",
+          focusMode && "opacity-0 pointer-events-none",
+        )}
+      >
         <Search className="size-3.5 shrink-0" />
         <input
           value={globalFilter}
-          onChange={(e) => { setGlobalFilter(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })); }}
+          onChange={(e) => {
+            setGlobalFilter(e.target.value);
+            setPagination((p) => ({ ...p, pageIndex: 0 }));
+          }}
           placeholder="Search tasks…"
           className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
         />
-        {globalFilter && <button type="button" onClick={() => setGlobalFilter("")} className="text-xs hover:text-foreground">✕</button>}
+        {globalFilter && (
+          <button
+            type="button"
+            onClick={() => setGlobalFilter("")}
+            className="text-xs hover:text-foreground"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Horizontal + vertical scroll area — only the table */}
       <div ref={scrollContainerRef} className="overflow-auto flex-1 min-h-0">
         <table
-          className="text-sm border-separate border-spacing-0 [&_th]:border-r [&_th]:border-b [&_th]:border-border [&_td]:border-r [&_td]:border-b [&_td]:border-border [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_tbody_tr:last-child_td]:border-b-0"
-          style={{ width: table.getTotalSize(), minWidth: "100%" }}
+          className={cn(
+            "text-sm border-separate border-spacing-0 [&_th]:border-r [&_th]:border-b [&_td]:border-r [&_td]:border-b [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_tbody_tr:last-child_td]:border-b-0",
+            focusMode
+              ? "[&_th]:border-transparent [&_td]:border-transparent"
+              : "[&_th]:border-border [&_td]:border-border",
+          )}
+          style={{
+            width: table.getTotalSize(),
+            minWidth: "100%",
+            tableLayout: "fixed",
+          }}
         >
-          <thead className="bg-muted sticky top-0 z-10">
+          <thead
+            className={cn(
+              "bg-muted sticky top-0 z-10",
+              focusMode && "opacity-0 pointer-events-none",
+            )}
+          >
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
                 {hg.headers.map((h) => (
@@ -632,10 +732,10 @@ export function TodoTable() {
                     style={{ width: h.getSize() }}
                     className={cn(
                       "relative text-left font-medium px-3 py-2 text-muted-foreground select-none transition-opacity",
-                      focusMode && ["priority", "group", "assignees", "completedIn"].includes(h.id) && "opacity-30",
                       h.id === "drag" && "sticky left-0 bg-muted z-20",
                       h.id === "done" && "sticky left-[32px] bg-muted z-20",
-                      h.id === "actions" && "sticky right-0 bg-muted z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
+                      h.id === "actions" &&
+                        "sticky right-0 bg-muted z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
                     )}
                   >
                     {h.isPlaceholder
@@ -659,13 +759,21 @@ export function TodoTable() {
             ))}
           </thead>
           <tbody>
-            {/* Add-todo row */}
-            <tr className="bg-muted/20">
-              <td className="px-3 py-2 align-middle sticky left-0 bg-muted z-1">
-                <Plus className="size-4 text-muted-foreground" />
+            {/* Add-todo row — sticky at top */}
+            <tr className={cn("transition-opacity")}>
+              <td className="px-3 py-2 align-middle sticky left-0 top-0 bg-background border-b border-border z-30">
+                <Plus
+                  className={cn(
+                    "size-4 text-muted-foreground",
+                    focusMode && "opacity-0 pointer-events-none",
+                  )}
+                />
               </td>
-              <td className="px-3 py-2 align-middle sticky left-[32px] bg-muted z-1" />
-              <td className="px-3 py-2 align-middle" colSpan={columns.length - 2}>
+              <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-background text-muted-foreground border-b border-border z-30" />
+              <td
+                className="px-3 py-2 align-middle sticky top-0 bg-background text-muted-foreground border-b border-border z-20"
+                colSpan={columns.length - 2}
+              >
                 <input
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
@@ -688,13 +796,23 @@ export function TodoTable() {
 
             {paginatedRows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-3 py-8 text-center text-muted-foreground">
-                  Start typing and press Enter
+                <td
+                  colSpan={columns.length}
+                  className="px-3 py-8 text-center text-muted-foreground"
+                >
+                  Start typing above and press Enter
                 </td>
               </tr>
             ) : (
               <>
-                {paddingTop > 0 && <tr><td colSpan={columns.length} style={{ height: paddingTop }} /></tr>}
+                {paddingTop > 0 && (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      style={{ height: paddingTop }}
+                    />
+                  </tr>
+                )}
                 {virtualItems.map((virtualRow) => {
                   const row = paginatedRows[virtualRow.index];
                   const id = row.original.id;
@@ -702,34 +820,106 @@ export function TodoTable() {
                   return (
                     <tr
                       key={row.id}
-                      ref={(el) => { if (el) rowRefs.current.set(id, el); else rowRefs.current.delete(id); }}
+                      ref={(el) => {
+                        if (el) rowRefs.current.set(id, el);
+                        else rowRefs.current.delete(id);
+                      }}
                       tabIndex={editingId === id ? -1 : 0}
                       onFocus={() => setFocusedId(id)}
-                      onKeyDown={(e) => handleRowKey(e, row.original, todos.indexOf(row.original))}
+                      onKeyDown={(e) =>
+                        handleRowKey(
+                          e,
+                          row.original,
+                          todos.indexOf(row.original),
+                        )
+                      }
                       draggable={editingId !== id && sorting.length === 0}
-                      onDragStart={(e) => { if (sorting.length > 0) return; setDragId(id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", id); }}
-                      onDragOver={(e) => { if (sorting.length > 0) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (overId !== id) setOverId(id); }}
-                      onDragLeave={() => { if (overId === id) setOverId(null); }}
-                      onDrop={(e) => { if (sorting.length > 0) return; e.preventDefault(); const fromId = e.dataTransfer.getData("text/plain") || dragId; if (fromId && fromId !== id) dispatch(reorder({ fromId, toId: id })); setDragId(null); setOverId(null); }}
-                      onDragEnd={() => { setDragId(null); setOverId(null); }}
-                      className={cn("transition-colors outline-none", dragId === id && "opacity-40", overId === id && dragId !== id && "bg-primary/10", isFocused && "shadow-[inset_1.5px_0_0_#3b82f6]")}
+                      onDragStart={(e) => {
+                        if (sorting.length > 0) return;
+                        setDragId(id);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("text/plain", id);
+                      }}
+                      onDragOver={(e) => {
+                        if (sorting.length > 0) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        if (overId !== id) setOverId(id);
+                      }}
+                      onDragLeave={() => {
+                        if (overId === id) setOverId(null);
+                      }}
+                      onDrop={(e) => {
+                        if (sorting.length > 0) return;
+                        e.preventDefault();
+                        const fromId =
+                          e.dataTransfer.getData("text/plain") || dragId;
+                        if (fromId && fromId !== id)
+                          dispatch(reorder({ fromId, toId: id }));
+                        setDragId(null);
+                        setOverId(null);
+                      }}
+                      onDragEnd={() => {
+                        setDragId(null);
+                        setOverId(null);
+                      }}
+                      className={cn(
+                        "transition-colors outline-none hover:bg-muted/50",
+                        dragId === id && "opacity-40",
+                        overId === id && dragId !== id && "bg-primary/20",
+                        isFocused && "bg-primary/2",
+                      )}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} style={{ width: cell.column.getSize() }}
-                          className={cn("px-3 py-2 align-middle truncate transition-opacity",
-                            focusMode && ["priority", "group", "assignees", "completedIn"].includes(cell.column.id) && "opacity-30",
-                            cell.column.id === "drag" && "sticky left-0 bg-background z-1",
-                            cell.column.id === "done" && "sticky left-[32px] bg-background z-1",
-                            cell.column.id === "actions" && "sticky right-0 bg-background z-1 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
+                        <td
+                          key={cell.id}
+                          style={{ width: cell.column.getSize() }}
+                          className={cn(
+                            "px-3 py-2 align-middle transition-opacity",
+                            !(focusMode && cell.column.id === "title") &&
+                              "truncate",
+                            focusMode &&
+                              [
+                                "priority",
+                                "group",
+                                "assignees",
+                                "completedIn",
+                                "actions",
+                              ].includes(cell.column.id) &&
+                              "opacity-0 pointer-events-none",
+                            cell.column.id === "drag" &&
+                              cn(
+                                "sticky left-0 z-1",
+                                isFocused
+                                  ? "shadow-[inset_2px_0_0_var(--color-primary)] bg-background"
+                                  : "bg-background",
+                              ),
+                            cell.column.id === "done" &&
+                              cn("sticky left-[32px] z-1", "bg-background"),
+                            cell.column.id === "actions" &&
+                              cn(
+                                "sticky right-0 z-1 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
+                                "bg-background",
+                              ),
                           )}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
                         </td>
                       ))}
                     </tr>
                   );
                 })}
-                {paddingBottom > 0 && <tr><td colSpan={columns.length} style={{ height: paddingBottom }} /></tr>}
+                {paddingBottom > 0 && (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      style={{ height: paddingBottom }}
+                    />
+                  </tr>
+                )}
               </>
             )}
           </tbody>
@@ -737,33 +927,38 @@ export function TodoTable() {
       </div>
 
       {/* Bottom bar — outside scroll, never clips */}
-      <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground bg-muted flex gap-3 flex-wrap items-center shrink-0">
+      <div
+        className={cn(
+          "border-t border-border px-3 py-1.5 text-xs text-muted-foreground bg-muted flex gap-3 flex-wrap items-center shrink-0 transition-opacity",
+          focusMode && "opacity-0 pointer-events-none",
+        )}
+      >
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1 border border-border rounded">
-            <ArrowUpDown className="size-3" />
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">
+            ↑↓
           </kbd>
           <span>move</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1 border border-border rounded">
-            <CornerDownLeft className="size-3" />
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">
+            ↵
           </kbd>
           <span>edit</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1 border border-border rounded">
-            <Space className="size-3" />
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+            Space
           </kbd>
           <span>toggle</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1 border border-border rounded">
-            <Delete className="size-3" />
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+            Del
           </kbd>
           <span>delete</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1 border border-border rounded text-[10px] leading-none py-0.5">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
             Esc
           </kbd>
           <span>cancel</span>
@@ -792,11 +987,28 @@ export function TodoTable() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <span>{pageStart + 1}–{Math.min(pageEnd, filteredRows.length)} of {todoCount} tasks</span>
-          <button type="button" onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))} disabled={!canPrev} className="p-0.5 rounded disabled:opacity-30 hover:text-foreground">
+          <span>
+            {pageStart + 1}–{Math.min(pageEnd, filteredRows.length)} of{" "}
+            {todoCount} tasks
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))
+            }
+            disabled={!canPrev}
+            className="p-0.5 rounded disabled:opacity-30 hover:text-foreground"
+          >
             <ChevronLeft className="size-3.5" />
           </button>
-          <button type="button" onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))} disabled={!canNext} className="p-0.5 rounded disabled:opacity-30 hover:text-foreground">
+          <button
+            type="button"
+            onClick={() =>
+              setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))
+            }
+            disabled={!canNext}
+            className="p-0.5 rounded disabled:opacity-30 hover:text-foreground"
+          >
             <ChevronRight className="size-3.5" />
           </button>
         </div>

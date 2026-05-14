@@ -173,7 +173,11 @@ const todoSlice = createSlice({
       const t = f.todos.find((i) => i.id === action.payload.id)
       if (!t) return
       if (action.payload.title !== undefined) t.title = action.payload.title
-      if (action.payload.done !== undefined) t.done = action.payload.done
+      if (action.payload.done !== undefined) {
+        t.done = action.payload.done
+        if (!action.payload.done) t.doneAt = null
+        else if (t.doneAt === null) t.doneAt = Date.now()
+      }
       if (action.payload.assignees !== undefined) t.assignees = action.payload.assignees
       if (action.payload.createdAt !== undefined)
         t.createdAt = action.payload.createdAt

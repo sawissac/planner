@@ -23,8 +23,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CornerDownLeft,
-  Delete,
   GripVertical,
   Plus,
   Search,
@@ -158,8 +156,8 @@ function NameCell({ user, meta }: { user: User; meta: RowMeta }) {
   }
   return (
     <span
-      className="truncate block leading-tight cursor-text"
-      onClick={() => {
+      className="truncate block leading-tight cursor-default"
+      onDoubleClick={() => {
         meta.setDraft(user.name);
         meta.setEditing(user.id, "name");
       }}
@@ -196,8 +194,8 @@ function AgendaCell({ user, meta }: { user: User; meta: RowMeta }) {
   }
   return (
     <span
-      className="truncate block leading-tight cursor-text"
-      onClick={() => {
+      className="truncate block leading-tight cursor-default"
+      onDoubleClick={() => {
         meta.setEditing(user.id, "agenda");
         meta.setDraft(user.agenda);
       }}
@@ -559,10 +557,10 @@ export function UserTable() {
                     }}
                     onDragEnd={() => { setDragId(null); setOverId(null); }}
                     className={cn(
-                      "transition-colors outline-none",
+                      "transition-colors outline-none hover:bg-muted/50",
                       dragId === id && "opacity-40",
                       overId === id && dragId !== id && "bg-primary/10",
-                      isFocused && "shadow-[inset_1.5px_0_0_#3b82f6]",
+                      isFocused && "bg-primary/5 shadow-[inset_2px_0_0_var(--color-primary)]",
                     )}
                   >
                     {row.getVisibleCells().map((cell) => (
@@ -587,33 +585,23 @@ export function UserTable() {
       </table>
       <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground bg-muted flex gap-3 flex-wrap items-center sticky bottom-0 z-10">
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1 border border-border rounded">
-            <ArrowUpDown className="size-3" />
-          </kbd>
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">↑↓</kbd>
           <span>move</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1 border border-border rounded">
-            <CornerDownLeft className="size-3" />
-          </kbd>
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">↵</kbd>
           <span>edit name</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1 border border-border rounded text-[10px] leading-none py-0.5">
-            Tab
-          </kbd>
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">Tab</kbd>
           <span>→ agenda</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1 border border-border rounded">
-            <Delete className="size-3" />
-          </kbd>
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">Del</kbd>
           <span>delete</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1 border border-border rounded text-[10px] leading-none py-0.5">
-            Esc
-          </kbd>
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">Esc</kbd>
           <span>cancel</span>
         </span>
         <div className="ml-auto flex items-center gap-2">
