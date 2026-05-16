@@ -436,27 +436,34 @@ export function UserTable() {
     setNewName("");
   };
 
+  const filteredRows = table.getFilteredRowModel().rows;
+  const pageStart = pagination.pageIndex * pagination.pageSize;
+  const pageEnd = pageStart + pagination.pageSize;
+  const userCount = filteredRows.length;
+  const canPrev = pagination.pageIndex > 0;
+  const canNext = pageEnd < filteredRows.length;
+
   return (
-    <div ref={scrollContainerRef} className="rounded-lg border border-border overflow-auto max-h-[calc(100vh-7rem)]">
-      <table
-        className="text-sm border-separate border-spacing-0 [&_th]:border-r [&_th]:border-b [&_th]:border-border [&_td]:border-r [&_td]:border-b [&_td]:border-border [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_tbody_tr:last-child_td]:border-b-0"
-        style={{ width: table.getTotalSize(), minWidth: "100%" }}
-      >
+    <div className="rounded-lg border border-border flex flex-col max-h-[calc(100vh-7rem)] w-full">
+      {/* Search bar — outside scroll, never clips */}
+      <div className="bg-muted border-b border-border px-3 py-1.5 shrink-0 flex items-center gap-2 text-muted-foreground">
+        <Search className="size-3.5 shrink-0" />
+        <input
+          value={globalFilter}
+          onChange={(e) => { setGlobalFilter(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })); }}
+          placeholder="Search users…"
+          className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        />
+        {globalFilter && <button type="button" onClick={() => setGlobalFilter("")} className="text-xs hover:text-foreground">✕</button>}
+      </div>
+
+      {/* Scroll area — only the table */}
+      <div ref={scrollContainerRef} className="overflow-auto flex-1 min-h-0">
+        <table
+          className="text-sm border-separate border-spacing-0 [&_th]:border-r [&_th]:border-b [&_th]:border-border [&_td]:border-r [&_td]:border-b [&_td]:border-border [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_tbody_tr:last-child_td]:border-b-0"
+          style={{ width: table.getTotalSize(), minWidth: "100%", tableLayout: "fixed" }}
+        >
         <thead className="bg-muted sticky top-0 z-10">
-          <tr>
-            <th colSpan={columns.length} className="px-3 py-1.5 border-b border-border font-normal">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Search className="size-3.5 shrink-0" />
-                <input
-                  value={globalFilter}
-                  onChange={(e) => { setGlobalFilter(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })); }}
-                  placeholder="Search users…"
-                  className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-                />
-                {globalFilter && <button type="button" onClick={() => setGlobalFilter("")} className="text-xs hover:text-foreground">✕</button>}
-              </div>
-            </th>
-          </tr>
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id}>
               {hg.headers.map((h) => (
@@ -465,6 +472,8 @@ export function UserTable() {
                   style={{ width: h.getSize() }}
                   className={cn(
                     "relative text-left font-medium px-3 py-2 text-muted-foreground select-none overflow-hidden",
+                    h.id === "drag" && "sticky left-0 bg-muted z-20",
+                    h.id === "avatar" && "sticky left-[32px] bg-muted z-20",
                     h.id === "actions" && "sticky right-0 bg-muted z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
                   )}
                 >
@@ -489,12 +498,12 @@ export function UserTable() {
           ))}
         </thead>
         <tbody>
-          <tr className="bg-muted/20">
-            <td className="px-3 py-2 align-middle">
+          <tr>
+            <td className="px-3 py-2 align-middle sticky left-0 top-0 bg-background border-b border-border z-30">
               <Plus className="size-4 text-muted-foreground" />
             </td>
-            <td className="px-3 py-2 align-middle" />
-            <td className="px-3 py-2 align-middle" colSpan={3}>
+            <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-background border-b border-border z-30" />
+            <td className="px-3 py-2 align-middle sticky top-0 bg-background text-muted-foreground border-b border-border z-20" colSpan={columns.length - 2}>
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
@@ -569,6 +578,13 @@ export function UserTable() {
                         style={{ width: cell.column.getSize() }}
                         className={cn(
                           "px-3 py-2 align-middle truncate",
+                          cell.column.id === "drag" && cn(
+                            "sticky left-0 z-1",
+                            isFocused
+                              ? "shadow-[inset_2px_0_0_var(--color-primary)] bg-background"
+                              : "bg-background",
+                          ),
+                          cell.column.id === "avatar" && "sticky left-[32px] z-1 bg-background",
                           cell.column.id === "actions" && "sticky right-0 bg-background z-1 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
                         )}
                       >
@@ -583,7 +599,8 @@ export function UserTable() {
           )}
         </tbody>
       </table>
-      <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground bg-muted flex gap-3 flex-wrap items-center sticky bottom-0 z-10">
+      </div>
+      <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground bg-muted flex gap-3 flex-wrap items-center shrink-0">
         <span className="inline-flex items-center gap-1">
           <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">↑↓</kbd>
           <span>move</span>
@@ -629,25 +646,20 @@ export function UserTable() {
             </DropdownMenuContent>
           </DropdownMenu>
           <span>
-            {pagination.pageIndex * pagination.pageSize + 1}–
-            {Math.min(
-              (pagination.pageIndex + 1) * pagination.pageSize,
-              sortedUsers.length,
-            )}{" "}
-            of {sortedUsers.length}
+            {pageStart + 1}–{Math.min(pageEnd, userCount)} of {userCount} users
           </span>
           <button
             type="button"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))}
+            disabled={!canPrev}
             className="p-0.5 rounded disabled:opacity-30 hover:text-foreground"
           >
             <ChevronLeft className="size-3.5" />
           </button>
           <button
             type="button"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))}
+            disabled={!canNext}
             className="p-0.5 rounded disabled:opacity-30 hover:text-foreground"
           >
             <ChevronRight className="size-3.5" />

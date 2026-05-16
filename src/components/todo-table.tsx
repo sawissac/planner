@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   flexRender,
@@ -408,8 +409,9 @@ export function TodoTable() {
         size: 40,
         enableResizing: false,
         cell: ({ row }) => (
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.85 }}
             onClick={(e) => {
               e.stopPropagation();
               dispatch(toggleTodo(row.original.id));
@@ -421,13 +423,21 @@ export function TodoTable() {
                 : "border-muted-foreground/40 hover:border-primary",
             )}
           >
-            {row.original.done && (
-              <Check
-                className="size-3 text-primary-foreground"
-                strokeWidth={3}
-              />
-            )}
-          </button>
+            <AnimatePresence initial={false}>
+              {row.original.done && (
+                <motion.span
+                  key="check"
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  exit={{ scale: 0, rotate: -45 }}
+                  transition={{ type: "spring", stiffness: 600, damping: 20 }}
+                  className="flex items-center justify-center"
+                >
+                  <Check className="size-3 text-primary-foreground" strokeWidth={3} />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         ),
       },
       {
@@ -558,15 +568,7 @@ export function TodoTable() {
       columnSizing: persistedSizing,
       pagination,
       globalFilter,
-      columnVisibility: focusMode
-        ? {
-            priority: false,
-            group: false,
-            assignees: false,
-            completedIn: false,
-            actions: false,
-          }
-        : {},
+      columnVisibility: {},
     },
     onGlobalFilterChange: setGlobalFilter,
     meta,

@@ -194,7 +194,7 @@ export function TimelineView() {
         .attr("rx", 6)
         .attr("fill", trackBg);
 
-      svg
+      const nameText = svg
         .append("text")
         .attr("x", 16)
         .attr("y", y + ROW_HEIGHT / 2 - 2)
@@ -202,6 +202,16 @@ export function TimelineView() {
         .attr("font-weight", "600")
         .attr("fill", labelPrimary)
         .text(row.name);
+      const maxLabelW = LEFT_LABEL - 16 - 8;
+      const node = nameText.node() as SVGTextElement | null;
+      if (node) {
+        let txt = row.name;
+        while (txt.length > 1 && node.getComputedTextLength() > maxLabelW) {
+          txt = txt.slice(0, -1);
+          nameText.text(txt + "…");
+        }
+        if (txt !== row.name) nameText.append("title").text(row.name);
+      }
 
       svg
         .append("text")

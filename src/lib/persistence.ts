@@ -44,6 +44,7 @@ function isTodoLike(v: unknown): v is {
   priority?: string | null
   assignees?: unknown[]
   groupId?: string | null
+  thought?: unknown
 } {
   if (!v || typeof v !== "object") return false
   const o = v as Record<string, unknown>
@@ -77,6 +78,7 @@ function migrateTodo(v: unknown): Todo | null {
     priority:
       typeof o.priority === "string" || o.priority === null ? o.priority : null,
     assignees: Array.isArray(o.assignees) ? (o.assignees as string[]).filter((x) => typeof x === "string") : [],
+    thought: typeof o.thought === "string" ? o.thought : "",
   }
 }
 

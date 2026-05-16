@@ -33,7 +33,7 @@ import {
   type FontWeight,
 } from "@/lib/settingsSlice";
 
-export function TitleStyleControls() {
+export function TitleStyleControls({ compact = false }: { compact?: boolean } = {}) {
   const font = useAppSelector((s) => s.settings.tableFont);
   const size = useAppSelector((s) => s.settings.titleFontSize);
   const weight = useAppSelector((s) => s.settings.titleFontWeight);
@@ -45,12 +45,21 @@ export function TitleStyleControls() {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="outline" size="lg">
+            <Button
+              variant="outline"
+              size={compact ? "icon-sm" : "lg"}
+              title={`Font: ${FONT_LABEL[font]}`}
+              aria-label={`Font: ${FONT_LABEL[font]}`}
+            >
               <TextInitial size={16} />
-              <span style={{ fontFamily: FONT_VAR[font] }}>
-                {FONT_LABEL[font]}
-              </span>
-              <ChevronDown />
+              {!compact && (
+                <>
+                  <span style={{ fontFamily: FONT_VAR[font] }}>
+                    {FONT_LABEL[font]}
+                  </span>
+                  <ChevronDown />
+                </>
+              )}
             </Button>
           }
         />
@@ -76,10 +85,19 @@ export function TitleStyleControls() {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="outline" size="lg">
+            <Button
+              variant="outline"
+              size={compact ? "icon-sm" : "lg"}
+              title={`Size: ${size}px`}
+              aria-label={`Size: ${size}px`}
+            >
               <ALargeSmall size={16} />
-              {size}px
-              <ChevronDown />
+              {!compact && (
+                <>
+                  {size}px
+                  <ChevronDown />
+                </>
+              )}
             </Button>
           }
         />
@@ -101,12 +119,21 @@ export function TitleStyleControls() {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="outline" size="lg">
+            <Button
+              variant="outline"
+              size={compact ? "icon-sm" : "lg"}
+              title={`Weight: ${FONT_WEIGHT_LABEL[weight]}`}
+              aria-label={`Weight: ${FONT_WEIGHT_LABEL[weight]}`}
+            >
               <AArrowUp size={16} />
-              <span style={{ fontWeight: weight }}>
-                {FONT_WEIGHT_LABEL[weight]}
-              </span>
-              <ChevronDown />
+              {!compact && (
+                <>
+                  <span style={{ fontWeight: weight }}>
+                    {FONT_WEIGHT_LABEL[weight]}
+                  </span>
+                  <ChevronDown />
+                </>
+              )}
             </Button>
           }
         />

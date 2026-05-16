@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useMemo, useState } from "react"
 import * as d3 from "d3"
+import { Clock } from "lucide-react"
 import type { TodoFile } from "@/lib/todoSlice"
 
 const DAYS_DISPLAY = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -81,12 +82,15 @@ export function AnalyticsHeatmap({ files, rangeDays }: Props) {
     const hourLabelH = 28
     const colGap = 5
     const rowGap = 6
+    const MIN_CELL = 22
 
-    const cellW = Math.floor((containerWidth - labelW - colGap * 23) / 24)
+    const fitted = Math.floor((containerWidth - labelW - colGap * 23) / 24)
+    const cellW = Math.max(MIN_CELL, fitted)
     const cellH = cellW
+    const totalW = labelW + 24 * cellW + 23 * colGap
     const totalH = hourLabelH + 7 * (cellH + rowGap) - rowGap + 8
 
-    svg.attr("width", containerWidth).attr("height", totalH)
+    svg.attr("width", totalW).attr("height", totalH)
 
     const maxAvg = Math.max(d3.max(cells, (c) => c.avg) ?? 0, 0.001)
     const color = d3.scaleSequential()
@@ -174,13 +178,16 @@ export function AnalyticsHeatmap({ files, rangeDays }: Props) {
   }, [cells, containerWidth])
 
   return (
-    <div className="rounded-xl border bg-card p-6">
-      <div className="text-base font-bold">Activity Contributions by Hour</div>
+    <div className="rounded-xl border bg-card p-6 h-full flex flex-col">
+      <div className="text-base font-bold flex items-center gap-2">
+        <Clock className="size-4" />
+        Activity Contributions by Hour
+      </div>
       <div className="mt-0.5 mb-5 text-sm text-muted-foreground">
         Average done todos per hour across the week
       </div>
-      <div ref={containerRef}>
-        <svg ref={svgRef} className="w-full overflow-visible" />
+      <div ref={containerRef} className="flex-1 overflow-x-auto">
+        <svg ref={svgRef} className="overflow-visible block" />
       </div>
       <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
         <span />

@@ -16,6 +16,7 @@ export type Todo = {
   priority: string | null
   assignees: string[]
   groupId: string | null
+  thought: string
 }
 
 function startOfDay(ts: number): number {
@@ -137,6 +138,7 @@ const todoSlice = createSlice({
             priority: null,
             assignees: [],
             groupId,
+            thought: "",
           } satisfies Todo,
         }
       },
@@ -166,6 +168,7 @@ const todoSlice = createSlice({
         priority?: string | null
         assignees?: string[]
         groupId?: string | null
+        thought?: string
       }>
     ) {
       const f = getActive(state)
@@ -190,6 +193,7 @@ const todoSlice = createSlice({
         t.priority = action.payload.priority
       if (action.payload.groupId !== undefined)
         t.groupId = action.payload.groupId
+      if (action.payload.thought !== undefined) t.thought = action.payload.thought
     },
     toggleTodo(state, action: PayloadAction<string>) {
       const f = getActive(state)

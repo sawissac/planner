@@ -64,7 +64,7 @@ export function AssigneeCell({
               <span className="flex items-center gap-1.5 min-w-0">
                 <Avatar
                   size={20}
-                  name={assignedUsers[0].name || assignedUsers[0].id}
+                  name={assignedUsers[0].id}
                   variant="beam"
                   colors={AVATAR_COLORS}
                 />

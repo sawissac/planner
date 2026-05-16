@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   CircleCheck,
   Download,
@@ -8,6 +9,8 @@ import {
   FileText,
   ListChecks,
   ListTodo,
+  Maximize,
+  Minimize,
   Moon,
   PanelRight,
   Pencil,
@@ -80,13 +83,39 @@ function exportFile(file: TodoFile, users: User[]) {
   URL.revokeObjectURL(url);
 }
 
-export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: () => void }) {
+function useFullscreen() {
+  const [isFs, setIsFs] = useState(false);
+  useEffect(() => {
+    const onChange = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  const toggle = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+    } else {
+      document.documentElement.requestFullscreen?.();
+    }
+  };
+  return { isFs, toggle };
+}
+
+export function Sidebar({
+  open = true,
+  onToggle,
+  isMobile = false,
+}: {
+  open?: boolean;
+  onToggle?: () => void;
+  isMobile?: boolean;
+}) {
   const files = useAppSelector((s) => s.todos.files);
   const activeFileId = useAppSelector((s) => s.todos.activeFileId);
   const users = useAppSelector((s) => s.users.users);
   const width = useAppSelector((s) => s.settings.sidebarWidth);
   const darkMode = useAppSelector((s) => s.settings.darkMode);
   const dispatch = useAppDispatch();
+  const { isFs, toggle: toggleFs } = useFullscreen();
   const fileRef = useRef<HTMLInputElement>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
@@ -195,14 +224,28 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
     </Button>
   );
 
+  const fullscreenBtn = (
+    <Button
+      size="icon-sm"
+      variant="ghost"
+      onClick={toggleFs}
+      aria-label={isFs ? "Exit fullscreen" : "Enter fullscreen"}
+      title={isFs ? "Exit fullscreen" : "Enter fullscreen"}
+    >
+      {isFs ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
+    </Button>
+  );
+
   if (!open) {
+    if (isMobile) return null;
     return (
       <aside
         style={{ width: 48 }}
-        className="shrink-0 border-l border-border bg-sidebar text-sidebar-foreground flex flex-col items-center py-3 gap-3 overflow-hidden transition-[width] duration-300 ease-in-out"
+        className="shrink-0 border-l border-border bg-sidebar text-sidebar-foreground hidden md:flex flex-col items-center py-3 gap-3 overflow-hidden transition-[width] duration-300 ease-in-out"
       >
         {toggleBtn}
         {darkToggleBtn}
+        {fullscreenBtn}
         <div className="w-px h-4 bg-border" />
         <span title={`${totalTodos} total`} className="flex flex-col items-center gap-0.5">
           <ListTodo className="size-3.5 text-muted-foreground" />
@@ -217,22 +260,29 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
           <span className="text-[10px] font-semibold leading-none">{totalDone}</span>
         </span>
         <div className="w-px h-4 bg-border" />
-        {files.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => dispatch(setActiveFile(f.id))}
-            title={f.name}
-            className={cn(
-              "p-1.5 rounded-md transition-colors",
-              f.id === activeFileId
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            <FileText className="size-4" />
-          </button>
-        ))}
+        <AnimatePresence initial={false}>
+          {files.map((f) => (
+            <motion.button
+              key={f.id}
+              layout
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.6 }}
+              transition={{ type: "spring", stiffness: 500, damping: 35 }}
+              type="button"
+              onClick={() => dispatch(setActiveFile(f.id))}
+              title={f.name}
+              className={cn(
+                "p-1.5 rounded-md transition-colors",
+                f.id === activeFileId
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <FileText className="size-4" />
+            </motion.button>
+          ))}
+        </AnimatePresence>
         <ConfirmDialog
           state={confirmState}
           onOpenChange={(o) => setConfirmState((s) => ({ ...s, open: o }))}
@@ -245,22 +295,31 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
     );
   }
 
+  const mobileWidth = isMobile ? "min(85vw, 360px)" : undefined;
+
   return (
     <aside
-      style={{ width: dragWidth ?? width }}
+      style={{ width: mobileWidth ?? (dragWidth ?? width) }}
       className={cn(
-        "shrink-0 border-l border-border bg-sidebar text-sidebar-foreground flex flex-col relative overflow-hidden",
-        dragWidth === null && "transition-[width] duration-300 ease-in-out",
+        "border-l border-border bg-sidebar text-sidebar-foreground flex flex-col overflow-hidden",
+        isMobile
+          ? "fixed inset-y-0 right-0 z-50 shadow-2xl"
+          : "shrink-0 relative",
+        !isMobile && dragWidth === null && "transition-[width] duration-300 ease-in-out",
       )}
     >
-      <div
-        onMouseDown={startResize}
-        className="absolute left-0 top-0 h-full w-3 -translate-x-1/2 cursor-ew-resize group z-10 flex items-center justify-center"
-      >
-        <div className="w-0.5 h-8 rounded-full bg-border group-hover:bg-primary/50 transition-colors" />
-      </div>
-      <div className="flex items-center justify-between px-2 pt-3 pb-1 shrink-0">
+      {!isMobile && (
+        <div
+          onMouseDown={startResize}
+          className="absolute left-0 top-0 h-full w-3 -translate-x-1/2 cursor-ew-resize group z-10 hidden md:flex items-center justify-center"
+        >
+          <div className="w-0.5 h-8 rounded-full bg-border group-hover:bg-primary/50 transition-colors" />
+        </div>
+      )}
+      <div className="flex items-center gap-1 px-2 pt-3 pb-1 shrink-0">
         {toggleBtn}
+        <div className="flex-1" />
+        {fullscreenBtn}
         {darkToggleBtn}
       </div>
 
@@ -340,6 +399,7 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
             </div>
           )}
 
+          <AnimatePresence initial={false}>
           {files.map((f) => {
             const active = f.id === activeFileId;
             const renaming = renamingId === f.id;
@@ -347,8 +407,13 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
             const total = f.todos.length;
             const pct = total > 0 ? Math.round((done / total) * 100) : 0;
             return (
-              <div
+              <motion.div
                 key={f.id}
+                layout
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 0 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 40 }}
                 onClick={() => !renaming && dispatch(setActiveFile(f.id))}
                 className={cn(
                   "group relative flex flex-col gap-0.5 rounded-lg px-2 py-1.5 cursor-pointer transition-colors min-w-0",
@@ -356,7 +421,11 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
                 )}
               >
                 {active && (
-                  <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-primary" />
+                  <motion.div
+                    layoutId="active-file-bar"
+                    transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                    className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-primary"
+                  />
                 )}
                 {renaming ? (
                   <input
@@ -460,16 +529,19 @@ export function Sidebar({ open = true, onToggle }: { open?: boolean; onToggle?: 
                       </span>
                     </div>
                     <div className="h-1 rounded-full bg-muted overflow-hidden ml-5">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${pct}%`, opacity: total > 0 ? 1 : 0 }}
+                      <motion.div
+                        className="h-full rounded-full bg-primary"
+                        initial={false}
+                        animate={{ width: `${pct}%`, opacity: total > 0 ? 1 : 0 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 30 }}
                       />
                     </div>
                   </>
                 )}
-              </div>
+              </motion.div>
             );
           })}
+          </AnimatePresence>
         </div>
       </div>
       <ConfirmDialog

@@ -4,8 +4,8 @@
     "hash": "239f3ebf717465dc636818a1a619398d"
   },
   "/Users/sawissac/Documents/GitHub/planner/next-env.d.ts": {
-    "mtime": 1778661546.5063026,
-    "hash": "2a74d3909800ca5467fa83b0ab4a4890"
+    "mtime": 1778662766.0724294,
+    "hash": "d0f8375ae1199dc7acd3977fc33b78b8"
   },
   "/Users/sawissac/Documents/GitHub/planner/eslint.config.mjs": {
     "mtime": 1778661546.5062735,
@@ -16,20 +16,156 @@
     "hash": "9b77af189a21a7a64e4bd7a426f64176"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/app/layout.tsx": {
-    "mtime": 1778661546.5066948,
-    "hash": "94c34ef68b3949a75807a0211ec2273c"
+    "mtime": 1778672974.353697,
+    "hash": "0ace010075b93e239a73eac33d52c6e2"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/app/page.tsx": {
-    "mtime": 1778661609.9851255,
-    "hash": "271c7f038118e441e3324b819da4126e"
+    "mtime": 1778676141.4678712,
+    "hash": "c2ffabec9d89dd3e42971a1da729e20e"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/prompt-dialog.tsx": {
+    "mtime": 1778671800.3315573,
+    "hash": "5f194429dba5b25a7113937967cbe12b"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/todo-row-actions.tsx": {
+    "mtime": 1778894823.0748425,
+    "hash": "8e9ee372f3392c8961ec6e40e172e851"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/analytics-chart.tsx": {
+    "mtime": 1778897398.0798142,
+    "hash": "e5aba08a18b657579f671922ba6b10b9"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/confirm-dialog.tsx": {
+    "mtime": 1778671565.9887183,
+    "hash": "bf395b336ae4d12740146fda5845b808"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/thought-editor.tsx": {
+    "mtime": 1778893080.8423698,
+    "hash": "e3f5f686adda362b0dfad58fd9c03d31"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/page-heading.tsx": {
+    "mtime": 1778701433.2636094,
+    "hash": "7659c1433ad7d50efd1e48bf797f5eb2"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/timeline-view.tsx": {
+    "mtime": 1778700056.6295974,
+    "hash": "8eee1096483fbe1015656a9c727b57de"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/user-table.tsx": {
+    "mtime": 1778701106.5707352,
+    "hash": "d6514041a222f23ffa1e64b87859bba5"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/todo-table.tsx": {
+    "mtime": 1778897333.304374,
+    "hash": "662015c8d3ba8de5c1ec76b82fb15004"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/title-font-dropdown.tsx": {
+    "mtime": 1778672085.2707298,
+    "hash": "ef2316874ff1329a0906d9e015fb4ff4"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/main-content.tsx": {
+    "mtime": 1778740416.199037,
+    "hash": "049fd29e7d3b8077acb73a68a1abcb6c"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/priority-cell.tsx": {
+    "mtime": 1778673225.299802,
+    "hash": "83af46ca45d035f6b71c5f7cd15c6dc8"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/sidebar.tsx": {
+    "mtime": 1778897311.249535,
+    "hash": "0ee81ce0df4709e4a424a0bb57bad705"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/user-row-actions.tsx": {
+    "mtime": 1778675623.4033594,
+    "hash": "478b240de1c8f548e70b4ef6d8820d04"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/analytics-heatmap.tsx": {
+    "mtime": 1778683896.3147955,
+    "hash": "eff0e26c8b6371b464c2ff9b46d7134e"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/app-shell.tsx": {
+    "mtime": 1778676461.9119666,
+    "hash": "f9511bd56b584a9b540aa2728792a4c2"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/assignee-cell.tsx": {
+    "mtime": 1778677369.6463041,
+    "hash": "6bd6c8cadc6c37ccbe1a1476e1a24956"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/date-range-cell.tsx": {
+    "mtime": 1778673367.691541,
+    "hash": "a6739fb84b65660dc57ebeabefa1c252"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/providers.tsx": {
+    "mtime": 1778701413.3843858,
+    "hash": "ee45e2979da4615680b41287c8802632"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/ui/alert-dialog.tsx": {
+    "mtime": 1778897364.3486116,
+    "hash": "2b361d1f9bf47a5bb086717cd900a911"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/ui/tabs.tsx": {
+    "mtime": 1778673918.4206374,
+    "hash": "7bd4b6627a4291ed61671c6109f05b8c"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/ui/popover.tsx": {
+    "mtime": 1778672223.7728024,
+    "hash": "3cb9c412624579717c4ad67965d80a1c"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/ui/drawer.tsx": {
+    "mtime": 1778849530.291522,
+    "hash": "ecce2b5100dd3d8a11f15fcc20fa33dd"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/ui/switch.tsx": {
+    "mtime": 1778677085.5436735,
+    "hash": "ff7947a74f0183a943e874a727313821"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/ui/calendar.tsx": {
+    "mtime": 1778672358.370365,
+    "hash": "4242a9f1dd5c11a65573794b1e815198"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/ui/dialog.tsx": {
+    "mtime": 1778897350.1380908,
+    "hash": "9537002351b9a647b64ea072068b40de"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/ui/button.tsx": {
     "mtime": 1778661989.446545,
     "hash": "705bf3552a39e0c722665ccbecb30654"
   },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/ui/dropdown-menu.tsx": {
+    "mtime": 1778670797.26626,
+    "hash": "e6107cbb2088437e76a858f75b5a0280"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/lib/settingsSlice.ts": {
+    "mtime": 1778735759.3370225,
+    "hash": "685d6354876b526b956c8074a504bd6f"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/lib/userSlice.ts": {
+    "mtime": 1778687251.2743855,
+    "hash": "b74d8c0f378ab10ba05994a506d9765b"
+  },
   "/Users/sawissac/Documents/GitHub/planner/src/lib/utils.ts": {
     "mtime": 1778661989.4873815,
     "hash": "5a6fd53fdcf2be529e9cc0b718fde352"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/lib/todoSlice.ts": {
+    "mtime": 1778848439.5650833,
+    "hash": "d6f8a58bea603d46e4cdbb0f26825ce7"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/lib/format.ts": {
+    "mtime": 1778671311.2700815,
+    "hash": "f3fda0fcfc3ed01f0f5bba8787d5e994"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/lib/persistence.ts": {
+    "mtime": 1778848542.3767211,
+    "hash": "eb2b5b864c26098064cee54fddb4e0d5"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/lib/hooks.ts": {
+    "mtime": 1778662664.3578725,
+    "hash": "079fadc63a9851f8bef23a98e1e2434f"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/lib/store.ts": {
+    "mtime": 1778673932.0668395,
+    "hash": "48b4439c6fc340fc8c4fed078cde5aca"
   },
   "/Users/sawissac/Documents/GitHub/planner/README.md": {
     "mtime": 1778661546.5070517,
@@ -46,5 +182,17 @@
   "/Users/sawissac/Documents/GitHub/planner/pnpm-workspace.yaml": {
     "mtime": 1778661546.5092244,
     "hash": "bb50e932d44a2dde6b7fe1bbea2c98c5"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/prompts/lib-rules.md": {
+    "mtime": 1778662909.9538093,
+    "hash": "a376a0cd890f5234b3a3f58c21ffd3ac"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/public/logo_meta.png": {
+    "mtime": 1778896189.5192084,
+    "hash": "b5071d1f827607bba7ba9870f2d288a6"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/public/logo.svg": {
+    "mtime": 1778896206.5032177,
+    "hash": "4e2f8161e01d0c88b272c36d92af5844"
   }
 }

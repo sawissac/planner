@@ -3,7 +3,7 @@
 import { useRef, useEffect, useMemo, useState } from "react";
 import * as d3 from "d3";
 import { useAppSelector } from "@/lib/hooks";
-import { Calendar, ChevronDown } from "lucide-react";
+import { Activity, Calendar, ChevronDown } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +13,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AnalyticsHeatmap } from "@/components/analytics-heatmap";
+import {
+  AssigneeBreakdown,
+  GroupBreakdown,
+} from "@/components/analytics-breakdowns";
 
 export const RANGES = [
   { label: "Last 7 days", days: 7 },
@@ -24,20 +28,34 @@ export const RANGES = [
 export function RangeFilter({
   rangeDays,
   onChange,
+  compact = false,
 }: {
   rangeDays: number;
   onChange: (days: number) => void;
+  compact?: boolean;
 }) {
   const rangeLabel =
     RANGES.find((r) => r.days === rangeDays)?.label ?? "Last 7 days";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
+        className={cn(
+          buttonVariants({
+            variant: "outline",
+            size: compact ? "icon-sm" : "lg",
+          }),
+          !compact && "gap-2",
+        )}
+        title={`Range: ${rangeLabel}`}
+        aria-label={`Range: ${rangeLabel}`}
       >
         <Calendar className="size-4" />
-        {rangeLabel}
-        <ChevronDown className="size-4" />
+        {!compact && (
+          <>
+            {rangeLabel}
+            <ChevronDown className="size-4" />
+          </>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {RANGES.map((r) => (
@@ -232,7 +250,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
     g.append("path")
       .datum(data)
       .attr("fill", c1)
-      .attr("fill-opacity", 0.12)
+      .attr("fill-opacity", 0)
       .attr(
         "d",
         d3
@@ -241,9 +259,13 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
           .y0(iH)
           .y1((d) => yL(d.doneCount))
           .curve(curve),
-      );
+      )
+      .transition()
+      .duration(900)
+      .ease(d3.easeCubicOut)
+      .attr("fill-opacity", 0.12);
 
-    g.append("path")
+    const doneLine = g.append("path")
       .datum(data)
       .attr("fill", "none")
       .attr("stroke", c1)
@@ -256,12 +278,20 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
           .y((d) => yL(d.doneCount))
           .curve(curve),
       );
+    const doneLen = (doneLine.node() as SVGPathElement).getTotalLength();
+    doneLine
+      .attr("stroke-dasharray", `${doneLen} ${doneLen}`)
+      .attr("stroke-dashoffset", doneLen)
+      .transition()
+      .duration(900)
+      .ease(d3.easeCubicOut)
+      .attr("stroke-dashoffset", 0);
 
     // area + line tickets
     g.append("path")
       .datum(data)
       .attr("fill", c2)
-      .attr("fill-opacity", 0.12)
+      .attr("fill-opacity", 0)
       .attr(
         "d",
         d3
@@ -270,9 +300,13 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
           .y0(iH)
           .y1((d) => yR(d.ticketCount))
           .curve(curve),
-      );
+      )
+      .transition()
+      .duration(900)
+      .ease(d3.easeCubicOut)
+      .attr("fill-opacity", 0.12);
 
-    g.append("path")
+    const ticketLine = g.append("path")
       .datum(data)
       .attr("fill", "none")
       .attr("stroke", c2)
@@ -285,6 +319,14 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
           .y((d) => yR(d.ticketCount))
           .curve(curve),
       );
+    const ticketLen = (ticketLine.node() as SVGPathElement).getTotalLength();
+    ticketLine
+      .attr("stroke-dasharray", `${ticketLen} ${ticketLen}`)
+      .attr("stroke-dashoffset", ticketLen)
+      .transition()
+      .duration(900)
+      .ease(d3.easeCubicOut)
+      .attr("stroke-dashoffset", 0);
 
     // tooltip
     const tip = d3
@@ -351,16 +393,19 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
   }, [data, containerWidth, isDark]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-xl border bg-card p-6">
-        <div className="text-base font-bold">Activity Contributions By Day</div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:auto-rows-fr">
+      <div className="rounded-xl border bg-card p-6 min-w-0 flex flex-col md:h-full">
+        <div className="text-base font-bold flex items-center gap-2">
+          <Activity className="size-4" />
+          Activity Contributions By Day
+        </div>
         <div className="mt-0.5 mb-5 text-sm text-muted-foreground">
           Daily done todos and ticket count
         </div>
         <div ref={containerRef}>
           <svg ref={svgRef} className="w-full overflow-visible" />
         </div>
-        <div className="mt-4 flex items-center justify-end gap-6 text-sm text-muted-foreground">
+        <div className="mt-auto pt-4 flex items-center justify-end gap-6 text-sm text-muted-foreground flex-wrap">
           <div className="flex items-center gap-2">
             <svg width="24" height="8">
               <line x1="0" y1="4" x2="24" y2="4" stroke={isDark ? "#34d399" : "#10b981"} strokeWidth="2.5" />
@@ -376,7 +421,16 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
         </div>
       </div>
 
-      <AnalyticsHeatmap files={files} rangeDays={rangeDays} />
+      <div className="min-w-0 md:h-full">
+        <AnalyticsHeatmap files={files} rangeDays={rangeDays} />
+      </div>
+
+      <div className="min-w-0 md:h-full">
+        <AssigneeBreakdown files={files} rangeDays={rangeDays} />
+      </div>
+      <div className="min-w-0 md:h-full">
+        <GroupBreakdown files={files} rangeDays={rangeDays} />
+      </div>
     </div>
   );
 }

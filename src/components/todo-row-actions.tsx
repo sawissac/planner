@@ -1,7 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import { CalendarClock, CalendarIcon, ChevronDown, MoreHorizontal, Trash2 } from "lucide-react";
+import {
+  CalendarClock,
+  CalendarIcon,
+  ChevronDown,
+  Lightbulb,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -11,6 +19,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +40,18 @@ import {
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { deleteTodo, updateTodo, type Todo } from "@/lib/todoSlice";
+
+const ThoughtEditor = dynamic(
+  () => import("@/components/thought-editor").then((m) => m.ThoughtEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-40 px-3 py-2 text-sm text-muted-foreground">
+        Loading editor…
+      </div>
+    ),
+  },
+);
 
 function pad(n: number): string {
   return n.toString().padStart(2, "0");
@@ -103,7 +129,10 @@ function NumberDropdown({
           </Button>
         }
       />
-      <DropdownMenuContent align="center" className="max-h-56 w-16 min-w-0 overflow-y-auto p-1">
+      <DropdownMenuContent
+        align="center"
+        className="max-h-56 w-16 min-w-0 overflow-y-auto p-1"
+      >
         {options.map((n) => (
           <DropdownMenuItem
             key={n}
@@ -227,7 +256,9 @@ function DatePicker({
               )}
             >
               <CalendarIcon className="size-4" />
-              {date === null ? placeholder : `${fmtDate(date)} ${fmtTime12(date)}`}
+              {date === null
+                ? placeholder
+                : `${fmtDate(date)} ${fmtTime12(date)}`}
             </Button>
           }
         />
@@ -271,8 +302,12 @@ function EditDatesDialog({
   const dispatch = useAppDispatch();
   const [createdAt, setCreatedAt] = useState<number | null>(todo.createdAt);
   const [doneAt, setDoneAt] = useState<number | null>(todo.doneAt);
-  const [completedFrom, setCompletedFrom] = useState<number | null>(todo.completedFrom);
-  const [completedTo, setCompletedTo] = useState<number | null>(todo.completedTo);
+  const [completedFrom, setCompletedFrom] = useState<number | null>(
+    todo.completedFrom,
+  );
+  const [completedTo, setCompletedTo] = useState<number | null>(
+    todo.completedTo,
+  );
 
   const reset = () => {
     setCreatedAt(todo.createdAt);
@@ -282,7 +317,8 @@ function EditDatesDialog({
   };
 
   const save = () => {
-    if (createdAt === null || completedFrom === null || completedTo === null) return;
+    if (createdAt === null || completedFrom === null || completedTo === null)
+      return;
     dispatch(
       updateTodo({
         id: todo.id,
@@ -303,15 +339,36 @@ function EditDatesDialog({
         onOpenChange(v);
       }}
     >
-      <DialogContent onClick={(e) => e.stopPropagation()} className="sm:max-w-md">
+      <DialogContent
+        onClick={(e) => e.stopPropagation()}
+        className="sm:max-w-md"
+      >
         <DialogHeader>
           <DialogTitle>Edit dates</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <DatePicker label="Created" value={createdAt} onChange={setCreatedAt} />
-          <DatePicker label="Done at" value={doneAt} onChange={setDoneAt} clearable placeholder="Not done" />
-          <DatePicker label="Complete from" value={completedFrom} onChange={setCompletedFrom} />
-          <DatePicker label="Complete to" value={completedTo} onChange={setCompletedTo} />
+          <DatePicker
+            label="Created"
+            value={createdAt}
+            onChange={setCreatedAt}
+          />
+          <DatePicker
+            label="Done at"
+            value={doneAt}
+            onChange={setDoneAt}
+            clearable
+            placeholder="Not done"
+          />
+          <DatePicker
+            label="Complete from"
+            value={completedFrom}
+            onChange={setCompletedFrom}
+          />
+          <DatePicker
+            label="Complete to"
+            value={completedTo}
+            onChange={setCompletedTo}
+          />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -319,7 +376,11 @@ function EditDatesDialog({
           </Button>
           <Button
             onClick={save}
-            disabled={createdAt === null || completedFrom === null || completedTo === null}
+            disabled={
+              createdAt === null ||
+              completedFrom === null ||
+              completedTo === null
+            }
           >
             Save
           </Button>
@@ -329,9 +390,64 @@ function EditDatesDialog({
   );
 }
 
+function ThoughtForm({ todo, onClose }: { todo: Todo; onClose: () => void }) {
+  const dispatch = useAppDispatch();
+  const [value, setValue] = useState(todo.thought ?? "");
+
+  const save = () => {
+    dispatch(updateTodo({ id: todo.id, thought: value }));
+    onClose();
+  };
+
+  return (
+    <>
+      <DrawerHeader className="flex flex-row items-center justify-between gap-2 border-b border-border">
+        <DrawerTitle>Thought</DrawerTitle>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={save}>
+            Save
+          </Button>
+        </div>
+      </DrawerHeader>
+      <div className="flex-1 overflow-auto">
+        <div className=" bg-background">
+          <ThoughtEditor markdown={value} onChange={setValue} />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ThoughtDialog({
+  todo,
+  open,
+  onOpenChange,
+}: {
+  todo: Todo;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Drawer direction="right" open={open} onOpenChange={onOpenChange}>
+      <DrawerContent
+        onClick={(e) => e.stopPropagation()}
+        className="w-[90vw]! max-w-[90vw]! sm:w-auto! sm:max-w-[min(960px,90vw)]!"
+      >
+        {open && (
+          <ThoughtForm todo={todo} onClose={() => onOpenChange(false)} />
+        )}
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
 export function TodoRowActions({ id }: { id: string }) {
   const dispatch = useAppDispatch();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [thoughtOpen, setThoughtOpen] = useState(false);
   const todo = useAppSelector((s) => {
     const f = s.todos.files.find((x) => x.id === s.todos.activeFileId);
     return f?.todos.find((t) => t.id === id) ?? null;
@@ -355,6 +471,10 @@ export function TodoRowActions({ id }: { id: string }) {
           }
         />
         <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuItem onClick={() => setThoughtOpen(true)}>
+            <Lightbulb />
+            Thought
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setDialogOpen(true)}>
             <CalendarClock />
             Edit dates
@@ -369,7 +489,16 @@ export function TodoRowActions({ id }: { id: string }) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <EditDatesDialog todo={todo} open={dialogOpen} onOpenChange={setDialogOpen} />
+      <EditDatesDialog
+        todo={todo}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
+      <ThoughtDialog
+        todo={todo}
+        open={thoughtOpen}
+        onOpenChange={setThoughtOpen}
+      />
     </>
   );
 }
