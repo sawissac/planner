@@ -379,7 +379,7 @@ export function Sidebar({
               <input
                 ref={fileRef}
                 type="file"
-                accept="application/json,.plan"
+                accept=".json,.plan,application/json,text/plain,*/*"
                 multiple
                 className="hidden"
                 onChange={(e) => {
