@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { Provider } from "react-redux"
 import { makeStore } from "@/lib/store"
 import { hydrate, subscribePersist } from "@/lib/persistence"
+import { subscribeDriveSync } from "@/lib/drive-sync"
 import { useAppSelector } from "@/lib/hooks"
 
 export const HydrationContext = createContext(false)
@@ -22,16 +23,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    let unsub: (() => void) | null = null
+    let unsubPersist: (() => void) | null = null
+    let unsubDrive: (() => void) | null = null
     let cancelled = false
     hydrate(store).finally(() => {
       if (cancelled) return
-      unsub = subscribePersist(store)
+      unsubPersist = subscribePersist(store)
+      unsubDrive = subscribeDriveSync(store)
       setReady(true)
     })
     return () => {
       cancelled = true
-      if (unsub) unsub()
+      if (unsubPersist) unsubPersist()
+      if (unsubDrive) unsubDrive()
     }
   }, [store])
 

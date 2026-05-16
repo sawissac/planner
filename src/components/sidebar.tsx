@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import {
   CircleCheck,
@@ -38,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { nanoid } from "@reduxjs/toolkit";
 import { ConfirmDialog, type ConfirmState } from "./confirm-dialog";
 import { PromptDialog, type PromptState } from "./prompt-dialog";
+import { DriveSyncButton } from "./drive-sync-button";
 
 type ExportBundle = { file: TodoFile; users: User[] }
 
@@ -542,6 +544,18 @@ export function Sidebar({
             );
           })}
           </AnimatePresence>
+        </div>
+      </div>
+      <div className="border-t border-border px-3 py-2 shrink-0 flex flex-col gap-2">
+        <DriveSyncButton />
+        <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+          <Link href="/privacy" className="hover:text-foreground hover:underline">
+            Privacy
+          </Link>
+          <span className="opacity-40">·</span>
+          <Link href="/terms" className="hover:text-foreground hover:underline">
+            Terms
+          </Link>
         </div>
       </div>
       <ConfirmDialog
