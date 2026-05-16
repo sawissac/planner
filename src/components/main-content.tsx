@@ -30,21 +30,29 @@ export function MainContent({
 
   const tabList = (
     <TabsList className="w-max shrink-0">
-      <TabsTrigger value="todo" className="gap-1" title="Todo">
-        <BadgeCheck className="size-4" />
-        <span className="hidden lg:inline">Todo</span>
+      <TabsTrigger value="todo" className="gap-1">
+        <span title="Todo" className="flex items-center gap-1">
+          <BadgeCheck className="size-4" />
+          <span className="hidden lg:inline">Todo</span>
+        </span>
       </TabsTrigger>
-      <TabsTrigger value="analytics" className="gap-1" title="Analytics">
-        <ChartArea className="size-4" />
-        <span className="hidden lg:inline">Analytics</span>
+      <TabsTrigger value="analytics" className="gap-1">
+        <span title="Analytics" className="flex items-center gap-1">
+          <ChartArea className="size-4" />
+          <span className="hidden lg:inline">Analytics</span>
+        </span>
       </TabsTrigger>
-      <TabsTrigger value="timeline" className="gap-1" title="Timeline">
-        <CalendarRange className="size-4" />
-        <span className="hidden lg:inline">Timeline</span>
+      <TabsTrigger value="timeline" className="gap-1">
+        <span title="Timeline" className="flex items-center gap-1">
+          <CalendarRange className="size-4" />
+          <span className="hidden lg:inline">Timeline</span>
+        </span>
       </TabsTrigger>
-      <TabsTrigger value="users" className="gap-1" title="Users">
-        <UsersRound className="size-4" />
-        <span className="hidden lg:inline">Users</span>
+      <TabsTrigger value="users" className="gap-1">
+        <span title="Users" className="flex items-center gap-1">
+          <UsersRound className="size-4" />
+          <span className="hidden lg:inline">Users</span>
+        </span>
       </TabsTrigger>
     </TabsList>
   );
