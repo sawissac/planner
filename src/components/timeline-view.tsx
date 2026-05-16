@@ -146,7 +146,13 @@ export function TimelineView() {
     const svg = d3.select(svgEl);
     svg.selectAll("*").remove();
 
-    const width = containerWidth;
+    const MIN_DAY_PX = 80;
+    const spanDaysCount = Math.max(
+      1,
+      Math.ceil((domain[1].getTime() - domain[0].getTime()) / 86_400_000),
+    );
+    const naturalWidth = LEFT_LABEL + RIGHT_PAD + spanDaysCount * MIN_DAY_PX;
+    const width = Math.max(containerWidth, naturalWidth);
     svg.attr("width", width).attr("height", height);
 
     const innerWidth = width - LEFT_LABEL - RIGHT_PAD;
@@ -291,9 +297,12 @@ export function TimelineView() {
         const d0 = dailyData[idx - 1];
         const d1 = dailyData[idx];
         const d =
-          !d1 || Math.abs(+xDate - +d0.date) <= Math.abs(+xDate - +d1.date)
-            ? d0
-            : d1;
+          !d0
+            ? d1
+            : !d1 || Math.abs(+xDate - +d0.date) <= Math.abs(+xDate - +d1.date)
+              ? d0
+              : d1;
+        if (!d) return;
         const xPos = LEFT_LABEL + x(d.date);
         vline.attr("x1", xPos).attr("x2", xPos).style("opacity", 1);
         vdot.attr("cx", xPos).style("opacity", 1);
@@ -335,8 +344,8 @@ export function TimelineView() {
       <div className="mb-5 text-sm text-muted-foreground">
         Each bar spans a group&apos;s earliest task start to latest task end
       </div>
-      <div ref={containerRef}>
-        <svg ref={svgRef} className="w-full block" />
+      <div ref={containerRef} className="overflow-x-auto">
+        <svg ref={svgRef} className="block" />
       </div>
     </div>
   );

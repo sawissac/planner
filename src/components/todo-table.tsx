@@ -63,6 +63,7 @@ import {
   type FontWeight,
 } from "@/lib/settingsSlice";
 import { cn } from "@/lib/utils";
+import { useTouchRowDrag } from "@/lib/use-touch-row-drag";
 import { DateRangeCell } from "@/components/date-range-cell";
 import { Button } from "@/components/ui/button";
 import { PriorityCell } from "@/components/priority-cell";
@@ -329,6 +330,9 @@ export function TodoTable() {
   }, [pagination.pageSize, persistedPageSize, dispatch]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const { touchDragId, touchOverId, start: startTouchDrag } = useTouchRowDrag(
+    (from, to) => dispatch(reorder({ fromId: from, toId: to })),
+  );
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -822,6 +826,7 @@ export function TodoTable() {
                   return (
                     <tr
                       key={row.id}
+                      data-row-id={id}
                       ref={(el) => {
                         if (el) rowRefs.current.set(id, el);
                         else rowRefs.current.delete(id);
@@ -867,8 +872,8 @@ export function TodoTable() {
                       }}
                       className={cn(
                         "transition-colors outline-none hover:bg-muted/50",
-                        dragId === id && "opacity-40",
-                        overId === id && dragId !== id && "bg-primary/20",
+                        (dragId === id || touchDragId === id) && "opacity-40",
+                        ((overId === id && dragId !== id) || (touchOverId === id && touchDragId !== id)) && "bg-primary/20",
                         isFocused && "bg-primary/2",
                       )}
                     >
@@ -876,8 +881,17 @@ export function TodoTable() {
                         <td
                           key={cell.id}
                           style={{ width: cell.column.getSize() }}
+                          onTouchStart={
+                            cell.column.id === "drag" && sorting.length === 0 && editingId !== id
+                              ? (e) => {
+                                  e.stopPropagation();
+                                  startTouchDrag(id);
+                                }
+                              : undefined
+                          }
                           className={cn(
                             "px-3 py-2 align-middle transition-opacity",
+                            cell.column.id === "drag" && "touch-none",
                             !(focusMode && cell.column.id === "title") &&
                               "truncate",
                             focusMode &&

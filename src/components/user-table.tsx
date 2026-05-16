@@ -45,6 +45,7 @@ import {
 } from "@/lib/userSlice";
 import { setUserColumnSizing } from "@/lib/settingsSlice";
 import { cn } from "@/lib/utils";
+import { useTouchRowDrag } from "@/lib/use-touch-row-drag";
 import { UserRowActions } from "@/components/user-row-actions";
 
 type RowMeta = {
@@ -218,6 +219,9 @@ export function UserTable() {
   });
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const { touchDragId, touchOverId, start: startTouchDrag } = useTouchRowDrag(
+    (from, to) => dispatch(reorderUser({ fromId: from, toId: to })),
+  );
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<"name" | "agenda">("name");
@@ -535,6 +539,7 @@ export function UserTable() {
                 return (
                   <tr
                     key={row.id}
+                    data-row-id={id}
                     ref={(el) => {
                       if (el) rowRefs.current.set(id, el);
                       else rowRefs.current.delete(id);
@@ -567,8 +572,8 @@ export function UserTable() {
                     onDragEnd={() => { setDragId(null); setOverId(null); }}
                     className={cn(
                       "transition-colors outline-none hover:bg-muted/50",
-                      dragId === id && "opacity-40",
-                      overId === id && dragId !== id && "bg-primary/10",
+                      (dragId === id || touchDragId === id) && "opacity-40",
+                      ((overId === id && dragId !== id) || (touchOverId === id && touchDragId !== id)) && "bg-primary/10",
                       isFocused && "bg-primary/5 shadow-[inset_2px_0_0_var(--color-primary)]",
                     )}
                   >
@@ -576,8 +581,17 @@ export function UserTable() {
                       <td
                         key={cell.id}
                         style={{ width: cell.column.getSize() }}
+                        onTouchStart={
+                          cell.column.id === "drag" && sorting.length === 0 && editingId !== id
+                            ? (e) => {
+                                e.stopPropagation();
+                                startTouchDrag(id);
+                              }
+                            : undefined
+                        }
                         className={cn(
                           "px-3 py-2 align-middle truncate",
+                          cell.column.id === "drag" && "touch-none",
                           cell.column.id === "drag" && cn(
                             "sticky left-0 z-1",
                             isFocused
