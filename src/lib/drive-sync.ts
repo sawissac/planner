@@ -115,6 +115,7 @@ export function subscribeDriveSync(
 
   const schedule = () => {
     if (!isSignedIn()) return
+    if (!appStore.getState().settings.driveAutoSync) return
     if (timer) clearTimeout(timer)
     timer = setTimeout(() => {
       void pushNow(appStore)

@@ -28,6 +28,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Filter,
   Folder,
   GripVertical,
   Plus,
@@ -57,6 +58,7 @@ import {
   FONT_VAR,
   setColumnSizing,
   setGlobalFilter as setPersistedGlobalFilter,
+  setGroupFilter as setPersistedGroupFilter,
   setPageSize as setPersistedPageSize,
   setSorting as setPersistedSorting,
   type FontSize,
@@ -200,6 +202,66 @@ function TitleCell({ todo, meta }: { todo: Todo; meta: RowMeta }) {
   );
 }
 
+function GroupFilterHeader({
+  groups,
+  value,
+  onChange,
+}: {
+  groups: Group[];
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const active = value !== null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+          >
+            Group
+            <Filter
+              className={cn(
+                "size-3",
+                active ? "text-primary" : "opacity-40",
+              )}
+            />
+          </button>
+        }
+      />
+      <DropdownMenuContent align="start" className="w-48">
+        <DropdownMenuItem
+          onClick={() => onChange(null)}
+          className="flex items-center gap-2"
+        >
+          <span className="flex-1">All groups</span>
+          {value === null && <Check className="size-3" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => onChange("__none__")}
+          className="flex items-center gap-2"
+        >
+          <span className="flex-1 text-muted-foreground">No group</span>
+          {value === "__none__" && <Check className="size-3" />}
+        </DropdownMenuItem>
+        {groups.length > 0 && <DropdownMenuSeparator />}
+        {groups.map((g) => (
+          <DropdownMenuItem
+            key={g.id}
+            onClick={() => onChange(g.id)}
+            className="flex items-center gap-2"
+          >
+            <Folder className="size-3 text-muted-foreground shrink-0" />
+            <span className="flex-1 truncate">{g.name}</span>
+            {value === g.id && <Check className="size-3 shrink-0" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
   const dispatch = useAppDispatch();
   const currentGroup = groups.find((g) => g.id === todo.groupId) ?? null;
@@ -301,6 +363,7 @@ export function TodoTable() {
   const persistedSizing = useAppSelector((s) => s.settings.columnSizing);
   const focusMode = useAppSelector((s) => s.settings.focusMode);
   const globalFilter = useAppSelector((s) => s.settings.globalFilter);
+  const groupFilter = useAppSelector((s) => s.settings.groupFilter);
   const sorting = useAppSelector((s) => s.settings.sorting) as SortingState;
   const persistedPageSize = useAppSelector((s) => s.settings.pageSize);
   const dispatch = useAppDispatch();
@@ -367,9 +430,16 @@ export function TodoTable() {
     [setSorting],
   );
 
+  const filteredByGroup = useMemo(() => {
+    if (groupFilter === null) return todos;
+    if (groupFilter === "__none__")
+      return todos.filter((t) => !t.groupId);
+    return todos.filter((t) => t.groupId === groupFilter);
+  }, [todos, groupFilter]);
+
   const sortedTodos = useMemo(() => {
-    if (sorting.length === 0) return todos;
-    return [...todos].sort((a, b) => {
+    if (sorting.length === 0) return filteredByGroup;
+    return [...filteredByGroup].sort((a, b) => {
       for (const { id, desc } of sorting) {
         let cmp = 0;
         if (id === "title") cmp = a.title.localeCompare(b.title);
@@ -380,7 +450,7 @@ export function TodoTable() {
       }
       return 0;
     });
-  }, [todos, sorting]);
+  }, [filteredByGroup, sorting]);
 
   const meta: RowMeta = {
     editingId,
@@ -480,7 +550,16 @@ export function TodoTable() {
       },
       {
         id: "group",
-        header: "Group",
+        header: () => (
+          <GroupFilterHeader
+            groups={groups}
+            value={groupFilter}
+            onChange={(v) => {
+              dispatch(setPersistedGroupFilter(v));
+              setPagination((p) => ({ ...p, pageIndex: 0 }));
+            }}
+          />
+        ),
         size: 200,
         minSize: 80,
         cell: ({ row }) => <GroupCell todo={row.original} groups={groups} />,
@@ -558,7 +637,7 @@ export function TodoTable() {
         ),
       },
     ],
-    [dispatch, groups],
+    [dispatch, groups, groupFilter],
   );
 
   const table = useReactTable({

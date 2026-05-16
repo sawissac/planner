@@ -8,11 +8,12 @@ import {
   useShortcutsController,
 } from "@/components/shortcuts-dialog";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { setDarkMode } from "@/lib/settingsSlice";
+import { setDarkMode, setSidebarOpen } from "@/lib/settingsSlice";
 
 export function AppShell() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const sidebarOpenPersisted = useAppSelector((s) => s.settings.sidebarOpen);
   const [isMobile, setIsMobile] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const dispatch = useAppDispatch();
   const darkMode = useAppSelector((s) => s.settings.darkMode);
 
@@ -20,14 +21,18 @@ export function AppShell() {
     const mq = window.matchMedia("(max-width: 767px)");
     const update = () => {
       setIsMobile(mq.matches);
-      if (mq.matches) setSidebarOpen(false);
+      if (mq.matches) setMobileOpen(false);
     };
     update();
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  const toggleSidebar = () => setSidebarOpen((v) => !v);
+  const sidebarOpen = isMobile ? mobileOpen : sidebarOpenPersisted;
+  const toggleSidebar = () => {
+    if (isMobile) setMobileOpen((v) => !v);
+    else dispatch(setSidebarOpen(!sidebarOpenPersisted));
+  };
   const toggleFullscreen = () => {
     if (typeof document === "undefined") return;
     if (document.fullscreenElement) document.exitFullscreen?.();

@@ -61,7 +61,7 @@ export default function AboutPage() {
 
         <h2 className="text-xl font-semibold mt-8">Try it</h2>
         <p>
-          <Link href="/" className="underline">
+          <Link href="/app" className="underline">
             Open the app →
           </Link>
         </p>

@@ -456,7 +456,12 @@ export function Sidebar({
                     <div className="flex items-center gap-2 min-w-0 h-6">
                       <FileText className={cn("size-3.5 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
                       <span className="flex-1 min-w-0 truncate text-sm">{f.name}</span>
-                      <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                      <div className={cn(
+                        "items-center gap-0.5 shrink-0",
+                        isMobile
+                          ? "flex"
+                          : "hidden group-hover:flex [@media(hover:none)]:flex",
+                      )}>
                         <Button
                           size="icon-xs"
                           variant="ghost"
@@ -524,8 +529,11 @@ export function Sidebar({
                         </Button>
                       </div>
                       <span className={cn(
-                        "text-xs tabular-nums shrink-0 group-hover:hidden",
+                        "text-xs tabular-nums shrink-0",
                         active ? "text-primary font-medium" : "text-muted-foreground",
+                        isMobile
+                          ? "hidden"
+                          : "group-hover:hidden [@media(hover:none)]:hidden",
                       )}>
                         {done}/{total}
                       </span>

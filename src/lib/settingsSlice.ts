@@ -44,6 +44,8 @@ export type SettingsState = {
   titleFontSize: FontSize
   titleFontWeight: FontWeight
   sidebarWidth: number
+  sidebarOpen: boolean
+  driveAutoSync: boolean
   columnSizing: Record<string, number>
   userColumnSizing: Record<string, number>
   priorityOptions: string[]
@@ -52,6 +54,7 @@ export type SettingsState = {
   pageSize: number
   sorting: TableSort[]
   globalFilter: string
+  groupFilter: string | null
 }
 
 const initialState: SettingsState = {
@@ -59,6 +62,8 @@ const initialState: SettingsState = {
   titleFontSize: 14,
   titleFontWeight: 400,
   sidebarWidth: 320,
+  sidebarOpen: true,
+  driveAutoSync: true,
   columnSizing: {},
   userColumnSizing: {},
   priorityOptions: [...DEFAULT_PRIORITY_OPTIONS],
@@ -67,6 +72,7 @@ const initialState: SettingsState = {
   pageSize: 30,
   sorting: [],
   globalFilter: "",
+  groupFilter: null,
 }
 
 const settingsSlice = createSlice({
@@ -84,6 +90,12 @@ const settingsSlice = createSlice({
     },
     setSidebarWidth(state, action: PayloadAction<number>) {
       state.sidebarWidth = Math.max(200, Math.min(640, action.payload))
+    },
+    setSidebarOpen(state, action: PayloadAction<boolean>) {
+      state.sidebarOpen = action.payload
+    },
+    setDriveAutoSync(state, action: PayloadAction<boolean>) {
+      state.driveAutoSync = action.payload
     },
     setColumnSizing(state, action: PayloadAction<Record<string, number>>) {
       state.columnSizing = action.payload
@@ -119,11 +131,16 @@ const settingsSlice = createSlice({
     setGlobalFilter(state, action: PayloadAction<string>) {
       state.globalFilter = action.payload
     },
+    setGroupFilter(state, action: PayloadAction<string | null>) {
+      state.groupFilter = action.payload
+    },
     replaceSettings(state, action: PayloadAction<SettingsState>) {
       state.tableFont = action.payload.tableFont
       state.titleFontSize = action.payload.titleFontSize
       state.titleFontWeight = action.payload.titleFontWeight
       state.sidebarWidth = action.payload.sidebarWidth
+      state.sidebarOpen = action.payload.sidebarOpen ?? true
+      state.driveAutoSync = action.payload.driveAutoSync ?? true
       state.columnSizing = action.payload.columnSizing
       state.userColumnSizing = action.payload.userColumnSizing ?? {}
       state.priorityOptions = action.payload.priorityOptions
@@ -132,6 +149,7 @@ const settingsSlice = createSlice({
       state.pageSize = action.payload.pageSize ?? 30
       state.sorting = action.payload.sorting ?? []
       state.globalFilter = action.payload.globalFilter ?? ""
+      state.groupFilter = action.payload.groupFilter ?? null
     },
   },
 })
@@ -141,6 +159,8 @@ export const {
   setFontSize,
   setFontWeight,
   setSidebarWidth,
+  setSidebarOpen,
+  setDriveAutoSync,
   setColumnSizing,
   setUserColumnSizing,
   addPriorityOption,
@@ -150,6 +170,7 @@ export const {
   setPageSize,
   setSorting,
   setGlobalFilter,
+  setGroupFilter,
   replaceSettings,
 } = settingsSlice.actions
 export default settingsSlice.reducer

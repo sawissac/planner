@@ -146,6 +146,8 @@ function migrateSettings(v: Partial<SettingsState>): SettingsState {
     titleFontSize: v.titleFontSize!,
     titleFontWeight: v.titleFontWeight!,
     sidebarWidth: v.sidebarWidth!,
+    sidebarOpen: typeof v.sidebarOpen === "boolean" ? v.sidebarOpen : true,
+    driveAutoSync: typeof v.driveAutoSync === "boolean" ? v.driveAutoSync : true,
     columnSizing: v.columnSizing!,
     userColumnSizing: typeof v.userColumnSizing === "object" && v.userColumnSizing !== null ? v.userColumnSizing as Record<string, number> : {},
     priorityOptions:
@@ -168,6 +170,10 @@ function migrateSettings(v: Partial<SettingsState>): SettingsState {
         ? v.sorting
         : [],
     globalFilter: typeof v.globalFilter === "string" ? v.globalFilter : "",
+    groupFilter:
+      typeof v.groupFilter === "string" || v.groupFilter === null
+        ? v.groupFilter
+        : null,
   }
 }
 

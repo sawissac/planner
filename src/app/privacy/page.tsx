@@ -11,7 +11,7 @@ const EFFECTIVE = "2026-05-16"
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-12 text-sm leading-relaxed">
-      <Link href="/" className="text-muted-foreground hover:text-foreground">
+      <Link href="/app" className="text-muted-foreground hover:text-foreground">
         ← Back to app
       </Link>
       <h1 className="mt-6 text-3xl font-semibold">Privacy Policy</h1>

@@ -17,6 +17,28 @@ function startEndForRange(rangeDays: number) {
   return { start: start.getTime(), end: end.getTime() };
 }
 
+const BAR_PALETTE = [
+  { from: "var(--chart-3)", to: "var(--primary)" },
+  { from: "var(--chart-4)", to: "var(--chart-3)" },
+  { from: "var(--primary)", to: "var(--chart-4)" },
+  { from: "var(--chart-2)", to: "var(--chart-4)" },
+  { from: "var(--chart-1)", to: "var(--chart-2)" },
+  { from: "var(--chart-5)", to: "var(--primary)" },
+];
+
+function hashIndex(str: string, mod: number) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(h) % mod;
+}
+
+function initials(label: string) {
+  const parts = label.trim().split(/\s+/);
+  if (parts.length === 0 || !parts[0]) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 function BarList({
   rows,
   emptyLabel,
@@ -25,6 +47,7 @@ function BarList({
   emptyLabel: string;
 }) {
   const max = Math.max(1, ...rows.map((r) => r.count));
+  const total = rows.reduce((sum, r) => sum + r.count, 0);
   if (rows.length === 0) {
     return (
       <div className="py-10 text-center text-sm text-muted-foreground">
@@ -33,24 +56,64 @@ function BarList({
     );
   }
   return (
-    <ul className="flex flex-col gap-2">
-      {rows.map((r) => {
+    <ul className="flex flex-col gap-3.5">
+      {rows.map((r, i) => {
         const pct = (r.count / max) * 100;
+        const share = total > 0 ? (r.count / total) * 100 : 0;
+        const palette = BAR_PALETTE[hashIndex(r.id, BAR_PALETTE.length)];
+        const isTop = i === 0;
         return (
-          <li key={r.id} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between text-sm gap-2">
-              <span className="truncate" title={r.label}>
-                {r.label}
-              </span>
-              <span className="text-muted-foreground tabular-nums shrink-0">
-                {r.count}
-              </span>
+          <li
+            key={r.id}
+            className="group/row flex items-center gap-3 min-w-0"
+          >
+            <div
+              className="relative shrink-0 grid place-items-center size-9 rounded-full text-[11px] font-semibold text-white shadow-sm"
+              style={{
+                background: `linear-gradient(135deg, ${palette.from}, ${palette.to})`,
+              }}
+              aria-hidden
+            >
+              {initials(r.label)}
+              {isTop && (
+                <span
+                  className="absolute -top-1 -right-1 grid place-items-center size-4 rounded-full bg-amber-400 text-[9px] text-amber-950 ring-2 ring-card"
+                  title="Top"
+                >
+                  ★
+                </span>
+              )}
             </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-primary transition-[width] duration-500"
-                style={{ width: `${pct}%` }}
-              />
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline justify-between gap-2 text-sm">
+                <span className="truncate font-medium" title={r.label}>
+                  {r.label}
+                </span>
+                <span className="shrink-0 inline-flex items-baseline gap-1.5 tabular-nums">
+                  <span className="font-semibold">{r.count}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {share.toFixed(0)}%
+                  </span>
+                </span>
+              </div>
+              <div className="mt-1.5 relative h-2.5 rounded-full bg-muted/70 overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full shadow-[0_0_8px_var(--ring)] transition-[width] duration-700 ease-[cubic-bezier(0.2,0.7,0.2,1)]"
+                  style={{
+                    width: `${pct}%`,
+                    background: `linear-gradient(90deg, ${palette.from}, ${palette.to})`,
+                  }}
+                />
+                <div
+                  className="pointer-events-none absolute inset-y-0 left-0 rounded-full opacity-0 group-hover/row:opacity-100 transition-opacity"
+                  style={{
+                    width: `${pct}%`,
+                    background:
+                      "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%)",
+                  }}
+                />
+              </div>
             </div>
           </li>
         );
