@@ -25,7 +25,8 @@ const caveat = Caveat({
 
 export const metadata: Metadata = {
   title: "Planner",
-  description: "Simple todo planner",
+  description:
+    "Local-first task and todo planner with optional Google Drive backup. Multiple files, timelines, analytics, dark mode.",
   manifest: "/manifest.webmanifest",
   applicationName: "Planner",
   appleWebApp: {
@@ -36,6 +37,9 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
     apple: "/logo.svg",
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   },
 };
 
