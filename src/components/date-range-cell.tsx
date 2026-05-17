@@ -213,10 +213,7 @@ export function DateRangeCell({
     commit(f, t);
   };
 
-  const sameDay = fmtDate(fromDate) === fmtDate(toDate);
-  const label = sameDay
-    ? `${fmtDate(fromDate)} ${fmtTime12(fromDate)} → ${fmtTime12(toDate)}`
-    : `${fmtFull(fromDate)} → ${fmtFull(toDate)}`;
+  const label = `${fmtFull(fromDate)} → ${fmtFull(toDate)}`;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

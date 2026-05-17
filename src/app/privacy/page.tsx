@@ -1,12 +1,12 @@
-import type { Metadata } from "next"
-import Link from "next/link"
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Planner",
   description: "How Planner handles your data.",
-}
+};
 
-const EFFECTIVE = "2026-05-16"
+const EFFECTIVE = "2026-05-16";
 
 export default function PrivacyPage() {
   return (
@@ -32,18 +32,20 @@ export default function PrivacyPage() {
           backend collecting your data.
         </p>
 
-        <h2 className="text-xl font-semibold mt-8">Google Drive sync (optional)</h2>
+        <h2 className="text-xl font-semibold mt-8">
+          Google Drive sync (optional)
+        </h2>
         <p>
           If you choose to connect your Google account, Planner uses the
           <code className="mx-1 rounded bg-muted px-1">drive.appdata</code>
-          OAuth scope to store a single JSON backup of your planner data
-          (todos, settings, user profiles) inside a hidden, app-specific folder
-          in your own Google Drive.
+          OAuth scope to store a single JSON backup of your planner data (todos,
+          settings, user profiles) inside a hidden, app-specific folder in your
+          own Google Drive.
         </p>
         <p>
           This folder is sandboxed: only Planner can read or write to it, and it
-          is not visible in the normal Drive interface. You can view its
-          storage usage or delete it via Drive Settings → Manage apps.
+          is not visible in the normal Drive interface. You can view its storage
+          usage or delete it via Drive Settings → Manage apps.
         </p>
         <p>
           Planner does not access any other files in your Drive. Planner does
@@ -55,6 +57,24 @@ export default function PrivacyPage() {
           When sync is enabled, the contents of your planner state are sent
           directly from your browser to Google&apos;s Drive API over HTTPS. No
           intermediate Planner server processes or stores this data.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-8">AI assistant (optional)</h2>
+        <p>
+          If you enable the in-app AI planning assistant, you provide your own
+          API key for one of the supported providers (Google Gemini, OpenRouter,
+          or Groq). The key is stored only in your browser&apos;s localStorage.
+          When you send a message, Planner posts the chat history and a context
+          summary of your active file (file/group/task names, ids, priorities,
+          assignees, dates, and the user list) directly from your browser to the
+          provider&apos;s API over HTTPS. No intermediate Planner server
+          processes or stores this data.
+        </p>
+        <p>
+          The provider may log requests under its own privacy policy. Do not
+          include information you would not want a third party to see. You can
+          delete the key any time from the AI panel&apos;s key dialog or by
+          clearing browser storage.
         </p>
 
         <h2 className="text-xl font-semibold mt-8">Authentication tokens</h2>
@@ -73,14 +93,38 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-semibold mt-8">Deleting your data</h2>
         <ul className="list-disc pl-6 space-y-1">
-          <li>Local data: clear browser storage for this site, or use the in-app delete actions.</li>
-          <li>Drive data: Drive Settings → Manage apps → Planner → Delete hidden app data.</li>
-          <li>Revoke access: <a className="underline" href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer">myaccount.google.com/permissions</a>.</li>
+          <li>
+            Local data: clear browser storage for this site, or use the in-app
+            delete actions.
+          </li>
+          <li>
+            Drive data: Drive Settings → Manage apps → Planner → Delete hidden
+            app data.
+          </li>
+          <li>
+            AI keys: open the AI panel → key dialog → clear the field and save,
+            or clear browser localStorage.
+          </li>
+          <li>
+            Revoke Google access:{" "}
+            <a
+              className="underline"
+              href="https://myaccount.google.com/permissions"
+              target="_blank"
+              rel="noreferrer"
+            >
+              myaccount.google.com/permissions
+            </a>
+            .
+          </li>
         </ul>
 
         <h2 className="text-xl font-semibold mt-8">Contact</h2>
         <p>
-          Questions: <a className="underline" href="mailto:issac.i@rotutia.com">issac.i@rotutia.com</a>
+          Questions:{" "}
+          <a className="underline" href="mailto:sawissacwaux@gmail.com">
+            sawissacwaux@gmail.com
+          </a>
         </p>
 
         <h2 className="text-xl font-semibold mt-8">Changes</h2>
@@ -90,5 +134,5 @@ export default function PrivacyPage() {
         </p>
       </section>
     </main>
-  )
+  );
 }

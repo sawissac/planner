@@ -16,6 +16,7 @@ import {
   PanelRight,
   Pencil,
   Plus,
+  Sparkles,
   Sun,
   Trash2,
   Upload,
@@ -34,6 +35,7 @@ import {
 } from "@/lib/todoSlice";
 import { type User } from "@/lib/userSlice";
 import { setSidebarWidth, setDarkMode } from "@/lib/settingsSlice";
+import { setOpen as setAiOpen } from "@/lib/aiSlice";
 import { isTodoFile } from "@/lib/persistence";
 import { cn } from "@/lib/utils";
 import { nanoid } from "@reduxjs/toolkit";
@@ -226,6 +228,18 @@ export function Sidebar({
     </Button>
   );
 
+  const aiBtn = (
+    <Button
+      size="icon-sm"
+      variant="ghost"
+      onClick={() => dispatch(setAiOpen(true))}
+      aria-label="AI chat"
+      title="AI chat"
+    >
+      <Sparkles className="size-4" />
+    </Button>
+  );
+
   const fullscreenBtn = (
     <Button
       size="icon-sm"
@@ -246,6 +260,7 @@ export function Sidebar({
         className="shrink-0 border-l border-border bg-sidebar text-sidebar-foreground hidden md:flex flex-col items-center py-3 gap-3 overflow-hidden transition-[width] duration-300 ease-in-out"
       >
         {toggleBtn}
+        {aiBtn}
         {darkToggleBtn}
         {fullscreenBtn}
         <div className="w-px h-4 bg-border" />
@@ -321,6 +336,7 @@ export function Sidebar({
       <div className="flex items-center gap-1 px-2 pt-3 pb-1 shrink-0">
         {toggleBtn}
         <div className="flex-1" />
+        {aiBtn}
         {fullscreenBtn}
         {darkToggleBtn}
       </div>

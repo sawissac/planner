@@ -55,6 +55,8 @@ export type SettingsState = {
   sorting: TableSort[]
   globalFilter: string
   groupFilter: string | null
+  priorityFilter: string | null
+  accentColor: string | null
 }
 
 const initialState: SettingsState = {
@@ -73,6 +75,8 @@ const initialState: SettingsState = {
   sorting: [],
   globalFilter: "",
   groupFilter: null,
+  priorityFilter: null,
+  accentColor: null,
 }
 
 const settingsSlice = createSlice({
@@ -134,6 +138,12 @@ const settingsSlice = createSlice({
     setGroupFilter(state, action: PayloadAction<string | null>) {
       state.groupFilter = action.payload
     },
+    setPriorityFilter(state, action: PayloadAction<string | null>) {
+      state.priorityFilter = action.payload
+    },
+    setAccentColor(state, action: PayloadAction<string | null>) {
+      state.accentColor = action.payload
+    },
     replaceSettings(state, action: PayloadAction<SettingsState>) {
       state.tableFont = action.payload.tableFont
       state.titleFontSize = action.payload.titleFontSize
@@ -150,6 +160,8 @@ const settingsSlice = createSlice({
       state.sorting = action.payload.sorting ?? []
       state.globalFilter = action.payload.globalFilter ?? ""
       state.groupFilter = action.payload.groupFilter ?? null
+      state.priorityFilter = action.payload.priorityFilter ?? null
+      state.accentColor = action.payload.accentColor ?? null
     },
   },
 })
@@ -171,6 +183,8 @@ export const {
   setSorting,
   setGlobalFilter,
   setGroupFilter,
+  setPriorityFilter,
+  setAccentColor,
   replaceSettings,
 } = settingsSlice.actions
 export default settingsSlice.reducer

@@ -174,6 +174,14 @@ function migrateSettings(v: Partial<SettingsState>): SettingsState {
       typeof v.groupFilter === "string" || v.groupFilter === null
         ? v.groupFilter
         : null,
+    priorityFilter:
+      typeof v.priorityFilter === "string" || v.priorityFilter === null
+        ? v.priorityFilter
+        : null,
+    accentColor:
+      typeof v.accentColor === "string" || v.accentColor === null
+        ? v.accentColor ?? null
+        : null,
   }
 }
 

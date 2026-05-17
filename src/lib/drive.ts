@@ -36,6 +36,7 @@ type StoredToken = { access_token: string; expires_at: number }
 let tokenClient: GoogleTokenClient | null = null
 let cachedFileId: string | null = null
 let listeners = new Set<(signedIn: boolean) => void>()
+let pendingRefresh: Promise<StoredToken | null> | null = null
 
 function readToken(): StoredToken | null {
   try {
@@ -139,15 +140,65 @@ export async function signOut(): Promise<void> {
   }
 }
 
-async function authedFetch(input: string, init: RequestInit = {}): Promise<Response> {
-  const t = readToken()
-  if (!t) throw new Error("Not signed in")
+function refreshTokenSilent(): Promise<StoredToken | null> {
+  if (pendingRefresh) return pendingRefresh
+  pendingRefresh = (async () => {
+    try {
+      const client = await ensureTokenClient()
+      return await new Promise<StoredToken | null>((resolve) => {
+        const off = onAuthChange((signedIn) => {
+          if (signedIn) {
+            off()
+            clearTimeout(timer)
+            resolve(readToken())
+          }
+        })
+        const timer = setTimeout(() => {
+          off()
+          resolve(null)
+        }, 5000)
+        try {
+          client.requestAccessToken({ prompt: "" })
+        } catch {
+          clearTimeout(timer)
+          off()
+          resolve(null)
+        }
+      })
+    } finally {
+      pendingRefresh = null
+    }
+  })()
+  return pendingRefresh
+}
+
+async function doFetch(
+  t: StoredToken,
+  input: string,
+  init: RequestInit,
+): Promise<Response> {
   const headers = new Headers(init.headers)
   headers.set("Authorization", `Bearer ${t.access_token}`)
-  const res = await fetch(input, { ...init, headers })
+  return fetch(input, { ...init, headers })
+}
+
+async function authedFetch(
+  input: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  let t = readToken()
+  if (!t) {
+    t = await refreshTokenSilent()
+    if (!t) throw new Error("Not signed in")
+  }
+  let res = await doFetch(t, input, init)
   if (res.status === 401) {
-    writeToken(null)
-    throw new Error("Drive auth expired")
+    const fresh = await refreshTokenSilent()
+    if (!fresh) {
+      writeToken(null)
+      throw new Error("Drive auth expired")
+    }
+    res = await doFetch(fresh, input, init)
   }
   return res
 }

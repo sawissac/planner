@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PageHeading } from "@/components/page-heading";
 import { TitleStyleControls } from "@/components/title-font-dropdown";
+import { AccentPicker } from "@/components/accent-picker";
 import { TodoTable } from "@/components/todo-table";
 import { UserTable } from "@/components/user-table";
 import { AnalyticsChart, RangeFilter } from "@/components/analytics-chart";
@@ -107,6 +108,7 @@ export function MainContent({
             {tabList}
             {focusSwitch}
             {tab === "todo" && <TitleStyleControls compact />}
+            <AccentPicker compact />
             {tab === "analytics" && (
               <RangeFilter rangeDays={rangeDays} onChange={setRangeDays} compact />
             )}
@@ -125,6 +127,7 @@ export function MainContent({
         <div className="flex items-center gap-3 ml-auto flex-wrap">
           {focusSwitch}
           {tab === "todo" && <TitleStyleControls />}
+          <AccentPicker />
           {tab === "analytics" && (
             <RangeFilter rangeDays={rangeDays} onChange={setRangeDays} />
           )}

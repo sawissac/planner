@@ -4,7 +4,7 @@ import Link from "next/link"
 export const metadata: Metadata = {
   title: "About Planner",
   description:
-    "Planner is a local-first task management web app with optional Google Drive backup.",
+    "Planner is a local-first task management web app with an optional AI planning assistant and Google Drive backup.",
 }
 
 export default function AboutPage() {
@@ -29,10 +29,24 @@ export default function AboutPage() {
           <li>Multiple todo files with groups, priorities, and assignees</li>
           <li>Timeline and calendar views</li>
           <li>Analytics: heatmaps, breakdowns, completion charts</li>
+          <li>AI planning assistant — describe a goal, get a grouped, scheduled task list</li>
           <li>Dark mode, font customization, focus mode</li>
           <li>Import / export <code className="rounded bg-muted px-1">.plan</code> JSON files</li>
           <li>Installable as a PWA for offline use</li>
         </ul>
+
+        <h2 className="text-xl font-semibold mt-8">AI planning assistant (optional)</h2>
+        <p>
+          Planner includes an in-app chat that can create, edit, and delete
+          files, groups, tasks, and people in your active workspace. You bring
+          your own API key for one of the supported free-tier providers:{" "}
+          <a className="underline" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Google Gemini</a>,{" "}
+          <a className="underline" href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">OpenRouter</a>, or{" "}
+          <a className="underline" href="https://console.groq.com/keys" target="_blank" rel="noreferrer">Groq</a>.
+          Keys are stored only in your browser&apos;s localStorage and sent
+          directly to the chosen provider. Planner has no server-side AI
+          component.
+        </p>
 
         <h2 className="text-xl font-semibold mt-8">Google Drive backup (optional)</h2>
         <p>

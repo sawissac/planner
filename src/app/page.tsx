@@ -2,9 +2,9 @@ import Link from "next/link"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Planner — local-first task & todo planner",
+  title: "Planner — local-first task & todo planner with AI",
   description:
-    "A fast, local-first planner with timelines, analytics, and optional Google Drive backup.",
+    "A fast, local-first planner with timelines, analytics, an AI planning assistant, and optional Google Drive backup.",
 }
 
 export default function Home() {
@@ -14,73 +14,82 @@ export default function Home() {
 
       <BackgroundLayer />
 
-      <section className="relative mx-auto flex max-w-5xl flex-col items-center px-6 pt-20 pb-16 text-center sm:pt-28 lg:pt-32 lg:pb-24">
-        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur lp-fade-up">
-          <span className="lp-dot" /> Local-first · No account required
-        </span>
-
-        <h1 className="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-          <span className="lp-fade-up lp-d1 block">Plan your day.</span>
-          <span className="lp-fade-up lp-d2 block bg-gradient-to-r from-[var(--chart-3)] via-[var(--primary)] to-[var(--chart-4)] bg-clip-text text-transparent">
-            Own your data.
+      <section className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 pt-20 pb-16 sm:pt-28 lg:grid-cols-2 lg:gap-16 lg:pt-32 lg:pb-24">
+        <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur lp-fade-up">
+            <span className="lp-dot" /> Local-first · No account required
           </span>
-        </h1>
 
-        <p className="lp-fade-up lp-d3 mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          A fast, local-first planner with timelines, analytics, and
-          optional Google Drive backup. Built for the browser. Yours alone.
-        </p>
+          <h1 className="mt-6 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
+            <span className="lp-fade-up lp-d1 block">Plan your day.</span>
+            <span className="lp-fade-up lp-d2 block bg-gradient-to-r from-[var(--chart-3)] via-[var(--primary)] to-[var(--chart-4)] bg-clip-text text-transparent">
+              Own your data.
+            </span>
+          </h1>
 
-        <div className="lp-fade-up lp-d4 mt-10 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
-          <Link
-            href="/app"
-            className="group relative inline-flex h-14 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-8 text-base font-medium text-primary-foreground shadow-md transition hover:shadow-xl sm:w-auto sm:min-w-[180px]"
-          >
-            <span className="lp-shimmer absolute inset-0" aria-hidden />
-            <span className="relative">Open the app</span>
-            <svg className="relative h-5 w-5 transition group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14" />
-              <path d="m13 6 6 6-6 6" />
-            </svg>
-          </Link>
-          <Link
-            href="/about"
-            className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/60 px-8 text-base font-medium backdrop-blur transition hover:bg-card sm:w-auto sm:min-w-[160px]"
-          >
-            Learn more
-          </Link>
+          <p className="lp-fade-up lp-d3 mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
+            A fast, local-first planner with timelines, analytics, an AI
+            planning assistant, and optional Google Drive backup. Built for the
+            browser. Yours alone.
+          </p>
+
+          <div className="lp-fade-up lp-d4 mt-10 flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
+            <Link
+              href="/app"
+              className="group relative inline-flex h-14 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-8 text-base font-medium text-primary-foreground shadow-md transition hover:shadow-xl sm:w-auto sm:min-w-[180px]"
+            >
+              <span className="lp-shimmer absolute inset-0" aria-hidden />
+              <span className="relative">Open the app</span>
+              <svg className="relative h-5 w-5 transition group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14" />
+                <path d="m13 6 6 6-6 6" />
+              </svg>
+            </Link>
+            <Link
+              href="/about"
+              className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/60 px-8 text-base font-medium backdrop-blur transition hover:bg-card sm:w-auto sm:min-w-[160px]"
+            >
+              Learn more
+            </Link>
+          </div>
+
+          <ul className="lp-fade-up lp-d5 mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground lg:justify-start">
+            <li className="inline-flex items-center gap-1.5"><Check /> No account</li>
+            <li className="inline-flex items-center gap-1.5"><Check /> Works offline</li>
+            <li className="inline-flex items-center gap-1.5"><Check /> Open source feel</li>
+          </ul>
         </div>
 
-        <ul className="lp-fade-up lp-d5 mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-          <li className="inline-flex items-center gap-1.5"><Check /> No account</li>
-          <li className="inline-flex items-center gap-1.5"><Check /> Works offline</li>
-          <li className="inline-flex items-center gap-1.5"><Check /> Open source feel</li>
-        </ul>
-
-        <div className="relative mt-16 w-full">
+        <div className="relative w-full">
           <HeroIllustration />
         </div>
       </section>
 
       <section className="relative mx-auto max-w-6xl px-6 pb-24">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <FeatureCard
+            title="AI assistant"
+            desc="Describe a goal. Get a grouped, scheduled plan."
+            icon={<SparkIcon />}
+            delay="lp-d1"
+          />
           <FeatureCard
             title="Timelines"
             desc="Drag, drop, resize. See your week at a glance."
             icon={<TimelineIcon />}
-            delay="lp-d1"
+            delay="lp-d2"
           />
           <FeatureCard
             title="Analytics"
             desc="Heatmaps and breakdowns of completed work."
             icon={<ChartIcon />}
-            delay="lp-d2"
+            delay="lp-d3"
           />
           <FeatureCard
             title="Drive backup"
             desc="Optional sync to a hidden folder in your own Drive."
             icon={<CloudIcon />}
-            delay="lp-d3"
+            delay="lp-d4"
           />
         </div>
       </section>
@@ -150,94 +159,178 @@ function BackgroundLayer() {
 
 function HeroIllustration() {
   return (
-    <div className="lp-fade-up lp-d3 relative mx-auto aspect-[5/4] w-full max-w-[520px]">
+    <div className="lp-fade-up lp-d3 relative mx-auto aspect-[5/4] w-full max-w-[560px]">
       <div className="lp-float absolute inset-0">
-        <svg viewBox="0 0 520 420" xmlns="http://www.w3.org/2000/svg" className="h-full w-full drop-shadow-[0_30px_60px_rgba(0,0,0,0.18)]">
+        <svg
+          viewBox="0 0 560 448"
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-full w-full drop-shadow-[0_40px_80px_rgba(0,0,0,0.18)]"
+        >
           <defs>
-            <linearGradient id="card-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="hero-card" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="var(--card)" />
               <stop offset="100%" stopColor="var(--background)" />
             </linearGradient>
-            <linearGradient id="bar-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id="hero-accent" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="var(--primary)" />
               <stop offset="100%" stopColor="var(--chart-4)" />
             </linearGradient>
-            <linearGradient id="head-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="var(--chart-3)" />
-              <stop offset="100%" stopColor="var(--primary)" />
+            <linearGradient id="hero-soft" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="var(--chart-4)" stopOpacity="0.08" />
             </linearGradient>
+            <filter id="hero-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="8" />
+            </filter>
           </defs>
 
-          <g>
-            <rect x="20" y="40" width="480" height="360" rx="20" fill="url(#card-bg)" stroke="var(--border)" />
-            <rect x="20" y="40" width="480" height="48" rx="20" fill="url(#head-grad)" opacity="0.95" />
-            <rect x="20" y="76" width="480" height="12" fill="url(#head-grad)" opacity="0.95" />
-            <circle cx="44" cy="64" r="5" fill="white" opacity="0.85" />
-            <circle cx="62" cy="64" r="5" fill="white" opacity="0.55" />
-            <circle cx="80" cy="64" r="5" fill="white" opacity="0.35" />
-            <rect x="110" y="58" width="120" height="12" rx="6" fill="white" opacity="0.85" />
+          {/* back card (timeline preview) */}
+          <g transform="translate(36 24) rotate(-3 240 180)" opacity="0.9">
+            <rect width="380" height="220" rx="20" fill="var(--card)" stroke="var(--border)" />
+            <rect x="20" y="20" width="80" height="10" rx="5" fill="var(--muted-foreground)" opacity="0.35" />
+            <rect x="20" y="38" width="48" height="6" rx="3" fill="var(--muted-foreground)" opacity="0.22" />
+            {/* timeline bars */}
+            {[
+              { y: 70, x: 20, w: 180, c: "var(--primary)" },
+              { y: 100, x: 80, w: 160, c: "var(--chart-4)" },
+              { y: 130, x: 40, w: 220, c: "var(--chart-3)" },
+              { y: 160, x: 140, w: 120, c: "var(--primary)" },
+              { y: 190, x: 60, w: 200, c: "var(--chart-4)" },
+            ].map((b, i) => (
+              <rect
+                key={i}
+                x={b.x}
+                y={b.y}
+                width={b.w}
+                height={14}
+                rx={7}
+                fill={b.c}
+                opacity={0.5}
+                className="lp-tl-bar"
+                style={{ animationDelay: `${0.2 + i * 0.12}s`, transformOrigin: `${b.x}px ${b.y}px` }}
+              />
+            ))}
+          </g>
 
-            <g className="lp-row" style={{ animationDelay: "0.2s" }}>
-              <rect x="44" y="116" width="20" height="20" rx="5" fill="var(--accent)" stroke="var(--primary)" />
-              <path className="lp-check" d="M48 126 l4 4 l8 -8" fill="none" stroke="var(--primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-              <rect x="76" y="120" width="220" height="12" rx="4" fill="var(--muted-foreground)" opacity="0.35" />
-              <rect x="320" y="120" width="120" height="12" rx="4" fill="url(#bar-grad)" opacity="0.7" />
+          {/* main card (tasks) */}
+          <g transform="translate(96 96)">
+            <rect width="400" height="300" rx="22" fill="url(#hero-card)" stroke="var(--border)" strokeWidth="1" />
+
+            {/* header */}
+            <g>
+              <rect width="400" height="56" rx="22" fill="url(#hero-accent)" />
+              <rect y="34" width="400" height="22" fill="url(#hero-accent)" />
+              <circle cx="22" cy="28" r="4" fill="white" opacity="0.9" />
+              <circle cx="38" cy="28" r="4" fill="white" opacity="0.6" />
+              <circle cx="54" cy="28" r="4" fill="white" opacity="0.35" />
+              <rect x="80" y="22" width="120" height="12" rx="6" fill="white" opacity="0.85" />
+              <rect x="340" y="20" width="44" height="16" rx="8" fill="white" opacity="0.25" />
             </g>
 
-            <g className="lp-row" style={{ animationDelay: "0.6s" }}>
-              <rect x="44" y="156" width="20" height="20" rx="5" fill="var(--accent)" stroke="var(--primary)" />
-              <path className="lp-check" style={{ animationDelay: "0.9s" }} d="M48 166 l4 4 l8 -8" fill="none" stroke="var(--primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-              <rect x="76" y="160" width="180" height="12" rx="4" fill="var(--muted-foreground)" opacity="0.35" />
-              <rect x="320" y="160" width="80" height="12" rx="4" fill="url(#bar-grad)" opacity="0.55" />
-            </g>
+            {/* task rows */}
+            {[
+              { y: 82, w: 220, badge: 88, done: true, delay: 0.2 },
+              { y: 120, w: 200, badge: 60, done: true, delay: 0.4 },
+              { y: 158, w: 240, badge: 100, done: false, delay: 0.6 },
+              { y: 196, w: 180, badge: 48, done: false, delay: 0.8 },
+            ].map((r, i) => (
+              <g key={i} className="lp-row" style={{ animationDelay: `${r.delay}s` }}>
+                <rect
+                  x={20}
+                  y={r.y}
+                  width={22}
+                  height={22}
+                  rx={6}
+                  fill={r.done ? "var(--primary)" : "var(--card)"}
+                  stroke={r.done ? "var(--primary)" : "var(--border)"}
+                  strokeWidth="1.5"
+                />
+                {r.done && (
+                  <path
+                    className="lp-check"
+                    style={{ animationDelay: `${r.delay + 0.3}s` }}
+                    d={`M${24} ${r.y + 11} l4 4 l10 -10`}
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="2.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )}
+                <rect
+                  x={56}
+                  y={r.y + 5}
+                  width={r.w}
+                  height={12}
+                  rx={6}
+                  fill="var(--muted-foreground)"
+                  opacity={r.done ? 0.35 : 0.55}
+                />
+                <rect
+                  x={400 - r.badge - 20}
+                  y={r.y + 5}
+                  width={r.badge}
+                  height={12}
+                  rx={6}
+                  fill="url(#hero-accent)"
+                  opacity={r.done ? 0.65 : 0.85}
+                />
+              </g>
+            ))}
 
-            <g className="lp-row" style={{ animationDelay: "1.0s" }}>
-              <rect x="44" y="196" width="20" height="20" rx="5" fill="var(--card)" stroke="var(--border)" />
-              <rect x="76" y="200" width="240" height="12" rx="4" fill="var(--muted-foreground)" opacity="0.25" />
-              <rect x="340" y="200" width="100" height="12" rx="4" fill="var(--muted-foreground)" opacity="0.2" />
-            </g>
-
-            <g className="lp-row" style={{ animationDelay: "1.3s" }}>
-              <rect x="44" y="236" width="20" height="20" rx="5" fill="var(--card)" stroke="var(--border)" />
-              <rect x="76" y="240" width="200" height="12" rx="4" fill="var(--muted-foreground)" opacity="0.25" />
-              <rect x="300" y="240" width="60" height="12" rx="4" fill="var(--muted-foreground)" opacity="0.2" />
-            </g>
-
-            <g transform="translate(44 282)">
-              <rect x="0" y="0" width="432" height="98" rx="10" fill="var(--muted)" opacity="0.4" />
-              {Array.from({ length: 7 }).map((_, c) => (
-                <g key={c}>
-                  {Array.from({ length: 4 }).map((_, r) => {
-                    const intensity = (c * r + c) % 5
-                    const opacity = 0.15 + intensity * 0.18
-                    const delay = (c * 4 + r) * 0.05
-                    return (
-                      <rect
-                        key={r}
-                        x={14 + c * 58}
-                        y={14 + r * 18}
-                        width={44}
-                        height={12}
-                        rx={3}
-                        fill="var(--primary)"
-                        opacity={opacity}
-                        className="lp-cell"
-                        style={{ animationDelay: `${delay}s` }}
-                      />
-                    )
-                  })}
-                </g>
+            {/* analytics strip */}
+            <g transform="translate(20 238)">
+              <rect width="360" height="48" rx="12" fill="url(#hero-soft)" />
+              {[14, 28, 18, 36, 24, 40, 22, 32, 16, 30, 20, 38].map((h, i) => (
+                <rect
+                  key={i}
+                  x={12 + i * 28}
+                  y={48 - 8 - h}
+                  width={16}
+                  height={h}
+                  rx={3}
+                  fill="var(--primary)"
+                  opacity={0.55 + (i % 3) * 0.12}
+                  className="lp-bar"
+                  style={{ transformOrigin: `${12 + i * 28}px ${40}px`, animationDelay: `${0.5 + i * 0.04}s` }}
+                />
               ))}
             </g>
           </g>
 
-          <g className="lp-bubble" style={{ animationDelay: "0.4s" }}>
-            <circle cx="478" cy="80" r="22" fill="var(--chart-4)" />
-            <path d="M469 80 l6 6 l12 -12" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          {/* AI sparkle bubble */}
+          <g className="lp-bubble" style={{ animationDelay: "0.5s" }}>
+            <circle cx="486" cy="92" r="28" fill="url(#hero-accent)" />
+            <circle cx="486" cy="92" r="36" fill="var(--primary)" opacity="0.18" filter="url(#hero-glow)" />
+            <path
+              d="M486 76 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 z"
+              fill="white"
+            />
+            <path
+              d="M504 108 l1.6 4 l4 1.6 l-4 1.6 l-1.6 4 l-1.6 -4 l-4 -1.6 l4 -1.6 z"
+              fill="white"
+              opacity="0.85"
+            />
           </g>
-          <g className="lp-bubble" style={{ animationDelay: "1.0s" }}>
-            <circle cx="40" cy="370" r="16" fill="var(--chart-3)" opacity="0.95" />
-            <path d="M33 370 l5 5 l9 -10" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+
+          {/* user avatar bubble */}
+          <g className="lp-bubble" style={{ animationDelay: "0.9s" }}>
+            <circle cx="76" cy="402" r="22" fill="var(--chart-3)" />
+            <circle cx="76" cy="394" r="7" fill="white" opacity="0.95" />
+            <path d="M62 412 a14 14 0 0 1 28 0" fill="white" opacity="0.9" />
+          </g>
+
+          {/* check bubble */}
+          <g className="lp-bubble" style={{ animationDelay: "1.2s" }}>
+            <circle cx="500" cy="380" r="20" fill="var(--chart-4)" />
+            <path
+              d="M491 380 l6 6 l12 -12"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </g>
         </svg>
       </div>
@@ -295,6 +388,15 @@ function ChartIcon() {
       <rect x="8" y="16" width="3" height="10" rx="1" className="lp-bar" style={{ transformOrigin: "9.5px 26px" }} />
       <rect x="14" y="10" width="3" height="16" rx="1" className="lp-bar" style={{ transformOrigin: "15.5px 26px", animationDelay: "0.15s" }} />
       <rect x="20" y="18" width="3" height="8" rx="1" className="lp-bar" style={{ transformOrigin: "21.5px 26px", animationDelay: "0.3s" }} />
+    </svg>
+  )
+}
+
+function SparkIcon() {
+  return (
+    <svg viewBox="0 0 32 32" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 4l2.4 6.4L24 12l-5.6 1.6L16 20l-2.4-6.4L8 12l5.6-1.6L16 4z" />
+      <path d="M24 20l1 2.6L28 24l-3 1.4L24 28l-1-2.6L20 24l3-1.4L24 20z" />
     </svg>
   )
 }
@@ -369,6 +471,7 @@ const landingCss = `
 .lp-d3 { animation-delay: 0.32s; }
 .lp-d4 { animation-delay: 0.46s; }
 .lp-d5 { animation-delay: 0.6s; }
+.lp-d6 { animation-delay: 0.74s; }
 
 .lp-float { animation: lp-float 6s ease-in-out infinite; }
 

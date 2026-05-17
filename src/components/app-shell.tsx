@@ -1,21 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MainContent } from "@/components/main-content";
 import { Sidebar } from "@/components/sidebar";
+import { AiChat } from "@/components/ai-chat";
 import {
   ShortcutsDialog,
   useShortcutsController,
 } from "@/components/shortcuts-dialog";
+import { useHydrated } from "@/components/providers";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { setDarkMode, setSidebarOpen } from "@/lib/settingsSlice";
+import { undoAction, redoAction } from "@/lib/undo";
+
+const INTRO_DELAY_MS = 450;
 
 export function AppShell() {
   const sidebarOpenPersisted = useAppSelector((s) => s.settings.sidebarOpen);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [introOpen, setIntroOpen] = useState(true);
   const dispatch = useAppDispatch();
   const darkMode = useAppSelector((s) => s.settings.darkMode);
+  const hydrated = useHydrated();
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -28,7 +35,49 @@ export function AppShell() {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  const sidebarOpen = isMobile ? mobileOpen : sidebarOpenPersisted;
+  const introDoneRef = useRef(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) {
+        return;
+      }
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) {
+        e.preventDefault();
+        dispatch(undoAction());
+      } else if ((k === "z" && e.shiftKey) || k === "y") {
+        e.preventDefault();
+        dispatch(redoAction());
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (introDoneRef.current) {
+      // After intro completed, follow Redux state directly.
+      setIntroOpen(sidebarOpenPersisted);
+      return;
+    }
+    if (sidebarOpenPersisted) {
+      introDoneRef.current = true;
+      setIntroOpen(true);
+      return;
+    }
+    const t = setTimeout(() => {
+      introDoneRef.current = true;
+      setIntroOpen(false);
+    }, INTRO_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [hydrated, sidebarOpenPersisted]);
+
+  const sidebarOpen = isMobile ? mobileOpen : introOpen;
   const toggleSidebar = () => {
     if (isMobile) setMobileOpen((v) => !v);
     else dispatch(setSidebarOpen(!sidebarOpenPersisted));
@@ -64,6 +113,7 @@ export function AppShell() {
       )}
       <Sidebar open={sidebarOpen} onToggle={toggleSidebar} isMobile={isMobile} />
       <ShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <AiChat />
     </div>
   );
 }

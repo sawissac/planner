@@ -218,6 +218,11 @@ const todoSlice = createSlice({
       const to = f.todos.findIndex((i) => i.id === toId)
       if (from === -1 || to === -1) return
       const [moved] = f.todos.splice(from, 1)
+      // Drag across groups: adopt target's groupId.
+      const target = f.todos[to > from ? to - 1 : to]
+      if (target && target.groupId !== moved.groupId) {
+        moved.groupId = target.groupId
+      }
       f.todos.splice(to, 0, moved)
     },
     reorderGroup(state, action: PayloadAction<{ fromId: string; toId: string }>) {

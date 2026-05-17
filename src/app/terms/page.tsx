@@ -28,7 +28,9 @@ export default function TermsPage() {
         <p>
           Planner is a personal task management web application. Data is stored
           locally in your browser. Optional Google Drive sync stores a backup in
-          your own Drive account, in a hidden app-specific folder.
+          your own Drive account, in a hidden app-specific folder. An optional
+          in-app AI planning assistant can call third-party large-language-model
+          APIs using an API key you supply.
         </p>
 
         <h2 className="text-xl font-semibold mt-8">3. Your account and data</h2>
@@ -69,6 +71,15 @@ export default function TermsPage() {
           Drive sync depends on Google services governed by Google&apos;s own
           terms and privacy policies. Planner is not affiliated with or endorsed
           by Google.
+        </p>
+        <p>
+          The AI planning assistant depends on a third-party LLM provider you
+          choose (Google Gemini, OpenRouter, or Groq). Your use of those APIs
+          is governed by that provider&apos;s terms and privacy policies. You
+          are responsible for the API key, any usage costs or quotas, and the
+          content of prompts you send. Planner is not affiliated with or
+          endorsed by these providers. AI output may be inaccurate; verify
+          before acting on it.
         </p>
 
         <h2 className="text-xl font-semibold mt-8">8. Termination</h2>

@@ -31,9 +31,11 @@ import {
   Filter,
   Folder,
   GripVertical,
+  Pencil,
   Plus,
   Search,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -48,6 +50,7 @@ import {
   createGroup,
   deleteGroup,
   deleteTodo,
+  renameGroup,
   reorder,
   toggleTodo,
   updateTodo,
@@ -60,6 +63,7 @@ import {
   setGlobalFilter as setPersistedGlobalFilter,
   setGroupFilter as setPersistedGroupFilter,
   setPageSize as setPersistedPageSize,
+  setPriorityFilter as setPersistedPriorityFilter,
   setSorting as setPersistedSorting,
   type FontSize,
   type FontWeight,
@@ -68,6 +72,7 @@ import { cn } from "@/lib/utils";
 import { useTouchRowDrag } from "@/lib/use-touch-row-drag";
 import { DateRangeCell } from "@/components/date-range-cell";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PriorityCell } from "@/components/priority-cell";
 import { AssigneeCell } from "@/components/assignee-cell";
 import { TodoRowActions } from "@/components/todo-row-actions";
@@ -262,6 +267,65 @@ function GroupFilterHeader({
   );
 }
 
+function PriorityFilterHeader({
+  options,
+  value,
+  onChange,
+}: {
+  options: string[];
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const active = value !== null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+          >
+            Priority
+            <Filter
+              className={cn(
+                "size-3",
+                active ? "text-primary" : "opacity-40",
+              )}
+            />
+          </button>
+        }
+      />
+      <DropdownMenuContent align="start" className="w-44">
+        <DropdownMenuItem
+          onClick={() => onChange(null)}
+          className="flex items-center gap-2"
+        >
+          <span className="flex-1">All priorities</span>
+          {value === null && <Check className="size-3" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => onChange("__none__")}
+          className="flex items-center gap-2"
+        >
+          <span className="flex-1 text-muted-foreground">No priority</span>
+          {value === "__none__" && <Check className="size-3" />}
+        </DropdownMenuItem>
+        {options.length > 0 && <DropdownMenuSeparator />}
+        {options.map((p) => (
+          <DropdownMenuItem
+            key={p}
+            onClick={() => onChange(p)}
+            className="flex items-center gap-2"
+          >
+            <span className="flex-1 truncate">{p}</span>
+            {value === p && <Check className="size-3 shrink-0" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
   const dispatch = useAppDispatch();
   const currentGroup = groups.find((g) => g.id === todo.groupId) ?? null;
@@ -326,9 +390,30 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  setPrompt({
+                    open: true,
+                    title: "Rename group",
+                    placeholder: "Group name",
+                    defaultValue: g.name,
+                    confirmLabel: "Rename",
+                    onConfirm: (name) => {
+                      dispatch(renameGroup({ id: g.id, name }));
+                    },
+                  });
+                }}
+                className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label={`Rename ${g.name}`}
+              >
+                <Pencil className="size-3" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
                   dispatch(deleteGroup(g.id));
                 }}
                 className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                aria-label={`Delete ${g.name}`}
               >
                 <Trash2 className="size-3" />
               </button>
@@ -352,6 +437,106 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
   );
 }
 
+function BulkActionBar({
+  count,
+  groups,
+  priorities,
+  onClear,
+  onDelete,
+  onMarkDone,
+  onMarkUndone,
+  onSetGroup,
+  onSetPriority,
+}: {
+  count: number;
+  groups: Group[];
+  priorities: string[];
+  onClear: () => void;
+  onDelete: () => void;
+  onMarkDone: () => void;
+  onMarkUndone: () => void;
+  onSetGroup: (groupId: string | null) => void;
+  onSetPriority: (priority: string | null) => void;
+}) {
+  return (
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-border bg-popover px-2 py-1 shadow-lg">
+      <span className="px-2 text-xs font-medium">{count} selected</span>
+      <div className="h-4 w-px bg-border" />
+      <Button size="sm" variant="ghost" onClick={onMarkDone} className="h-7 gap-1 text-xs">
+        <Check className="size-3" /> Done
+      </Button>
+      <Button size="sm" variant="ghost" onClick={onMarkUndone} className="h-7 gap-1 text-xs">
+        <Check className="size-3 opacity-40" /> Reopen
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
+              <Folder className="size-3" /> Group
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="center" className="w-44">
+          <DropdownMenuItem onClick={() => onSetGroup(null)}>
+            <span className="text-muted-foreground">No group</span>
+          </DropdownMenuItem>
+          {groups.length > 0 && <DropdownMenuSeparator />}
+          {groups.map((g) => (
+            <DropdownMenuItem key={g.id} onClick={() => onSetGroup(g.id)}>
+              <Folder className="size-3 text-muted-foreground" />
+              <span className="truncate">{g.name}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DropdownMenuPriority priorities={priorities} onPick={onSetPriority} />
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={onDelete}
+        className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+      >
+        <Trash2 className="size-3" /> Delete
+      </Button>
+      <div className="h-4 w-px bg-border" />
+      <Button size="icon-sm" variant="ghost" onClick={onClear} aria-label="Clear selection">
+        <X className="size-3" />
+      </Button>
+    </div>
+  );
+}
+
+function DropdownMenuPriority({
+  priorities,
+  onPick,
+}: {
+  priorities: string[];
+  onPick: (p: string | null) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
+            <Filter className="size-3" /> Priority
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="center" className="w-44">
+        <DropdownMenuItem onClick={() => onPick(null)}>
+          <span className="text-muted-foreground">No priority</span>
+        </DropdownMenuItem>
+        {priorities.length > 0 && <DropdownMenuSeparator />}
+        {priorities.map((p) => (
+          <DropdownMenuItem key={p} onClick={() => onPick(p)}>
+            {p}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function TodoTable() {
   const activeFile = useAppSelector((s) => {
     const id = s.todos.activeFileId;
@@ -364,6 +549,8 @@ export function TodoTable() {
   const focusMode = useAppSelector((s) => s.settings.focusMode);
   const globalFilter = useAppSelector((s) => s.settings.globalFilter);
   const groupFilter = useAppSelector((s) => s.settings.groupFilter);
+  const priorityFilter = useAppSelector((s) => s.settings.priorityFilter);
+  const priorityOptions = useAppSelector((s) => s.settings.priorityOptions);
   const sorting = useAppSelector((s) => s.settings.sorting) as SortingState;
   const persistedPageSize = useAppSelector((s) => s.settings.pageSize);
   const dispatch = useAppDispatch();
@@ -398,6 +585,10 @@ export function TodoTable() {
   );
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    if (focusMode && selected.size > 0) setSelected(new Set());
+  }, [focusMode, selected.size]);
   const [draft, setDraft] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
@@ -437,9 +628,16 @@ export function TodoTable() {
     return todos.filter((t) => t.groupId === groupFilter);
   }, [todos, groupFilter]);
 
+  const filteredByPriority = useMemo(() => {
+    if (priorityFilter === null) return filteredByGroup;
+    if (priorityFilter === "__none__")
+      return filteredByGroup.filter((t) => !t.priority);
+    return filteredByGroup.filter((t) => t.priority === priorityFilter);
+  }, [filteredByGroup, priorityFilter]);
+
   const sortedTodos = useMemo(() => {
-    if (sorting.length === 0) return filteredByGroup;
-    return [...filteredByGroup].sort((a, b) => {
+    if (sorting.length === 0) return filteredByPriority;
+    return [...filteredByPriority].sort((a, b) => {
       for (const { id, desc } of sorting) {
         let cmp = 0;
         if (id === "title") cmp = a.title.localeCompare(b.title);
@@ -450,7 +648,7 @@ export function TodoTable() {
       }
       return 0;
     });
-  }, [filteredByGroup, sorting]);
+  }, [filteredByPriority, sorting]);
 
   const meta: RowMeta = {
     editingId,
@@ -475,6 +673,48 @@ export function TodoTable() {
         enableResizing: false,
         cell: () => (
           <GripVertical className="size-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+        ),
+      },
+      {
+        id: "select",
+        header: () => {
+          const ids = sortedTodos.map((t) => t.id);
+          const allSelected =
+            ids.length > 0 && ids.every((id) => selected.has(id));
+          const someSelected =
+            !allSelected && ids.some((id) => selected.has(id));
+          return (
+            <div onClick={(e) => e.stopPropagation()} className="flex">
+              <Checkbox
+                checked={allSelected}
+                indeterminate={someSelected}
+                onCheckedChange={(checked) => {
+                  setSelected(() =>
+                    checked === true ? new Set(ids) : new Set(),
+                  );
+                }}
+                aria-label="Select all"
+              />
+            </div>
+          );
+        },
+        size: 40,
+        enableResizing: false,
+        cell: ({ row }) => (
+          <div onClick={(e) => e.stopPropagation()} className="flex">
+            <Checkbox
+              checked={selected.has(row.original.id)}
+              onCheckedChange={(checked) => {
+                setSelected((prev) => {
+                  const next = new Set(prev);
+                  if (checked === true) next.add(row.original.id);
+                  else next.delete(row.original.id);
+                  return next;
+                });
+              }}
+              aria-label="Select row"
+            />
+          </div>
         ),
       },
       {
@@ -541,7 +781,16 @@ export function TodoTable() {
       },
       {
         id: "priority",
-        header: "Priority",
+        header: () => (
+          <PriorityFilterHeader
+            options={priorityOptions}
+            value={priorityFilter}
+            onChange={(v) => {
+              dispatch(setPersistedPriorityFilter(v));
+              setPagination((p) => ({ ...p, pageIndex: 0 }));
+            }}
+          />
+        ),
         size: 200,
         minSize: 100,
         cell: ({ row }) => (
@@ -637,7 +886,15 @@ export function TodoTable() {
         ),
       },
     ],
-    [dispatch, groups, groupFilter],
+    [
+      dispatch,
+      groups,
+      groupFilter,
+      priorityFilter,
+      priorityOptions,
+      selected,
+      sortedTodos,
+    ],
   );
 
   const table = useReactTable({
@@ -651,7 +908,7 @@ export function TodoTable() {
       columnSizing: persistedSizing,
       pagination,
       globalFilter,
-      columnVisibility: {},
+      columnVisibility: { select: !focusMode },
     },
     onGlobalFilterChange: setGlobalFilter,
     meta,
@@ -753,13 +1010,43 @@ export function TodoTable() {
     );
   }
 
+  const bulkDelete = () => {
+    for (const id of selected) dispatch(deleteTodo(id));
+    setSelected(new Set());
+  };
+  const bulkSetDone = (done: boolean) => {
+    for (const id of selected) dispatch(updateTodo({ id, done }));
+    setSelected(new Set());
+  };
+  const bulkSetGroup = (groupId: string | null) => {
+    for (const id of selected) dispatch(updateTodo({ id, groupId }));
+    setSelected(new Set());
+  };
+  const bulkSetPriority = (priority: string | null) => {
+    for (const id of selected) dispatch(updateTodo({ id, priority }));
+    setSelected(new Set());
+  };
+
   return (
     <div
       className={cn(
-        "rounded-lg border flex flex-col max-h-[calc(100vh-7rem)] w-full transition-colors",
+        "rounded-lg border flex flex-col max-h-[calc(100vh-7rem)] w-full transition-colors relative",
         focusMode ? "border-transparent" : "border-border",
       )}
     >
+      {selected.size > 0 && (
+        <BulkActionBar
+          count={selected.size}
+          groups={groups}
+          priorities={priorityOptions}
+          onClear={() => setSelected(new Set())}
+          onDelete={bulkDelete}
+          onMarkDone={() => bulkSetDone(true)}
+          onMarkUndone={() => bulkSetDone(false)}
+          onSetGroup={bulkSetGroup}
+          onSetPriority={bulkSetPriority}
+        />
+      )}
       {/* Search bar — outside scroll, never clips */}
       <div
         className={cn(
@@ -855,9 +1142,12 @@ export function TodoTable() {
                 />
               </td>
               <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-background text-muted-foreground border-b border-border z-30" />
+              {!focusMode && (
+                <td className="px-3 py-2 align-middle sticky left-[72px] top-0 bg-background text-muted-foreground border-b border-border z-30" />
+              )}
               <td
                 className="px-3 py-2 align-middle sticky top-0 bg-background text-muted-foreground border-b border-border z-20"
-                colSpan={columns.length - 2}
+                colSpan={columns.length - (focusMode ? 2 : 3)}
               >
                 <input
                   value={newTitle}
