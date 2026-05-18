@@ -10,7 +10,7 @@ import {
 } from "@/components/shortcuts-dialog";
 import { useHydrated } from "@/components/providers";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { setDarkMode, setSidebarOpen } from "@/lib/settingsSlice";
+import { setDarkMode, setFocusMode, setSidebarOpen } from "@/lib/settingsSlice";
 import { undoAction, redoAction } from "@/lib/undo";
 
 const INTRO_DELAY_MS = 450;
@@ -22,6 +22,7 @@ export function AppShell() {
   const [introOpen, setIntroOpen] = useState(true);
   const dispatch = useAppDispatch();
   const darkMode = useAppSelector((s) => s.settings.darkMode);
+  const focusMode = useAppSelector((s) => s.settings.focusMode);
   const hydrated = useHydrated();
 
   useEffect(() => {
@@ -88,11 +89,13 @@ export function AppShell() {
     else document.documentElement.requestFullscreen?.();
   };
   const toggleDark = () => dispatch(setDarkMode(!darkMode));
+  const toggleFocus = () => dispatch(setFocusMode(!focusMode));
 
   const { open: helpOpen, setOpen: setHelpOpen } = useShortcutsController({
     onToggleSidebar: toggleSidebar,
     onToggleFullscreen: toggleFullscreen,
     onToggleDark: toggleDark,
+    onToggleFocus: toggleFocus,
   });
 
   return (

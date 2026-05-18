@@ -21,6 +21,7 @@ const GROUPS: { label: string; items: Shortcut[] }[] = [
       { keys: ["Shift", "F"], desc: "Toggle fullscreen" },
       { keys: ["Shift", "S"], desc: "Toggle sidebar" },
       { keys: ["Shift", "D"], desc: "Toggle dark mode" },
+      { keys: ["Shift", "Z"], desc: "Toggle focus mode" },
       { keys: ["Esc"], desc: "Close dialog / cancel edit" },
     ],
   },
@@ -112,10 +113,12 @@ export function useShortcutsController({
   onToggleSidebar,
   onToggleFullscreen,
   onToggleDark,
+  onToggleFocus,
 }: {
   onToggleSidebar?: () => void;
   onToggleFullscreen?: () => void;
   onToggleDark?: () => void;
+  onToggleFocus?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -139,11 +142,14 @@ export function useShortcutsController({
         } else if (e.key === "D" || e.key === "d") {
           e.preventDefault();
           onToggleDark?.();
+        } else if (e.key === "Z" || e.key === "z") {
+          e.preventDefault();
+          onToggleFocus?.();
         }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onToggleSidebar, onToggleFullscreen, onToggleDark]);
+  }, [onToggleSidebar, onToggleFullscreen, onToggleDark, onToggleFocus]);
   return { open, setOpen };
 }

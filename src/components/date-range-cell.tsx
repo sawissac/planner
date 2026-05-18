@@ -16,16 +16,55 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { useAppDispatch } from "@/lib/hooks";
 import { updateTodo } from "@/lib/todoSlice";
+import { useIsMobile } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 function pad(n: number): string {
   return n.toString().padStart(2, "0");
 }
 
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
 function fmtDate(d: Date): string {
-  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
+  return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function isDayStart(d: Date): boolean {
+  return d.getHours() === 0 && d.getMinutes() === 0;
+}
+
+function isDayEnd(d: Date): boolean {
+  return d.getHours() === 23 && d.getMinutes() === 59;
 }
 
 function to12(h24: number): { h12: number; ampm: "AM" | "PM" } {
@@ -196,6 +235,7 @@ export function DateRangeCell({
 }) {
   const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
   const fromDate = new Date(from);
   const toDate = new Date(to);
   const range: DateRange = { from: fromDate, to: toDate };
@@ -213,47 +253,79 @@ export function DateRangeCell({
     commit(f, t);
   };
 
-  const label = `${fmtFull(fromDate)} → ${fmtFull(toDate)}`;
+  const fullDay = isDayStart(fromDate) && isDayEnd(toDate);
+  const sameDay = isSameDay(fromDate, toDate);
+  let label: string;
+  if (fullDay && sameDay) {
+    label = fmtDate(fromDate);
+  } else if (fullDay) {
+    label = `${fmtDate(fromDate)} → ${fmtDate(toDate)}`;
+  } else if (sameDay) {
+    label = `${fmtDate(fromDate)} ${fmtTime12(fromDate)} → ${fmtTime12(toDate)}`;
+  } else {
+    label = `${fmtFull(fromDate)} → ${fmtFull(toDate)}`;
+  }
+
+  const triggerBtn = (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={(e) => e.stopPropagation()}
+      className="h-7 w-full justify-start px-2 text-xs font-normal text-muted-foreground"
+    >
+      <CalendarDays className="size-3" />
+      <span className="truncate">{label}</span>
+    </Button>
+  );
+
+  const body = (compact: boolean) => (
+    <>
+      <Calendar
+        mode="range"
+        selected={range}
+        onSelect={onSelect}
+        numberOfMonths={compact ? 1 : 2}
+        defaultMonth={range.from}
+        className="mx-auto"
+      />
+      <div className="flex flex-col gap-2 border-t border-border px-3 py-3">
+        <TimeRow
+          label="Start"
+          value={fromDate}
+          onChange={(h, m) => commit(withTime(fromDate, h, m), toDate)}
+        />
+        <TimeRow
+          label="End"
+          value={toDate}
+          onChange={(h, m) => commit(fromDate, withTime(toDate, h, m))}
+        />
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerTrigger asChild>{triggerBtn}</DrawerTrigger>
+        <DrawerContent onClick={(e) => e.stopPropagation()}>
+          <DrawerHeader className="border-b border-border">
+            <DrawerTitle>Date & time</DrawerTitle>
+          </DrawerHeader>
+          <div className="overflow-y-auto pb-4">{body(true)}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => e.stopPropagation()}
-            className="h-7 w-full justify-start px-2 text-xs font-normal text-muted-foreground"
-          >
-            <CalendarDays className="size-3" />
-            <span className="truncate">{label}</span>
-          </Button>
-        }
-      />
+      <PopoverTrigger render={triggerBtn} />
       <PopoverContent
         className="w-auto p-0"
         align="start"
         onClick={(e) => e.stopPropagation()}
       >
-        <Calendar
-          mode="range"
-          selected={range}
-          onSelect={onSelect}
-          numberOfMonths={2}
-          defaultMonth={range.from}
-        />
-        <div className="flex flex-col gap-2 border-t border-border px-3 py-3">
-          <TimeRow
-            label="Start"
-            value={fromDate}
-            onChange={(h, m) => commit(withTime(fromDate, h, m), toDate)}
-          />
-          <TimeRow
-            label="End"
-            value={toDate}
-            onChange={(h, m) => commit(fromDate, withTime(toDate, h, m))}
-          />
-        </div>
+        {body(false)}
       </PopoverContent>
     </Popover>
   );

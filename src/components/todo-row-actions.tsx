@@ -41,8 +41,14 @@ import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { deleteTodo, updateTodo, type Todo } from "@/lib/todoSlice";
 
+const loadThoughtEditorModule = () => import("@/components/thought-editor");
+
+export function preloadThoughtEditor() {
+  void loadThoughtEditorModule();
+}
+
 const ThoughtEditor = dynamic(
-  () => import("@/components/thought-editor").then((m) => m.ThoughtEditor),
+  () => loadThoughtEditorModule().then((m) => m.ThoughtEditor),
   {
     ssr: false,
     loading: () => (
@@ -393,6 +399,18 @@ function EditDatesDialog({
 function ThoughtForm({ todo, onClose }: { todo: Todo; onClose: () => void }) {
   const dispatch = useAppDispatch();
   const [value, setValue] = useState(todo.thought ?? "");
+  const [editorReady, setEditorReady] = useState(false);
+
+  useEffect(() => {
+    let rafId = 0;
+    const timeoutId = window.setTimeout(() => {
+      rafId = window.requestAnimationFrame(() => setEditorReady(true));
+    }, 320);
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   const save = () => {
     dispatch(updateTodo({ id: todo.id, thought: value }));
@@ -402,7 +420,12 @@ function ThoughtForm({ todo, onClose }: { todo: Todo; onClose: () => void }) {
   return (
     <>
       <DrawerHeader className="flex flex-row items-center justify-between gap-2 border-b border-border">
-        <DrawerTitle>Thought</DrawerTitle>
+        <DrawerTitle className="truncate">
+          Thought on{" "}
+          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">
+            {todo.title?.trim() || "(untitled)"}
+          </span>
+        </DrawerTitle>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onClose}>
             Cancel
@@ -414,14 +437,20 @@ function ThoughtForm({ todo, onClose }: { todo: Todo; onClose: () => void }) {
       </DrawerHeader>
       <div className="flex-1 overflow-auto">
         <div className=" bg-background">
-          <ThoughtEditor markdown={value} onChange={setValue} />
+          {editorReady ? (
+            <ThoughtEditor markdown={value} onChange={setValue} />
+          ) : (
+            <div className="min-h-40 px-3 py-2 text-sm text-muted-foreground">
+              Loading editor…
+            </div>
+          )}
         </div>
       </div>
     </>
   );
 }
 
-function ThoughtDialog({
+export function ThoughtDialog({
   todo,
   open,
   onOpenChange,
@@ -471,7 +500,12 @@ export function TodoRowActions({ id }: { id: string }) {
           }
         />
         <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuItem onClick={() => setThoughtOpen(true)}>
+          <DropdownMenuItem
+            onClick={() => setThoughtOpen(true)}
+            onMouseEnter={preloadThoughtEditor}
+            onFocus={preloadThoughtEditor}
+            onPointerDown={preloadThoughtEditor}
+          >
             <Lightbulb />
             Thought
           </DropdownMenuItem>

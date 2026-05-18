@@ -37,6 +37,12 @@ export const DEFAULT_PRIORITY_OPTIONS = [
   "deferred",
 ] as const
 
+export const DEFAULT_PROGRESS_OPTIONS = [
+  "Not Started",
+  "InProgress",
+  "Done",
+] as const
+
 export type TableSort = { id: string; desc: boolean }
 
 export type SettingsState = {
@@ -49,6 +55,7 @@ export type SettingsState = {
   columnSizing: Record<string, number>
   userColumnSizing: Record<string, number>
   priorityOptions: string[]
+  progressOptions: string[]
   focusMode: boolean
   darkMode: boolean
   pageSize: number
@@ -56,7 +63,10 @@ export type SettingsState = {
   globalFilter: string
   groupFilter: string | null
   priorityFilter: string | null
+  progressFilter: string | null
   accentColor: string | null
+  activeTab: string
+  boardCompact: boolean
 }
 
 const initialState: SettingsState = {
@@ -69,6 +79,7 @@ const initialState: SettingsState = {
   columnSizing: {},
   userColumnSizing: {},
   priorityOptions: [...DEFAULT_PRIORITY_OPTIONS],
+  progressOptions: [...DEFAULT_PROGRESS_OPTIONS],
   focusMode: false,
   darkMode: false,
   pageSize: 30,
@@ -76,7 +87,10 @@ const initialState: SettingsState = {
   globalFilter: "",
   groupFilter: null,
   priorityFilter: null,
+  progressFilter: null,
   accentColor: null,
+  activeTab: "todo",
+  boardCompact: false,
 }
 
 const settingsSlice = createSlice({
@@ -120,6 +134,69 @@ const settingsSlice = createSlice({
         (p) => p !== action.payload,
       )
     },
+    renamePriorityOption(
+      state,
+      action: PayloadAction<{ from: string; to: string }>,
+    ) {
+      const { from, to } = action.payload
+      const next = to.trim()
+      if (!next || from === next) return
+      if ((DEFAULT_PRIORITY_OPTIONS as readonly string[]).includes(from)) return
+      if (
+        state.priorityOptions.some(
+          (p) => p.toLowerCase() === next.toLowerCase() && p !== from,
+        )
+      )
+        return
+      state.priorityOptions = state.priorityOptions.map((p) =>
+        p === from ? next : p,
+      )
+      if (state.priorityFilter === from) state.priorityFilter = next
+    },
+    addProgressOption(state, action: PayloadAction<string>) {
+      const v = action.payload.trim()
+      if (!v) return
+      if (!state.progressOptions.some((p) => p.toLowerCase() === v.toLowerCase())) {
+        state.progressOptions.push(v)
+      }
+    },
+    removeProgressOption(state, action: PayloadAction<string>) {
+      if ((DEFAULT_PROGRESS_OPTIONS as readonly string[]).includes(action.payload)) return
+      state.progressOptions = state.progressOptions.filter(
+        (p) => p !== action.payload,
+      )
+    },
+    reorderProgressOption(
+      state,
+      action: PayloadAction<{ from: string; to: string }>,
+    ) {
+      const { from, to } = action.payload
+      if (from === to) return
+      const fromIdx = state.progressOptions.indexOf(from)
+      const toIdx = state.progressOptions.indexOf(to)
+      if (fromIdx === -1 || toIdx === -1) return
+      const [moved] = state.progressOptions.splice(fromIdx, 1)
+      state.progressOptions.splice(toIdx, 0, moved)
+    },
+    renameProgressOption(
+      state,
+      action: PayloadAction<{ from: string; to: string }>,
+    ) {
+      const { from, to } = action.payload
+      const next = to.trim()
+      if (!next || from === next) return
+      if ((DEFAULT_PROGRESS_OPTIONS as readonly string[]).includes(from)) return
+      if (
+        state.progressOptions.some(
+          (p) => p.toLowerCase() === next.toLowerCase() && p !== from,
+        )
+      )
+        return
+      state.progressOptions = state.progressOptions.map((p) =>
+        p === from ? next : p,
+      )
+      if (state.progressFilter === from) state.progressFilter = next
+    },
     setFocusMode(state, action: PayloadAction<boolean>) {
       state.focusMode = action.payload
     },
@@ -141,8 +218,17 @@ const settingsSlice = createSlice({
     setPriorityFilter(state, action: PayloadAction<string | null>) {
       state.priorityFilter = action.payload
     },
+    setProgressFilter(state, action: PayloadAction<string | null>) {
+      state.progressFilter = action.payload
+    },
     setAccentColor(state, action: PayloadAction<string | null>) {
       state.accentColor = action.payload
+    },
+    setActiveTab(state, action: PayloadAction<string>) {
+      state.activeTab = action.payload
+    },
+    setBoardCompact(state, action: PayloadAction<boolean>) {
+      state.boardCompact = action.payload
     },
     replaceSettings(state, action: PayloadAction<SettingsState>) {
       state.tableFont = action.payload.tableFont
@@ -154,6 +240,7 @@ const settingsSlice = createSlice({
       state.columnSizing = action.payload.columnSizing
       state.userColumnSizing = action.payload.userColumnSizing ?? {}
       state.priorityOptions = action.payload.priorityOptions
+      state.progressOptions = action.payload.progressOptions ?? [...DEFAULT_PROGRESS_OPTIONS]
       state.focusMode = action.payload.focusMode ?? false
       state.darkMode = action.payload.darkMode ?? false
       state.pageSize = action.payload.pageSize ?? 30
@@ -161,7 +248,10 @@ const settingsSlice = createSlice({
       state.globalFilter = action.payload.globalFilter ?? ""
       state.groupFilter = action.payload.groupFilter ?? null
       state.priorityFilter = action.payload.priorityFilter ?? null
+      state.progressFilter = action.payload.progressFilter ?? null
       state.accentColor = action.payload.accentColor ?? null
+      state.activeTab = action.payload.activeTab ?? "todo"
+      state.boardCompact = action.payload.boardCompact ?? false
     },
   },
 })
@@ -177,6 +267,11 @@ export const {
   setUserColumnSizing,
   addPriorityOption,
   removePriorityOption,
+  renamePriorityOption,
+  addProgressOption,
+  removeProgressOption,
+  renameProgressOption,
+  reorderProgressOption,
   setFocusMode,
   setDarkMode,
   setPageSize,
@@ -184,7 +279,10 @@ export const {
   setGlobalFilter,
   setGroupFilter,
   setPriorityFilter,
+  setProgressFilter,
   setAccentColor,
+  setActiveTab,
+  setBoardCompact,
   replaceSettings,
 } = settingsSlice.actions
 export default settingsSlice.reducer

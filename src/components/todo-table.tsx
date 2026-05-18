@@ -64,6 +64,7 @@ import {
   setGroupFilter as setPersistedGroupFilter,
   setPageSize as setPersistedPageSize,
   setPriorityFilter as setPersistedPriorityFilter,
+  setProgressFilter as setPersistedProgressFilter,
   setSorting as setPersistedSorting,
   type FontSize,
   type FontWeight,
@@ -74,6 +75,7 @@ import { DateRangeCell } from "@/components/date-range-cell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PriorityCell } from "@/components/priority-cell";
+import { ProgressCell } from "@/components/progress-cell";
 import { AssigneeCell } from "@/components/assignee-cell";
 import { TodoRowActions } from "@/components/todo-row-actions";
 import { PromptDialog, type PromptState } from "@/components/prompt-dialog";
@@ -227,10 +229,7 @@ function GroupFilterHeader({
           >
             Group
             <Filter
-              className={cn(
-                "size-3",
-                active ? "text-primary" : "opacity-40",
-              )}
+              className={cn("size-3", active ? "text-primary" : "opacity-40")}
             />
           </button>
         }
@@ -287,10 +286,7 @@ function PriorityFilterHeader({
           >
             Priority
             <Filter
-              className={cn(
-                "size-3",
-                active ? "text-primary" : "opacity-40",
-              )}
+              className={cn("size-3", active ? "text-primary" : "opacity-40")}
             />
           </button>
         }
@@ -308,6 +304,62 @@ function PriorityFilterHeader({
           className="flex items-center gap-2"
         >
           <span className="flex-1 text-muted-foreground">No priority</span>
+          {value === "__none__" && <Check className="size-3" />}
+        </DropdownMenuItem>
+        {options.length > 0 && <DropdownMenuSeparator />}
+        {options.map((p) => (
+          <DropdownMenuItem
+            key={p}
+            onClick={() => onChange(p)}
+            className="flex items-center gap-2"
+          >
+            <span className="flex-1 truncate">{p}</span>
+            {value === p && <Check className="size-3 shrink-0" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ProgressFilterHeader({
+  options,
+  value,
+  onChange,
+}: {
+  options: string[];
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const active = value !== null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+          >
+            Progress
+            <Filter
+              className={cn("size-3", active ? "text-primary" : "opacity-40")}
+            />
+          </button>
+        }
+      />
+      <DropdownMenuContent align="start" className="w-44">
+        <DropdownMenuItem
+          onClick={() => onChange(null)}
+          className="flex items-center gap-2"
+        >
+          <span className="flex-1">All progress</span>
+          {value === null && <Check className="size-3" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => onChange("__none__")}
+          className="flex items-center gap-2"
+        >
+          <span className="flex-1 text-muted-foreground">No progress</span>
           {value === "__none__" && <Check className="size-3" />}
         </DropdownMenuItem>
         {options.length > 0 && <DropdownMenuSeparator />}
@@ -441,31 +493,45 @@ function BulkActionBar({
   count,
   groups,
   priorities,
+  progressOptions,
   onClear,
   onDelete,
   onMarkDone,
   onMarkUndone,
   onSetGroup,
   onSetPriority,
+  onSetProgress,
 }: {
   count: number;
   groups: Group[];
   priorities: string[];
+  progressOptions: string[];
   onClear: () => void;
   onDelete: () => void;
   onMarkDone: () => void;
   onMarkUndone: () => void;
   onSetGroup: (groupId: string | null) => void;
   onSetPriority: (priority: string | null) => void;
+  onSetProgress: (progress: string | null) => void;
 }) {
   return (
     <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-border bg-popover px-2 py-1 shadow-lg">
       <span className="px-2 text-xs font-medium">{count} selected</span>
       <div className="h-4 w-px bg-border" />
-      <Button size="sm" variant="ghost" onClick={onMarkDone} className="h-7 gap-1 text-xs">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={onMarkDone}
+        className="h-7 gap-1 text-xs"
+      >
         <Check className="size-3" /> Done
       </Button>
-      <Button size="sm" variant="ghost" onClick={onMarkUndone} className="h-7 gap-1 text-xs">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={onMarkUndone}
+        className="h-7 gap-1 text-xs"
+      >
         <Check className="size-3 opacity-40" /> Reopen
       </Button>
       <DropdownMenu>
@@ -490,6 +556,7 @@ function BulkActionBar({
         </DropdownMenuContent>
       </DropdownMenu>
       <DropdownMenuPriority priorities={priorities} onPick={onSetPriority} />
+      <DropdownMenuProgress options={progressOptions} onPick={onSetProgress} />
       <Button
         size="sm"
         variant="ghost"
@@ -499,7 +566,12 @@ function BulkActionBar({
         <Trash2 className="size-3" /> Delete
       </Button>
       <div className="h-4 w-px bg-border" />
-      <Button size="icon-sm" variant="ghost" onClick={onClear} aria-label="Clear selection">
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        onClick={onClear}
+        aria-label="Clear selection"
+      >
         <X className="size-3" />
       </Button>
     </div>
@@ -537,6 +609,37 @@ function DropdownMenuPriority({
   );
 }
 
+function DropdownMenuProgress({
+  options,
+  onPick,
+}: {
+  options: string[];
+  onPick: (p: string | null) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
+            <Filter className="size-3" /> Progress
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="center" className="w-44">
+        <DropdownMenuItem onClick={() => onPick(null)}>
+          <span className="text-muted-foreground">No progress</span>
+        </DropdownMenuItem>
+        {options.length > 0 && <DropdownMenuSeparator />}
+        {options.map((p) => (
+          <DropdownMenuItem key={p} onClick={() => onPick(p)}>
+            {p}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function TodoTable() {
   const activeFile = useAppSelector((s) => {
     const id = s.todos.activeFileId;
@@ -551,6 +654,8 @@ export function TodoTable() {
   const groupFilter = useAppSelector((s) => s.settings.groupFilter);
   const priorityFilter = useAppSelector((s) => s.settings.priorityFilter);
   const priorityOptions = useAppSelector((s) => s.settings.priorityOptions);
+  const progressFilter = useAppSelector((s) => s.settings.progressFilter);
+  const progressOptions = useAppSelector((s) => s.settings.progressOptions);
   const sorting = useAppSelector((s) => s.settings.sorting) as SortingState;
   const persistedPageSize = useAppSelector((s) => s.settings.pageSize);
   const dispatch = useAppDispatch();
@@ -580,8 +685,12 @@ export function TodoTable() {
   }, [pagination.pageSize, persistedPageSize, dispatch]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const { touchDragId, touchOverId, start: startTouchDrag } = useTouchRowDrag(
-    (from, to) => dispatch(reorder({ fromId: from, toId: to })),
+  const {
+    touchDragId,
+    touchOverId,
+    start: startTouchDrag,
+  } = useTouchRowDrag((from, to) =>
+    dispatch(reorder({ fromId: from, toId: to })),
   );
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -623,8 +732,7 @@ export function TodoTable() {
 
   const filteredByGroup = useMemo(() => {
     if (groupFilter === null) return todos;
-    if (groupFilter === "__none__")
-      return todos.filter((t) => !t.groupId);
+    if (groupFilter === "__none__") return todos.filter((t) => !t.groupId);
     return todos.filter((t) => t.groupId === groupFilter);
   }, [todos, groupFilter]);
 
@@ -635,9 +743,16 @@ export function TodoTable() {
     return filteredByGroup.filter((t) => t.priority === priorityFilter);
   }, [filteredByGroup, priorityFilter]);
 
+  const filteredByProgress = useMemo(() => {
+    if (progressFilter === null) return filteredByPriority;
+    if (progressFilter === "__none__")
+      return filteredByPriority.filter((t) => !t.progress);
+    return filteredByPriority.filter((t) => t.progress === progressFilter);
+  }, [filteredByPriority, progressFilter]);
+
   const sortedTodos = useMemo(() => {
-    if (sorting.length === 0) return filteredByPriority;
-    return [...filteredByPriority].sort((a, b) => {
+    if (sorting.length === 0) return filteredByProgress;
+    return [...filteredByProgress].sort((a, b) => {
       for (const { id, desc } of sorting) {
         let cmp = 0;
         if (id === "title") cmp = a.title.localeCompare(b.title);
@@ -648,7 +763,7 @@ export function TodoTable() {
       }
       return 0;
     });
-  }, [filteredByPriority, sorting]);
+  }, [filteredByProgress, sorting]);
 
   const meta: RowMeta = {
     editingId,
@@ -747,7 +862,10 @@ export function TodoTable() {
                   transition={{ type: "spring", stiffness: 600, damping: 20 }}
                   className="flex items-center justify-center"
                 >
-                  <Check className="size-3 text-primary-foreground" strokeWidth={3} />
+                  <Check
+                    className="size-3 text-primary-foreground"
+                    strokeWidth={3}
+                  />
                 </motion.span>
               )}
             </AnimatePresence>
@@ -795,6 +913,24 @@ export function TodoTable() {
         minSize: 100,
         cell: ({ row }) => (
           <PriorityCell id={row.original.id} priority={row.original.priority} />
+        ),
+      },
+      {
+        id: "progress",
+        header: () => (
+          <ProgressFilterHeader
+            options={progressOptions}
+            value={progressFilter}
+            onChange={(v) => {
+              dispatch(setPersistedProgressFilter(v));
+              setPagination((p) => ({ ...p, pageIndex: 0 }));
+            }}
+          />
+        ),
+        size: 200,
+        minSize: 100,
+        cell: ({ row }) => (
+          <ProgressCell id={row.original.id} progress={row.original.progress} />
         ),
       },
       {
@@ -892,6 +1028,8 @@ export function TodoTable() {
       groupFilter,
       priorityFilter,
       priorityOptions,
+      progressFilter,
+      progressOptions,
       selected,
       sortedTodos,
     ],
@@ -1026,11 +1164,15 @@ export function TodoTable() {
     for (const id of selected) dispatch(updateTodo({ id, priority }));
     setSelected(new Set());
   };
+  const bulkSetProgress = (progress: string | null) => {
+    for (const id of selected) dispatch(updateTodo({ id, progress }));
+    setSelected(new Set());
+  };
 
   return (
     <div
       className={cn(
-        "rounded-lg border flex flex-col max-h-[calc(100vh-7rem)] w-full transition-colors relative",
+        "rounded-lg border flex flex-col max-h-[calc(100vh-10rem)] w-full transition-colors relative",
         focusMode ? "border-transparent" : "border-border",
       )}
     >
@@ -1039,12 +1181,14 @@ export function TodoTable() {
           count={selected.size}
           groups={groups}
           priorities={priorityOptions}
+          progressOptions={progressOptions}
           onClear={() => setSelected(new Set())}
           onDelete={bulkDelete}
           onMarkDone={() => bulkSetDone(true)}
           onMarkUndone={() => bulkSetDone(false)}
           onSetGroup={bulkSetGroup}
           onSetPriority={bulkSetPriority}
+          onSetProgress={bulkSetProgress}
         />
       )}
       {/* Search bar — outside scroll, never clips */}
@@ -1141,9 +1285,9 @@ export function TodoTable() {
                   )}
                 />
               </td>
-              <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-background text-muted-foreground border-b border-border z-30" />
+              <td className="px-3 py-2 align-middle  bg-background text-muted-foreground border-b border-border z-30" />
               {!focusMode && (
-                <td className="px-3 py-2 align-middle sticky left-[72px] top-0 bg-background text-muted-foreground border-b border-border z-30" />
+                <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-background text-muted-foreground border-b border-border z-30" />
               )}
               <td
                 className="px-3 py-2 align-middle sticky top-0 bg-background text-muted-foreground border-b border-border z-20"
@@ -1242,7 +1386,9 @@ export function TodoTable() {
                       className={cn(
                         "transition-colors outline-none hover:bg-muted/50",
                         (dragId === id || touchDragId === id) && "opacity-40",
-                        ((overId === id && dragId !== id) || (touchOverId === id && touchDragId !== id)) && "bg-primary/20",
+                        ((overId === id && dragId !== id) ||
+                          (touchOverId === id && touchDragId !== id)) &&
+                          "bg-primary/20",
                         isFocused && "bg-primary/2",
                       )}
                     >
@@ -1251,7 +1397,9 @@ export function TodoTable() {
                           key={cell.id}
                           style={{ width: cell.column.getSize() }}
                           onTouchStart={
-                            cell.column.id === "drag" && sorting.length === 0 && editingId !== id
+                            cell.column.id === "drag" &&
+                            sorting.length === 0 &&
+                            editingId !== id
                               ? (e) => {
                                   e.stopPropagation();
                                   startTouchDrag(id);
@@ -1266,6 +1414,7 @@ export function TodoTable() {
                             focusMode &&
                               [
                                 "priority",
+                                "progress",
                                 "group",
                                 "assignees",
                                 "completedIn",

@@ -8,6 +8,7 @@ import {
 } from "./todoSlice"
 import {
   DEFAULT_PRIORITY_OPTIONS,
+  DEFAULT_PROGRESS_OPTIONS,
   FONTS,
   FONT_SIZES,
   FONT_WEIGHTS,
@@ -42,6 +43,7 @@ function isTodoLike(v: unknown): v is {
   completedFrom?: number
   completedTo?: number
   priority?: string | null
+  progress?: string | null
   assignees?: unknown[]
   groupId?: string | null
   thought?: unknown
@@ -77,6 +79,12 @@ function migrateTodo(v: unknown): Todo | null {
       typeof o.completedTo === "number" ? o.completedTo : eod.getTime(),
     priority:
       typeof o.priority === "string" || o.priority === null ? o.priority : null,
+    progress:
+      typeof o.progress === "string"
+        ? o.progress
+        : o.done
+          ? "Done"
+          : "Not Started",
     assignees: Array.isArray(o.assignees) ? (o.assignees as string[]).filter((x) => typeof x === "string") : [],
     thought: typeof o.thought === "string" ? o.thought : "",
   }
@@ -155,6 +163,11 @@ function migrateSettings(v: Partial<SettingsState>): SettingsState {
       v.priorityOptions.every((p) => typeof p === "string")
         ? v.priorityOptions
         : [...DEFAULT_PRIORITY_OPTIONS],
+    progressOptions:
+      Array.isArray(v.progressOptions) &&
+      v.progressOptions.every((p) => typeof p === "string")
+        ? v.progressOptions
+        : [...DEFAULT_PROGRESS_OPTIONS],
     focusMode: typeof v.focusMode === "boolean" ? v.focusMode : false,
     darkMode: typeof v.darkMode === "boolean" ? v.darkMode : false,
     pageSize: typeof v.pageSize === "number" ? v.pageSize : 30,
@@ -178,10 +191,17 @@ function migrateSettings(v: Partial<SettingsState>): SettingsState {
       typeof v.priorityFilter === "string" || v.priorityFilter === null
         ? v.priorityFilter
         : null,
+    progressFilter:
+      typeof v.progressFilter === "string" || v.progressFilter === null
+        ? v.progressFilter
+        : null,
     accentColor:
       typeof v.accentColor === "string" || v.accentColor === null
         ? v.accentColor ?? null
         : null,
+    activeTab: typeof v.activeTab === "string" ? v.activeTab : "todo",
+    boardCompact:
+      typeof v.boardCompact === "boolean" ? v.boardCompact : false,
   }
 }
 

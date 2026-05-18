@@ -6,20 +6,32 @@ import {
   Bot,
   KeyRound,
   Lightbulb,
-  Loader2,
   RotateCcw,
-  Send,
   Sparkles,
   Trash2,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import {
+  Message,
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
+import {
   PromptInput,
-  PromptInputActions,
+  PromptInputBody,
+  PromptInputFooter,
+  type PromptInputMessage,
+  PromptInputSubmit,
   PromptInputTextarea,
-} from "@/components/ui/prompt-input";
-import { Message, MessageContent } from "@/components/ui/message";
+  PromptInputTools,
+} from "@/components/ai-elements/prompt-input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,55 +87,55 @@ function ApiKeysForm({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-        <DialogHeader>
-          <DialogTitle>AI providers</DialogTitle>
-          <DialogDescription>
-            Keys / endpoints stored in your browser localStorage. Ollama runs locally and needs no key — just a base URL.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-3">
-          {PROVIDERS.map((p) => {
-            const isOllama = p === "ollama";
-            return (
-              <div key={p} className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">{PROVIDER_LABEL[p]}</label>
-                  <a
-                    href={PROVIDER_KEY_URL[p]}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-primary hover:underline"
-                  >
-                    {isOllama ? "Install" : "Get key"}
-                  </a>
-                </div>
-                <input
-                  type={isOllama ? "text" : "password"}
-                  autoComplete="off"
-                  value={keys[p]}
-                  onChange={(e) => setKeys((s) => ({ ...s, [p]: e.target.value }))}
-                  placeholder={
-                    isOllama
-                      ? "http://localhost:11434 (default)"
-                      : `${PROVIDER_LABEL[p]} API key`
-                  }
-                  className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                />
-                {isOllama && (
-                  <p className="text-xs text-muted-foreground">
-                    Base URL of your local Ollama server. Leave blank for default. Start it with <code className="rounded bg-muted px-1">ollama serve</code>.
-                  </p>
-                )}
+      <DialogHeader>
+        <DialogTitle>AI providers</DialogTitle>
+        <DialogDescription>
+          Keys / endpoints stored in your browser localStorage. Ollama runs locally and needs no key — just a base URL.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="flex flex-col gap-3">
+        {PROVIDERS.map((p) => {
+          const isOllama = p === "ollama";
+          return (
+            <div key={p} className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">{PROVIDER_LABEL[p]}</label>
+                <a
+                  href={PROVIDER_KEY_URL[p]}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-primary hover:underline"
+                >
+                  {isOllama ? "Install" : "Get key"}
+                </a>
               </div>
-            );
-          })}
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={save}>Save</Button>
-        </DialogFooter>
+              <input
+                type={isOllama ? "text" : "password"}
+                autoComplete="off"
+                value={keys[p]}
+                onChange={(e) => setKeys((s) => ({ ...s, [p]: e.target.value }))}
+                placeholder={
+                  isOllama
+                    ? "http://localhost:11434 (default)"
+                    : `${PROVIDER_LABEL[p]} API key`
+                }
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+              {isOllama && (
+                <p className="text-xs text-muted-foreground">
+                  Base URL of your local Ollama server. Leave blank for default. Start it with <code className="rounded bg-muted px-1">ollama serve</code>.
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <DialogFooter>
+        <Button variant="ghost" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button onClick={save}>Save</Button>
+      </DialogFooter>
     </>
   );
 }
@@ -212,7 +224,6 @@ export function AiChat() {
   const [keysOpen, setKeysOpen] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const allModels = useMemo(
     () => getAllModels(ollamaModels, openrouterModels),
@@ -247,14 +258,8 @@ export function AiChat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isStreaming]);
-
-  const submit = async () => {
-    const text = input.trim();
+  const handleSubmit = async (message: PromptInputMessage) => {
+    const text = message.text?.trim();
     if (!text || isStreaming) return;
     setInput("");
     const ctrl = new AbortController();
@@ -280,6 +285,16 @@ export function AiChat() {
     [messages],
   );
 
+  const visibleMessages = messages.filter(
+    (m) =>
+      !m.hidden &&
+      (m.role === "user" ||
+        (m.role === "assistant" &&
+          (m.content || (m.toolCalls && m.toolCalls.length > 0)))),
+  );
+
+  const status: "ready" | "streaming" = isStreaming ? "streaming" : "ready";
+
   return (
     <>
       <AnimatePresence>
@@ -289,7 +304,10 @@ export function AiChat() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 32 }}
-            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(96vw,640px)] max-h-[70vh] flex flex-col rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-hidden"
+            className={cn(
+              "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(96vw,640px)] flex flex-col rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-hidden",
+              visibleMessages.length === 0 ? "max-h-[70vh]" : "h-[70vh]",
+            )}
           >
             <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
               <Sparkles className="size-4 text-primary" />
@@ -367,105 +385,94 @@ export function AiChat() {
               </Button>
             </div>
 
-            <div
-              ref={scrollRef}
-              className="flex-1 overflow-auto px-3 py-3 flex flex-col gap-3 min-h-0"
-            >
-              {messages.length === 0 && (
-                <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
-                  <Bot className="size-8 opacity-40" />
-                  <p className="text-sm max-w-sm">
-                    Plan something. Example: &quot;Plan a 3-day trip to Chiang Mai for me and Alice.&quot;
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setExamplesOpen(true)}
+            <Conversation className="flex-1 min-h-0">
+              <ConversationContent className="gap-4 p-3">
+                {visibleMessages.length === 0 && (
+                  <ConversationEmptyState
+                    icon={<Bot className="size-8 opacity-40" />}
+                    title="Plan something"
+                    description={'Example: "Plan a 3-day trip to Chiang Mai for me and Alice."'}
                   >
-                    <Lightbulb />
-                    Browse examples
-                  </Button>
-                </div>
-              )}
-              {messages
-                .filter((m) => !m.hidden && (m.role === "user" || (m.role === "assistant" && (m.content || (m.toolCalls && m.toolCalls.length > 0)))))
-                .map((m) => (
-                  <Message
-                    key={m.id}
-                    className={cn(
-                      "flex-col items-start gap-1",
-                      m.role === "user" ? "items-end" : "items-start",
-                    )}
-                  >
-                    <MessageContent
-                      markdown={m.role === "assistant" && !!m.content}
-                      className={cn(
-                        "max-w-[85%] text-sm",
-                        m.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary",
-                      )}
-                    >
-                      {m.content ||
-                        (m.toolCalls && m.toolCalls.length > 0
-                          ? `_Running: ${m.toolCalls.map((c) => c.name).join(", ")}_`
-                          : "")}
-                    </MessageContent>
-                  </Message>
-                ))}
-              {isStreaming && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="size-3 animate-spin" />
-                  Thinking…
-                </div>
-              )}
-              {error && (
-                <div className="text-xs text-destructive bg-destructive/10 rounded-md p-2 flex items-start justify-between gap-2">
-                  <span className="flex-1">{error}</span>
-                  {canRetry && !isStreaming && (
+                    <Bot className="size-8 opacity-40 text-muted-foreground" />
+                    <p className="text-sm max-w-sm text-muted-foreground">
+                      Plan something. Example: &quot;Plan a 3-day trip to Chiang Mai for me and Alice.&quot;
+                    </p>
                     <Button
                       size="sm"
-                      variant="ghost"
-                      onClick={retry}
-                      className="h-6 px-2 text-xs text-destructive hover:bg-destructive/10"
-                      aria-label="Retry"
+                      variant="outline"
+                      onClick={() => setExamplesOpen(true)}
                     >
-                      <RotateCcw className="size-3" />
-                      Retry
+                      <Lightbulb />
+                      Browse examples
                     </Button>
-                  )}
-                </div>
-              )}
-            </div>
+                  </ConversationEmptyState>
+                )}
+
+                {visibleMessages.map((m) => {
+                  const content =
+                    m.content ||
+                    (m.toolCalls && m.toolCalls.length > 0
+                      ? `_Running: ${m.toolCalls.map((c) => c.name).join(", ")}_`
+                      : "");
+                  return (
+                    <Message key={m.id} from={m.role === "user" ? "user" : "assistant"}>
+                      <MessageContent>
+                        <MessageResponse>{content}</MessageResponse>
+                      </MessageContent>
+                    </Message>
+                  );
+                })}
+
+                {error && (
+                  <div className="text-xs text-destructive bg-destructive/10 rounded-md p-2 flex items-start justify-between gap-2">
+                    <span className="flex-1">{error}</span>
+                    {canRetry && !isStreaming && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={retry}
+                        className="h-6 px-2 text-xs text-destructive hover:bg-destructive/10"
+                        aria-label="Retry"
+                      >
+                        <RotateCcw className="size-3" />
+                        Retry
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </ConversationContent>
+              <ConversationScrollButton />
+            </Conversation>
 
             <div className="p-2 border-t border-border shrink-0">
-              <PromptInput
-                value={input}
-                onValueChange={setInput}
-                onSubmit={submit}
-                isLoading={isStreaming}
-                className="rounded-xl"
-              >
-                <PromptInputTextarea
-                  placeholder="Plan something…"
-                  disabled={isStreaming}
-                />
-                <PromptInputActions className="justify-end mt-1">
+              <PromptInput onSubmit={handleSubmit}>
+                <PromptInputBody>
+                  <PromptInputTextarea
+                    value={input}
+                    onChange={(e) => setInput(e.currentTarget.value)}
+                    placeholder="Plan something…"
+                    disabled={isStreaming}
+                  />
+                </PromptInputBody>
+                <PromptInputFooter>
+                  <PromptInputTools />
                   {isStreaming ? (
-                    <Button size="icon-sm" variant="ghost" onClick={stop} aria-label="Stop">
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      type="button"
+                      onClick={stop}
+                      aria-label="Stop"
+                    >
                       <X />
                     </Button>
                   ) : (
-                    <Button
-                      size="icon-sm"
-                      onClick={submit}
+                    <PromptInputSubmit
+                      status={status}
                       disabled={!input.trim()}
-                      aria-label="Send"
-                    >
-                      <Send />
-                    </Button>
+                    />
                   )}
-                </PromptInputActions>
+                </PromptInputFooter>
               </PromptInput>
             </div>
           </motion.div>

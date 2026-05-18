@@ -57,6 +57,7 @@ function buildContext(store: AppStore): string {
   const state = store.getState();
   const file = state.todos.files.find((f) => f.id === state.todos.activeFileId);
   const priorities = state.settings.priorityOptions;
+  const progressStates = state.settings.progressOptions;
   const users = state.users.users;
   const allFiles = state.todos.files;
   const now = new Date();
@@ -76,6 +77,9 @@ function buildContext(store: AppStore): string {
   lines.push(`One month from today: ${isoDate(nextMonth)}`);
   lines.push(
     `Available priorities (use ONLY these exact strings, case-sensitive): ${priorities.join(", ") || "(none)"}`,
+  );
+  lines.push(
+    `Available progress states (use ONLY these exact strings, case-sensitive): ${progressStates.join(", ") || "(none)"}`,
   );
   lines.push("");
   lines.push(`Files (${allFiles.length}):`);
@@ -120,7 +124,7 @@ function buildContext(store: AppStore): string {
             ? ` [assignees(${anames.length})=${anames.map((n) => `"${n}"`).join(",")}]`
             : " [assignees(0)]";
         lines.push(
-          `  - id=${t.id} "${t.title}"${t.priority ? ` [p=${t.priority}]` : ""}${gname ? ` [group="${gname}"]` : ""}${assigneeStr}${t.done ? " [done]" : ""}`,
+          `  - id=${t.id} "${t.title}"${t.priority ? ` [p=${t.priority}]` : ""}${t.progress ? ` [progress=${t.progress}]` : ""}${gname ? ` [group="${gname}"]` : ""}${assigneeStr}${t.done ? " [done]" : ""}`,
         );
       }
   } else {
@@ -208,8 +212,11 @@ You: (assistant content: "Couch-to-5K, 8 weeks, 3 sessions/week. Group: 'Couch t
 - "delete tasks in <group>" → delete_todos({groupId}) in ONE call.
 - "delete <group>" → delete_group(id). If user implies tasks too ("get rid of the trip section and its tasks"), cascade=true.
 - "rename <group/file/person> to X" → rename_group / rename_file / update_user.
-- "mark <task> done" / "I finished X" → update_todo({id, done:true}).
+- "mark <task> done" / "I finished X" → update_todo({id, done:true}) — also flips progress to "Done".
 - "mark these done" / batch toggle → update_todos({ids, patch:{done:true}}).
+- "set <task> in progress" / "start X" → update_todo({id, progress:"InProgress"}). Bulk → update_todos({ids, patch:{progress:"InProgress"}}).
+- "reset <task> to not started" → update_todo({id, progress:"Not Started"}).
+- "move <task> to <column>" / kanban talk ("on the board", "column", "lane") → update_todo({id, progress:"<column>"}). The Board tab renders tasks as cards grouped by their progress value; columns ARE progress states. Bulk → update_todos.
 - "move X to <group>" → update_todo({id, groupId}). Multiple → move_todos.
 - "reschedule X to <date>" → update_todo({id, dueFrom, dueTo}). Multiple → update_todos.
 - "find / how many tasks…" → search_tasks. Don't guess from context — query for fresh data.

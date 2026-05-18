@@ -14,10 +14,14 @@ export type Todo = {
   completedFrom: number
   completedTo: number
   priority: string | null
+  progress: string | null
   assignees: string[]
   groupId: string | null
   thought: string
 }
+
+export const PROGRESS_DONE = "Done"
+export const PROGRESS_NOT_STARTED = "Not Started"
 
 function startOfDay(ts: number): number {
   const d = new Date(ts)
@@ -136,6 +140,7 @@ const todoSlice = createSlice({
             completedFrom: startOfDay(now),
             completedTo: endOfDay(now),
             priority: null,
+            progress: PROGRESS_NOT_STARTED,
             assignees: [],
             groupId,
             thought: "",
@@ -166,6 +171,7 @@ const todoSlice = createSlice({
         completedFrom?: number
         completedTo?: number
         priority?: string | null
+        progress?: string | null
         assignees?: string[]
         groupId?: string | null
         thought?: string
@@ -178,8 +184,13 @@ const todoSlice = createSlice({
       if (action.payload.title !== undefined) t.title = action.payload.title
       if (action.payload.done !== undefined) {
         t.done = action.payload.done
-        if (!action.payload.done) t.doneAt = null
-        else if (t.doneAt === null) t.doneAt = Date.now()
+        if (!action.payload.done) {
+          t.doneAt = null
+          if (t.progress === PROGRESS_DONE) t.progress = PROGRESS_NOT_STARTED
+        } else {
+          if (t.doneAt === null) t.doneAt = Date.now()
+          t.progress = PROGRESS_DONE
+        }
       }
       if (action.payload.assignees !== undefined) t.assignees = action.payload.assignees
       if (action.payload.createdAt !== undefined)
@@ -191,6 +202,16 @@ const todoSlice = createSlice({
         t.completedTo = action.payload.completedTo
       if (action.payload.priority !== undefined)
         t.priority = action.payload.priority
+      if (action.payload.progress !== undefined) {
+        t.progress = action.payload.progress
+        if (action.payload.progress === PROGRESS_DONE) {
+          t.done = true
+          if (t.doneAt === null) t.doneAt = Date.now()
+        } else if (action.payload.progress !== null) {
+          t.done = false
+          t.doneAt = null
+        }
+      }
       if (action.payload.groupId !== undefined)
         t.groupId = action.payload.groupId
       if (action.payload.thought !== undefined) t.thought = action.payload.thought
@@ -202,6 +223,29 @@ const todoSlice = createSlice({
       if (t) {
         t.done = !t.done
         t.doneAt = t.done ? Date.now() : null
+        t.progress = t.done ? PROGRESS_DONE : PROGRESS_NOT_STARTED
+      }
+    },
+    renamePriorityValue(
+      state,
+      action: PayloadAction<{ from: string; to: string }>,
+    ) {
+      const { from, to } = action.payload
+      for (const f of state.files) {
+        for (const t of f.todos) {
+          if (t.priority === from) t.priority = to
+        }
+      }
+    },
+    renameProgressValue(
+      state,
+      action: PayloadAction<{ from: string; to: string }>,
+    ) {
+      const { from, to } = action.payload
+      for (const f of state.files) {
+        for (const t of f.todos) {
+          if (t.progress === from) t.progress = to
+        }
       }
     },
     deleteTodo(state, action: PayloadAction<string>) {
@@ -265,6 +309,8 @@ export const {
   reorderGroup,
   clearAll,
   replaceState,
+  renamePriorityValue,
+  renameProgressValue,
 } = todoSlice.actions
 
 export default todoSlice.reducer

@@ -219,8 +219,12 @@ export function UserTable() {
   });
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const { touchDragId, touchOverId, start: startTouchDrag } = useTouchRowDrag(
-    (from, to) => dispatch(reorderUser({ fromId: from, toId: to })),
+  const {
+    touchDragId,
+    touchOverId,
+    start: startTouchDrag,
+  } = useTouchRowDrag((from, to) =>
+    dispatch(reorderUser({ fromId: from, toId: to })),
   );
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -388,9 +392,11 @@ export function UserTable() {
 
   const virtualItems = rowVirtualizer.getVirtualItems();
   const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
-  const paddingBottom = virtualItems.length > 0
-    ? rowVirtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end
-    : 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? rowVirtualizer.getTotalSize() -
+        virtualItems[virtualItems.length - 1].end
+      : 0;
 
   useEffect(() => {
     if (editingId === null && focusedId) {
@@ -448,191 +454,257 @@ export function UserTable() {
   const canNext = pageEnd < filteredRows.length;
 
   return (
-    <div className="rounded-lg border border-border flex flex-col max-h-[calc(100vh-7rem)] w-full">
+    <div className="rounded-lg border border-border flex flex-col max-h-[calc(100vh-10rem)] w-full">
       {/* Search bar — outside scroll, never clips */}
       <div className="bg-muted border-b border-border px-3 py-1.5 shrink-0 flex items-center gap-2 text-muted-foreground">
         <Search className="size-3.5 shrink-0" />
         <input
           value={globalFilter}
-          onChange={(e) => { setGlobalFilter(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })); }}
+          onChange={(e) => {
+            setGlobalFilter(e.target.value);
+            setPagination((p) => ({ ...p, pageIndex: 0 }));
+          }}
           placeholder="Search users…"
           className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
         />
-        {globalFilter && <button type="button" onClick={() => setGlobalFilter("")} className="text-xs hover:text-foreground">✕</button>}
+        {globalFilter && (
+          <button
+            type="button"
+            onClick={() => setGlobalFilter("")}
+            className="text-xs hover:text-foreground"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Scroll area — only the table */}
       <div ref={scrollContainerRef} className="overflow-auto flex-1 min-h-0">
         <table
           className="text-sm border-separate border-spacing-0 [&_th]:border-r [&_th]:border-b [&_th]:border-border [&_td]:border-r [&_td]:border-b [&_td]:border-border [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_tbody_tr:last-child_td]:border-b-0"
-          style={{ width: table.getTotalSize(), minWidth: "100%", tableLayout: "fixed" }}
+          style={{
+            width: table.getTotalSize(),
+            minWidth: "100%",
+            tableLayout: "fixed",
+          }}
         >
-        <thead className="bg-muted sticky top-0 z-10">
-          {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id}>
-              {hg.headers.map((h) => (
-                <th
-                  key={h.id}
-                  style={{ width: h.getSize() }}
-                  className={cn(
-                    "relative text-left font-medium px-3 py-2 text-muted-foreground select-none overflow-hidden",
-                    h.id === "drag" && "sticky left-0 bg-muted z-20",
-                    h.id === "avatar" && "sticky left-[32px] bg-muted z-20",
-                    h.id === "actions" && "sticky right-0 bg-muted z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
-                  )}
-                >
-                  {h.isPlaceholder
-                    ? null
-                    : flexRender(h.column.columnDef.header, h.getContext())}
-                  {h.column.getCanResize() && (
-                    <div
-                      onMouseDown={h.getResizeHandler()}
-                      onTouchStart={h.getResizeHandler()}
-                      className={cn(
-                        "absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none touch-none",
-                        h.column.getIsResizing()
-                          ? "bg-primary"
-                          : "hover:bg-primary/30",
-                      )}
-                    />
-                  )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          <tr>
-            <td className="px-3 py-2 align-middle sticky left-0 top-0 bg-background border-b border-border z-30">
-              <Plus className="size-4 text-muted-foreground" />
-            </td>
-            <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-background border-b border-border z-30" />
-            <td className="px-3 py-2 align-middle sticky top-0 bg-background text-muted-foreground border-b border-border z-20" colSpan={columns.length - 2}>
-              <input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submitNew();
-                  }
-                }}
-                placeholder="Add a user… (Press Enter)"
-                className="w-full bg-transparent p-0 outline-none placeholder:text-muted-foreground"
-              />
-            </td>
-          </tr>
-
-          {rows.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="px-3 py-8 text-center text-muted-foreground">
-                No users yet. Type a name and press Enter.
-              </td>
-            </tr>
-          ) : (
-            <>
-              {paddingTop > 0 && <tr><td colSpan={columns.length} style={{ height: paddingTop }} /></tr>}
-              {virtualItems.map((virtualRow) => {
-                const row = rows[virtualRow.index];
-                const id = row.original.id;
-                const isFocused = focusedId === id;
-                return (
-                  <tr
-                    key={row.id}
-                    data-row-id={id}
-                    ref={(el) => {
-                      if (el) rowRefs.current.set(id, el);
-                      else rowRefs.current.delete(id);
-                    }}
-                    tabIndex={editingId === id ? -1 : 0}
-                    onFocus={() => setFocusedId(id)}
-                    onKeyDown={(e) => handleRowKey(e, row.original, virtualRow.index)}
-                    draggable={editingId !== id && sorting.length === 0}
-                    onDragStart={(e) => {
-                      if (sorting.length > 0) return;
-                      setDragId(id);
-                      e.dataTransfer.effectAllowed = "move";
-                      e.dataTransfer.setData("text/plain", id);
-                    }}
-                    onDragOver={(e) => {
-                      if (sorting.length > 0) return;
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = "move";
-                      if (overId !== id) setOverId(id);
-                    }}
-                    onDragLeave={() => { if (overId === id) setOverId(null); }}
-                    onDrop={(e) => {
-                      if (sorting.length > 0) return;
-                      e.preventDefault();
-                      const fromId = e.dataTransfer.getData("text/plain") || dragId;
-                      if (fromId && fromId !== id) dispatch(reorderUser({ fromId, toId: id }));
-                      setDragId(null);
-                      setOverId(null);
-                    }}
-                    onDragEnd={() => { setDragId(null); setOverId(null); }}
+          <thead className="bg-muted sticky top-0 z-10">
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id}>
+                {hg.headers.map((h) => (
+                  <th
+                    key={h.id}
+                    style={{ width: h.getSize() }}
                     className={cn(
-                      "transition-colors outline-none hover:bg-muted/50",
-                      (dragId === id || touchDragId === id) && "opacity-40",
-                      ((overId === id && dragId !== id) || (touchOverId === id && touchDragId !== id)) && "bg-primary/10",
-                      isFocused && "bg-primary/5 shadow-[inset_2px_0_0_var(--color-primary)]",
+                      "relative text-left font-medium px-3 py-2 text-muted-foreground select-none overflow-hidden",
+                      h.id === "drag" && "sticky left-0 bg-muted z-20",
+                      h.id === "avatar" && "sticky left-[32px] bg-muted z-20",
+                      h.id === "actions" &&
+                        "sticky right-0 bg-muted z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
                     )}
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        style={{ width: cell.column.getSize() }}
-                        onTouchStart={
-                          cell.column.id === "drag" && sorting.length === 0 && editingId !== id
-                            ? (e) => {
-                                e.stopPropagation();
-                                startTouchDrag(id);
-                              }
-                            : undefined
-                        }
+                    {h.isPlaceholder
+                      ? null
+                      : flexRender(h.column.columnDef.header, h.getContext())}
+                    {h.column.getCanResize() && (
+                      <div
+                        onMouseDown={h.getResizeHandler()}
+                        onTouchStart={h.getResizeHandler()}
                         className={cn(
-                          "px-3 py-2 align-middle truncate",
-                          cell.column.id === "drag" && "touch-none",
-                          cell.column.id === "drag" && cn(
-                            "sticky left-0 z-1",
-                            isFocused
-                              ? "shadow-[inset_2px_0_0_var(--color-primary)] bg-background"
-                              : "bg-background",
-                          ),
-                          cell.column.id === "avatar" && "sticky left-[32px] z-1 bg-background",
-                          cell.column.id === "actions" && "sticky right-0 bg-background z-1 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
+                          "absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none touch-none",
+                          h.column.getIsResizing()
+                            ? "bg-primary"
+                            : "hover:bg-primary/30",
                         )}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
+                      />
+                    )}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            <tr>
+              <td className="px-3 py-2 align-middle sticky left-0 top-0 bg-background border-b border-border z-30">
+                <Plus className="size-4 text-muted-foreground" />
+              </td>
+              <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-background border-b border-border z-30" />
+              <td
+                className="px-3 py-2 align-middle sticky top-0 bg-background text-muted-foreground border-b border-border z-20"
+                colSpan={columns.length - 2}
+              >
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submitNew();
+                    }
+                  }}
+                  placeholder="Add a user… (Press Enter)"
+                  className="w-full bg-transparent p-0 outline-none placeholder:text-muted-foreground"
+                />
+              </td>
+            </tr>
+
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="px-3 py-8 text-center text-muted-foreground"
+                >
+                  No users yet. Type a name and press Enter.
+                </td>
+              </tr>
+            ) : (
+              <>
+                {paddingTop > 0 && (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      style={{ height: paddingTop }}
+                    />
                   </tr>
-                );
-              })}
-              {paddingBottom > 0 && <tr><td colSpan={columns.length} style={{ height: paddingBottom }} /></tr>}
-            </>
-          )}
-        </tbody>
-      </table>
+                )}
+                {virtualItems.map((virtualRow) => {
+                  const row = rows[virtualRow.index];
+                  const id = row.original.id;
+                  const isFocused = focusedId === id;
+                  return (
+                    <tr
+                      key={row.id}
+                      data-row-id={id}
+                      ref={(el) => {
+                        if (el) rowRefs.current.set(id, el);
+                        else rowRefs.current.delete(id);
+                      }}
+                      tabIndex={editingId === id ? -1 : 0}
+                      onFocus={() => setFocusedId(id)}
+                      onKeyDown={(e) =>
+                        handleRowKey(e, row.original, virtualRow.index)
+                      }
+                      draggable={editingId !== id && sorting.length === 0}
+                      onDragStart={(e) => {
+                        if (sorting.length > 0) return;
+                        setDragId(id);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("text/plain", id);
+                      }}
+                      onDragOver={(e) => {
+                        if (sorting.length > 0) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        if (overId !== id) setOverId(id);
+                      }}
+                      onDragLeave={() => {
+                        if (overId === id) setOverId(null);
+                      }}
+                      onDrop={(e) => {
+                        if (sorting.length > 0) return;
+                        e.preventDefault();
+                        const fromId =
+                          e.dataTransfer.getData("text/plain") || dragId;
+                        if (fromId && fromId !== id)
+                          dispatch(reorderUser({ fromId, toId: id }));
+                        setDragId(null);
+                        setOverId(null);
+                      }}
+                      onDragEnd={() => {
+                        setDragId(null);
+                        setOverId(null);
+                      }}
+                      className={cn(
+                        "transition-colors outline-none hover:bg-muted/50",
+                        (dragId === id || touchDragId === id) && "opacity-40",
+                        ((overId === id && dragId !== id) ||
+                          (touchOverId === id && touchDragId !== id)) &&
+                          "bg-primary/10",
+                        isFocused &&
+                          "bg-primary/5 shadow-[inset_2px_0_0_var(--color-primary)]",
+                      )}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          style={{ width: cell.column.getSize() }}
+                          onTouchStart={
+                            cell.column.id === "drag" &&
+                            sorting.length === 0 &&
+                            editingId !== id
+                              ? (e) => {
+                                  e.stopPropagation();
+                                  startTouchDrag(id);
+                                }
+                              : undefined
+                          }
+                          className={cn(
+                            "px-3 py-2 align-middle truncate",
+                            cell.column.id === "drag" && "touch-none",
+                            cell.column.id === "drag" &&
+                              cn(
+                                "sticky left-0 z-1",
+                                isFocused
+                                  ? "shadow-[inset_2px_0_0_var(--color-primary)] bg-background"
+                                  : "bg-background",
+                              ),
+                            cell.column.id === "avatar" &&
+                              "sticky left-[32px] z-1 bg-background",
+                            cell.column.id === "actions" &&
+                              "sticky right-0 bg-background z-1 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
+                          )}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+                {paddingBottom > 0 && (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      style={{ height: paddingBottom }}
+                    />
+                  </tr>
+                )}
+              </>
+            )}
+          </tbody>
+        </table>
       </div>
       <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground bg-muted flex gap-3 flex-wrap items-center shrink-0">
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">↑↓</kbd>
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">
+            ↑↓
+          </kbd>
           <span>move</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">↵</kbd>
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">
+            ↵
+          </kbd>
           <span>edit name</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">Tab</kbd>
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+            Tab
+          </kbd>
           <span>→ agenda</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">Del</kbd>
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+            Del
+          </kbd>
           <span>delete</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">Esc</kbd>
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+            Esc
+          </kbd>
           <span>cancel</span>
         </span>
         <div className="ml-auto flex items-center gap-2">
@@ -664,7 +736,9 @@ export function UserTable() {
           </span>
           <button
             type="button"
-            onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))}
+            onClick={() =>
+              setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))
+            }
             disabled={!canPrev}
             className="p-0.5 rounded disabled:opacity-30 hover:text-foreground"
           >
@@ -672,7 +746,9 @@ export function UserTable() {
           </button>
           <button
             type="button"
-            onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))}
+            onClick={() =>
+              setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))
+            }
             disabled={!canNext}
             className="p-0.5 rounded disabled:opacity-30 hover:text-foreground"
           >

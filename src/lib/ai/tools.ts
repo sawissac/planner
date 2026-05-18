@@ -129,6 +129,11 @@ export const AI_TOOLS: OpenAITool[] = [
             description:
               "Must match one of Available priorities exactly (case-sensitive). Reserve the highest tier for blockers/hard deadlines. Omit if unclear.",
           },
+          progress: {
+            type: "string",
+            description:
+              "Must match one of Available progress states exactly (case-sensitive). Defaults to 'Not Started' on create. Setting 'Done' also marks the task done.",
+          },
           groupId: {
             type: "string",
             description:
@@ -181,6 +186,10 @@ export const AI_TOOLS: OpenAITool[] = [
           priority: {
             type: "string",
             description: "Must match Available priorities exactly. Use empty string to clear.",
+          },
+          progress: {
+            type: "string",
+            description: "Must match Available progress states exactly. Use empty string to clear. Setting 'Done' also marks the task done; setting any other value reopens it.",
           },
           groupId: {
             type: "string",
@@ -351,6 +360,7 @@ export const AI_TOOLS: OpenAITool[] = [
           groupId: { type: "string", description: "Restrict to this group id." },
           assigneeId: { type: "string", description: "Restrict to tasks assigned to this user id." },
           priority: { type: "string", description: "Exact priority match." },
+          progress: { type: "string", description: "Exact progress state match." },
           done: { type: "boolean", description: "True = only completed; false = only open." },
           dueFrom: { type: "string", description: "ISO YYYY-MM-DD. Match tasks whose window overlaps on/after this date." },
           dueTo: { type: "string", description: "ISO YYYY-MM-DD. Match tasks whose window overlaps on/before this date." },
@@ -406,6 +416,11 @@ export const AI_TOOLS: OpenAITool[] = [
             description: "Fields to overwrite on each task.",
             properties: {
               priority: { type: "string", description: "Empty string clears." },
+              progress: {
+                type: "string",
+                description:
+                  "Empty string clears. Setting 'Done' also marks tasks done; any other value reopens them.",
+              },
               groupId: { type: "string", description: "Empty string ungroups." },
               assigneeIds: { type: "array", items: { type: "string" } },
               dueFrom: { type: "string", description: "ISO YYYY-MM-DD." },
@@ -452,6 +467,11 @@ export const AI_TOOLS: OpenAITool[] = [
                 title: { type: "string" },
                 thought: { type: "string" },
                 priority: { type: "string" },
+                progress: {
+                  type: "string",
+                  description:
+                    "Must match Available progress states exactly. Default 'Not Started'. 'Done' also marks the task done.",
+                },
                 groupId: { type: "string" },
                 assigneeIds: { type: "array", items: { type: "string" } },
                 dueFrom: { type: "string", description: "ISO YYYY-MM-DD." },
@@ -702,6 +722,8 @@ export function runTool(
       ? (args.assigneeIds as unknown[]).filter((x): x is string => typeof x === "string")
       : []
     const priority = typeof args.priority === "string" ? args.priority : null
+    const progress =
+      typeof args.progress === "string" && args.progress ? args.progress : null
     const thought = typeof args.thought === "string" ? args.thought.trim() : ""
     store.dispatch(
       updateTodo({
@@ -710,6 +732,7 @@ export function runTool(
         assignees: assigneeIds,
         completedFrom: startOfDay(fromTs),
         completedTo: endOfDay(toTs),
+        ...(progress ? { progress } : {}),
         ...(thought ? { thought } : {}),
       }),
     )
@@ -724,6 +747,8 @@ export function runTool(
     if (typeof args.thought === "string") payload.thought = args.thought.trim()
     if (typeof args.priority === "string")
       payload.priority = args.priority === "" ? null : args.priority
+    if (typeof args.progress === "string")
+      payload.progress = args.progress === "" ? null : args.progress
     if (typeof args.groupId === "string")
       payload.groupId = args.groupId === "" ? null : args.groupId
     if (Array.isArray(args.assigneeIds))
@@ -844,6 +869,8 @@ export function runTool(
         : null
     const priority =
       typeof args.priority === "string" && args.priority ? args.priority : null
+    const progress =
+      typeof args.progress === "string" && args.progress ? args.progress : null
     const done = typeof args.done === "boolean" ? args.done : null
     const fromTs =
       typeof args.dueFrom === "string"
@@ -863,6 +890,7 @@ export function runTool(
       if (groupId && t.groupId !== groupId) return false
       if (assigneeId && !t.assignees.includes(assigneeId)) return false
       if (priority && t.priority !== priority) return false
+      if (progress && t.progress !== progress) return false
       if (done !== null && t.done !== done) return false
       if (fromTs !== null && t.completedTo < fromTs) return false
       if (toTs !== null && t.completedFrom > toTs) return false
@@ -876,6 +904,7 @@ export function runTool(
         title: t.title,
         thought: t.thought,
         priority: t.priority,
+        progress: t.progress,
         groupId: t.groupId,
         assignees: t.assignees,
         done: t.done,
@@ -912,6 +941,7 @@ export function runTool(
         id: t.id,
         title: t.title,
         priority: t.priority,
+        progress: t.progress,
         groupId: t.groupId,
         assignees: t.assignees,
         done: t.done,
@@ -936,6 +966,7 @@ export function runTool(
       title: t.title,
       thought: t.thought,
       priority: t.priority,
+      progress: t.progress,
       groupId: t.groupId,
       assignees: t.assignees,
       done: t.done,
@@ -955,6 +986,8 @@ export function runTool(
     const base: Parameters<typeof updateTodo>[0] = { id: "" }
     if (typeof patch.priority === "string")
       base.priority = patch.priority === "" ? null : patch.priority
+    if (typeof patch.progress === "string")
+      base.progress = patch.progress === "" ? null : patch.progress
     if (typeof patch.groupId === "string")
       base.groupId = patch.groupId === "" ? null : patch.groupId
     if (Array.isArray(patch.assigneeIds))
@@ -1008,6 +1041,8 @@ export function runTool(
         : []
       const priority =
         typeof item.priority === "string" ? item.priority : null
+      const progress =
+        typeof item.progress === "string" && item.progress ? item.progress : null
       const thought =
         typeof item.thought === "string" ? item.thought.trim() : ""
       store.dispatch(
@@ -1017,6 +1052,7 @@ export function runTool(
           assignees: assigneeIds,
           completedFrom: startOfDay(fromTs),
           completedTo: endOfDay(toTs),
+          ...(progress ? { progress } : {}),
           ...(thought ? { thought } : {}),
         }),
       )
@@ -1132,6 +1168,7 @@ export function runTool(
       updateTodo({
         id: newId,
         priority: src.priority,
+        progress: src.progress,
         assignees: [...src.assignees],
         completedFrom: startOfDay(fromTs),
         completedTo: endOfDay(toTs),
@@ -1158,6 +1195,11 @@ export function runTool(
           name: "Multi-file workspaces",
           summary:
             "Several independent planner files; switch between them from the sidebar. Each file has its own groups and tasks.",
+        },
+        {
+          name: "Board (Kanban)",
+          summary:
+            "Board tab renders tasks as cards in columns grouped by progress state. Drag a card to another column to update its progress. Add/rename/delete columns (custom progress states) and add/edit/delete cards inline; all edits reflect in the Todo table and vice-versa.",
         },
         {
           name: "Groups (sections)",
@@ -1232,6 +1274,7 @@ export function runTool(
         title: t.title,
         thought: t.thought,
         priority: t.priority,
+        progress: t.progress,
         groupId: t.groupId,
         assignees: t.assignees,
         done: t.done,
@@ -1275,6 +1318,7 @@ export function runTool(
           updateTodo({
             id: newId,
             priority: t.priority,
+            progress: t.progress,
             assignees: [...t.assignees],
             completedFrom: t.completedFrom,
             completedTo: t.completedTo,

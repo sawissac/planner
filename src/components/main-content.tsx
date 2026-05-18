@@ -1,19 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeading } from "@/components/page-heading";
 import { TitleStyleControls } from "@/components/title-font-dropdown";
 import { AccentPicker } from "@/components/accent-picker";
 import { TodoTable } from "@/components/todo-table";
 import { UserTable } from "@/components/user-table";
-import { AnalyticsChart, RangeFilter } from "@/components/analytics-chart";
+import { AnalyticsChart } from "@/components/analytics-chart";
+import {
+  DateRangeFilter,
+  presetRange,
+  type DateRangeValue,
+} from "@/components/date-range-filter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { setFocusMode } from "@/lib/settingsSlice";
-import { Switch } from "@/components/ui/switch";
-import { BadgeCheck, UsersRound, ChartArea, CalendarRange, PanelRight, Keyboard } from "lucide-react";
+import { setActiveTab, setBoardCompact, setFocusMode } from "@/lib/settingsSlice";
+import {
+  BadgeCheck,
+  UsersRound,
+  ChartArea,
+  CalendarRange,
+  PanelRight,
+  Keyboard,
+  LayoutList,
+  Columns3,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimelineView } from "@/components/timeline-view";
+import { BoardView } from "@/components/board-view";
 
 export function MainContent({
   onToggleSidebar,
@@ -24,48 +40,79 @@ export function MainContent({
   sidebarOpen?: boolean;
   onOpenShortcuts?: () => void;
 } = {}) {
-  const [tab, setTab] = useState("todo");
-  const [rangeDays, setRangeDays] = useState(7);
-  const focusMode = useAppSelector((s) => s.settings.focusMode);
   const dispatch = useAppDispatch();
+  const tab = useAppSelector((s) => s.settings.activeTab);
+  const setTab = (v: string) => dispatch(setActiveTab(v));
+  const [range, setRange] = useState<DateRangeValue>(() => presetRange(7));
+  const rangeDays = useMemo(() => {
+    const ms =
+      new Date(range.to).setHours(23, 59, 59, 999) -
+      new Date(range.from).setHours(0, 0, 0, 0);
+    return Math.max(1, Math.round(ms / 86400000) + 1);
+  }, [range]);
+  const focusMode = useAppSelector((s) => s.settings.focusMode);
+  const boardCompact = useAppSelector((s) => s.settings.boardCompact);
 
   const tabList = (
     <TabsList className="w-max shrink-0">
       <TabsTrigger value="todo" className="gap-1">
         <span title="Todo" className="flex items-center gap-1">
           <BadgeCheck className="size-4" />
-          <span className="hidden lg:inline">Todo</span>
+        </span>
+      </TabsTrigger>
+      <TabsTrigger value="board" className="gap-1">
+        <span title="Board" className="flex items-center gap-1">
+          <Columns3 className="size-4" />
         </span>
       </TabsTrigger>
       <TabsTrigger value="analytics" className="gap-1">
         <span title="Analytics" className="flex items-center gap-1">
           <ChartArea className="size-4" />
-          <span className="hidden lg:inline">Analytics</span>
         </span>
       </TabsTrigger>
       <TabsTrigger value="timeline" className="gap-1">
         <span title="Timeline" className="flex items-center gap-1">
           <CalendarRange className="size-4" />
-          <span className="hidden lg:inline">Timeline</span>
         </span>
       </TabsTrigger>
       <TabsTrigger value="users" className="gap-1">
         <span title="Users" className="flex items-center gap-1">
           <UsersRound className="size-4" />
-          <span className="hidden lg:inline">Users</span>
         </span>
       </TabsTrigger>
     </TabsList>
   );
 
   const focusSwitch = tab === "todo" && (
-    <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-muted-foreground shrink-0">
-      <span>Focus</span>
-      <Switch
-        checked={focusMode}
-        onCheckedChange={(v) => dispatch(setFocusMode(v))}
-      />
-    </label>
+    <Button
+      size="icon-sm"
+      variant={focusMode ? "secondary" : "ghost"}
+      onClick={() => dispatch(setFocusMode(!focusMode))}
+      aria-label={focusMode ? "Disable focus mode" : "Enable focus mode"}
+      aria-pressed={focusMode}
+      title="Focus mode (Shift+Z)"
+      className={focusMode ? "text-primary" : ""}
+    >
+      <LayoutList className="size-4" />
+    </Button>
+  );
+
+  const boardCompactSwitch = tab === "board" && (
+    <Button
+      size="icon-sm"
+      variant={boardCompact ? "secondary" : "ghost"}
+      onClick={() => dispatch(setBoardCompact(!boardCompact))}
+      aria-label={boardCompact ? "Show card details" : "Show titles only"}
+      aria-pressed={boardCompact}
+      title={boardCompact ? "Show details" : "Compact cards"}
+      className={boardCompact ? "text-primary" : ""}
+    >
+      {boardCompact ? (
+        <Maximize2 className="size-4" />
+      ) : (
+        <Minimize2 className="size-4" />
+      )}
+    </Button>
   );
 
   const shortcutsBtn = onOpenShortcuts && (
@@ -94,48 +141,33 @@ export function MainContent({
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-4">
-      {/* Compact header: mobile + tablet (< lg) */}
-      <div className="lg:hidden flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <img src="/logo.svg" alt="Logo" className="size-7 shrink-0" />
           <div className="min-w-0 flex-1">
             <PageHeading />
           </div>
-          <div className="shrink-0">{sidebarBtn}</div>
+          <div className="shrink-0 lg:hidden">{sidebarBtn}</div>
         </div>
         <div className="-mx-3 px-3 overflow-x-auto">
           <div className="flex items-center gap-2 w-max pb-1">
             {tabList}
             {focusSwitch}
+            {boardCompactSwitch}
             {tab === "todo" && <TitleStyleControls compact />}
             <AccentPicker compact />
-            {tab === "analytics" && (
-              <RangeFilter rangeDays={rangeDays} onChange={setRangeDays} compact />
+            {(tab === "analytics" || tab === "board") && (
+              <DateRangeFilter value={range} onChange={setRange} compact />
             )}
             {shortcutsBtn}
           </div>
         </div>
       </div>
-
-      {/* Desktop header (lg+) */}
-      <div className="hidden lg:flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <img src="/logo.svg" alt="Logo" className="size-8 shrink-0" />
-          <PageHeading />
-          {tabList}
-        </div>
-        <div className="flex items-center gap-3 ml-auto flex-wrap">
-          {focusSwitch}
-          {tab === "todo" && <TitleStyleControls />}
-          <AccentPicker />
-          {tab === "analytics" && (
-            <RangeFilter rangeDays={rangeDays} onChange={setRangeDays} />
-          )}
-          {shortcutsBtn}
-        </div>
-      </div>
       <TabsContent value="todo">
         <TodoTable />
+      </TabsContent>
+      <TabsContent value="board">
+        <BoardView from={range.from.getTime()} to={range.to.getTime()} />
       </TabsContent>
       <TabsContent value="users">
         <UserTable />
