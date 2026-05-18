@@ -35,9 +35,53 @@ import {
   ConditionalContents,
   ChangeCodeMirrorLanguage,
   DiffSourceToggleWrapper,
+  insertMarkdown$,
+  usePublisher,
+  activeEditor$,
+  useCellValue,
   type MDXEditorMethods,
 } from "@mdxeditor/editor";
-import { forwardRef } from "react";
+import { Smile } from "lucide-react";
+import { forwardRef, useEffect, useState } from "react";
+import { EmojiPicker } from "@/components/emoji-picker";
+
+function InsertEmojiButton() {
+  const insertMarkdown = usePublisher(insertMarkdown$);
+  const activeEditor = useCellValue(activeEditor$);
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setContainer(
+      document.querySelector<HTMLElement>('[data-slot="drawer-content"]'),
+    );
+  }, []);
+
+  return (
+    <EmojiPicker
+      container={container}
+      onPick={(e) => {
+        if (activeEditor) {
+          activeEditor.focus(
+            () => insertMarkdown(e),
+            { defaultSelection: "rootEnd" },
+          );
+        } else {
+          insertMarkdown(e);
+        }
+      }}
+      trigger={
+        <button
+          type="button"
+          aria-label="Insert emoji"
+          title="Insert emoji"
+          className="inline-flex items-center justify-center rounded p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Smile className="size-4" />
+        </button>
+      }
+    />
+  );
+}
 
 type Props = {
   markdown: string;
@@ -112,6 +156,7 @@ export const ThoughtEditor = forwardRef<MDXEditorMethods, Props>(
                     {
                       fallback: () => (
                         <>
+                          <InsertEmojiButton />
                           <BlockTypeSelect />
                           <CreateLink />
                           <InsertImage />
@@ -123,6 +168,7 @@ export const ThoughtEditor = forwardRef<MDXEditorMethods, Props>(
                           <InsertAdmonition />
                           <Separator />
                           <InsertFrontmatter />
+                          <Separator />
                         </>
                       ),
                     },

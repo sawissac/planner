@@ -28,9 +28,12 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ClipboardCopy,
+  FileDown,
   Filter,
   Folder,
   GripVertical,
+  MoreHorizontal,
   Pencil,
   Plus,
   Search,
@@ -79,6 +82,112 @@ import { ProgressCell } from "@/components/progress-cell";
 import { AssigneeCell } from "@/components/assignee-cell";
 import { TodoRowActions } from "@/components/todo-row-actions";
 import { PromptDialog, type PromptState } from "@/components/prompt-dialog";
+
+function fmtDateOnly(ts: number | null | undefined): string {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function csvEscape(v: string): string {
+  if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
+  return v;
+}
+
+function todosToMarkdownTable(
+  rows: Todo[],
+  groups: Group[],
+  userNameById: (id: string) => string,
+): string {
+  const header = [
+    "Done",
+    "Task",
+    "Priority",
+    "Progress",
+    "Group",
+    "Assignees",
+    "From",
+    "To",
+  ];
+  const lines = [
+    `| ${header.join(" | ")} |`,
+    `| ${header.map(() => "---").join(" | ")} |`,
+  ];
+  for (const t of rows) {
+    const g = groups.find((x) => x.id === t.groupId)?.name ?? "";
+    const a = t.assignees.map(userNameById).filter(Boolean).join(", ");
+    lines.push(
+      `| ${t.done ? "x" : " "} | ${(t.title || "").replace(/\|/g, "\\|")} | ${t.priority ?? ""} | ${t.progress ?? ""} | ${g} | ${a} | ${fmtDateOnly(t.completedFrom)} | ${fmtDateOnly(t.completedTo)} |`,
+    );
+  }
+  return lines.join("\n");
+}
+
+function todosToMarkdownChecklist(rows: Todo[]): string {
+  return rows
+    .map((t) => `- [${t.done ? "x" : " "}] ${t.title}`)
+    .join("\n");
+}
+
+function todosToCsv(
+  rows: Todo[],
+  groups: Group[],
+  userNameById: (id: string) => string,
+): string {
+  const header = [
+    "done",
+    "title",
+    "priority",
+    "progress",
+    "group",
+    "assignees",
+    "completedFrom",
+    "completedTo",
+    "createdAt",
+    "doneAt",
+  ];
+  const out = [header.join(",")];
+  for (const t of rows) {
+    const g = groups.find((x) => x.id === t.groupId)?.name ?? "";
+    const a = t.assignees.map(userNameById).filter(Boolean).join("; ");
+    out.push(
+      [
+        t.done ? "true" : "false",
+        t.title,
+        t.priority ?? "",
+        t.progress ?? "",
+        g,
+        a,
+        fmtDateOnly(t.completedFrom),
+        fmtDateOnly(t.completedTo),
+        fmtDateOnly(t.createdAt),
+        fmtDateOnly(t.doneAt),
+      ]
+        .map((v) => csvEscape(String(v)))
+        .join(","),
+    );
+  }
+  return out.join("\n");
+}
+
+async function copyText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      ta.remove();
+    }
+  }
+}
 
 type RowMeta = {
   editingId: string | null;
@@ -491,150 +600,199 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
 
 function BulkActionBar({
   count,
+  total,
   groups,
   priorities,
   progressOptions,
   onClear,
+  onSelectAll,
   onDelete,
   onMarkDone,
   onMarkUndone,
   onSetGroup,
   onSetPriority,
   onSetProgress,
+  onCopyMarkdown,
+  onCopyChecklist,
+  onCopyCsv,
 }: {
   count: number;
+  total: number;
   groups: Group[];
   priorities: string[];
   progressOptions: string[];
   onClear: () => void;
+  onSelectAll: () => void;
   onDelete: () => void;
   onMarkDone: () => void;
   onMarkUndone: () => void;
   onSetGroup: (groupId: string | null) => void;
   onSetPriority: (priority: string | null) => void;
   onSetProgress: (progress: string | null) => void;
+  onCopyMarkdown: () => void;
+  onCopyChecklist: () => void;
+  onCopyCsv: () => void;
 }) {
+  const allSelected = count >= total && total > 0;
   return (
-    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-border bg-popover px-2 py-1 shadow-lg">
-      <span className="px-2 text-xs font-medium">{count} selected</span>
-      <div className="h-4 w-px bg-border" />
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-border bg-popover/95 backdrop-blur px-1.5 py-1 shadow-lg max-w-[calc(100vw-2rem)]">
+      <button
+        type="button"
+        onClick={allSelected ? onClear : onSelectAll}
+        className="rounded-full px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors tabular-nums"
+        title={allSelected ? "Clear selection" : `Select all ${total}`}
+      >
+        <span className="text-primary">{count}</span>
+        <span className="text-muted-foreground"> / {total}</span>
+      </button>
+      <div className="h-4 w-px bg-border mx-0.5" />
       <Button
-        size="sm"
+        size="icon-sm"
         variant="ghost"
         onClick={onMarkDone}
-        className="h-7 gap-1 text-xs"
+        aria-label="Mark done"
+        title="Mark done"
+        className="rounded-full"
       >
-        <Check className="size-3" /> Done
+        <Check className="size-3.5" />
       </Button>
       <Button
-        size="sm"
+        size="icon-sm"
         variant="ghost"
         onClick={onMarkUndone}
-        className="h-7 gap-1 text-xs"
+        aria-label="Reopen"
+        title="Reopen"
+        className="rounded-full"
       >
-        <Check className="size-3 opacity-40" /> Reopen
+        <Check className="size-3.5 opacity-40" />
       </Button>
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        onClick={onDelete}
+        aria-label="Delete"
+        title="Delete selected"
+        className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+      >
+        <Trash2 className="size-3.5" />
+      </Button>
+      <div className="h-4 w-px bg-border mx-0.5" />
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
-              <Folder className="size-3" /> Group
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label="More bulk actions"
+              title="More actions"
+              className="rounded-full"
+            >
+              <MoreHorizontal className="size-3.5" />
             </Button>
           }
         />
-        <DropdownMenuContent align="center" className="w-44">
-          <DropdownMenuItem onClick={() => onSetGroup(null)}>
-            <span className="text-muted-foreground">No group</span>
+        <DropdownMenuContent align="center" className="w-56">
+          <DropdownMenuItem
+            onClick={onSelectAll}
+            disabled={allSelected}
+          >
+            <Check className="size-3.5" />
+            Select all visible
           </DropdownMenuItem>
-          {groups.length > 0 && <DropdownMenuSeparator />}
-          {groups.map((g) => (
-            <DropdownMenuItem key={g.id} onClick={() => onSetGroup(g.id)}>
-              <Folder className="size-3 text-muted-foreground" />
-              <span className="truncate">{g.name}</span>
+          <DropdownMenuSeparator />
+          <DropdownMenuSub label="Set group" icon={<Folder className="size-3.5" />}>
+            <DropdownMenuItem onClick={() => onSetGroup(null)}>
+              <span className="text-muted-foreground">No group</span>
             </DropdownMenuItem>
-          ))}
+            {groups.length > 0 && <DropdownMenuSeparator />}
+            {groups.map((g) => (
+              <DropdownMenuItem key={g.id} onClick={() => onSetGroup(g.id)}>
+                <Folder className="size-3.5 text-muted-foreground" />
+                <span className="truncate">{g.name}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSub>
+          <DropdownMenuSub label="Set priority" icon={<Filter className="size-3.5" />}>
+            <DropdownMenuItem onClick={() => onSetPriority(null)}>
+              <span className="text-muted-foreground">No priority</span>
+            </DropdownMenuItem>
+            {priorities.length > 0 && <DropdownMenuSeparator />}
+            {priorities.map((p) => (
+              <DropdownMenuItem key={p} onClick={() => onSetPriority(p)}>
+                {p}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSub>
+          <DropdownMenuSub label="Set progress" icon={<Filter className="size-3.5" />}>
+            <DropdownMenuItem onClick={() => onSetProgress(null)}>
+              <span className="text-muted-foreground">No progress</span>
+            </DropdownMenuItem>
+            {progressOptions.length > 0 && <DropdownMenuSeparator />}
+            {progressOptions.map((p) => (
+              <DropdownMenuItem key={p} onClick={() => onSetProgress(p)}>
+                {p}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={onCopyChecklist}>
+            <ClipboardCopy className="size-3.5" />
+            Copy tasks as Markdown
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onCopyMarkdown}>
+            <ClipboardCopy className="size-3.5" />
+            Copy as Markdown table
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onCopyCsv}>
+            <FileDown className="size-3.5" />
+            Copy as CSV
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <DropdownMenuPriority priorities={priorities} onPick={onSetPriority} />
-      <DropdownMenuProgress options={progressOptions} onPick={onSetProgress} />
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={onDelete}
-        className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-      >
-        <Trash2 className="size-3" /> Delete
-      </Button>
-      <div className="h-4 w-px bg-border" />
       <Button
         size="icon-sm"
         variant="ghost"
         onClick={onClear}
         aria-label="Clear selection"
+        title="Clear selection"
+        className="rounded-full"
       >
-        <X className="size-3" />
+        <X className="size-3.5" />
       </Button>
     </div>
   );
 }
 
-function DropdownMenuPriority({
-  priorities,
-  onPick,
+function DropdownMenuSub({
+  label,
+  icon,
+  children,
 }: {
-  priorities: string[];
-  onPick: (p: string | null) => void;
+  label: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         render={
-          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
-            <Filter className="size-3" /> Priority
-          </Button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              setOpen(true);
+            }}
+            className="flex w-full select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            {icon}
+            <span className="flex-1 text-left">{label}</span>
+            <ChevronRight className="size-3.5 opacity-60" />
+          </button>
         }
       />
-      <DropdownMenuContent align="center" className="w-44">
-        <DropdownMenuItem onClick={() => onPick(null)}>
-          <span className="text-muted-foreground">No priority</span>
-        </DropdownMenuItem>
-        {priorities.length > 0 && <DropdownMenuSeparator />}
-        {priorities.map((p) => (
-          <DropdownMenuItem key={p} onClick={() => onPick(p)}>
-            {p}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function DropdownMenuProgress({
-  options,
-  onPick,
-}: {
-  options: string[];
-  onPick: (p: string | null) => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
-            <Filter className="size-3" /> Progress
-          </Button>
-        }
-      />
-      <DropdownMenuContent align="center" className="w-44">
-        <DropdownMenuItem onClick={() => onPick(null)}>
-          <span className="text-muted-foreground">No progress</span>
-        </DropdownMenuItem>
-        {options.length > 0 && <DropdownMenuSeparator />}
-        {options.map((p) => (
-          <DropdownMenuItem key={p} onClick={() => onPick(p)}>
-            {p}
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent side="right" align="start" className="w-48">
+        {children}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -645,6 +803,7 @@ export function TodoTable() {
     const id = s.todos.activeFileId;
     return s.todos.files.find((f) => f.id === id) ?? null;
   });
+  const usersList = useAppSelector((s) => s.users.users);
   const tableFont = useAppSelector((s) => s.settings.tableFont);
   const titleFontSize = useAppSelector((s) => s.settings.titleFontSize);
   const titleFontWeight = useAppSelector((s) => s.settings.titleFontWeight);
@@ -1168,6 +1327,15 @@ export function TodoTable() {
     for (const id of selected) dispatch(updateTodo({ id, progress }));
     setSelected(new Set());
   };
+  const selectedTodos = sortedTodos.filter((t) => selected.has(t.id));
+  const userNameById = (id: string) =>
+    usersList.find((u) => u.id === id)?.name ?? "";
+  const bulkCopyMarkdown = () =>
+    copyText(todosToMarkdownTable(selectedTodos, groups, userNameById));
+  const bulkCopyChecklist = () =>
+    copyText(todosToMarkdownChecklist(selectedTodos));
+  const bulkCopyCsv = () =>
+    copyText(todosToCsv(selectedTodos, groups, userNameById));
 
   return (
     <div
@@ -1179,16 +1347,23 @@ export function TodoTable() {
       {selected.size > 0 && (
         <BulkActionBar
           count={selected.size}
+          total={sortedTodos.length}
           groups={groups}
           priorities={priorityOptions}
           progressOptions={progressOptions}
           onClear={() => setSelected(new Set())}
+          onSelectAll={() =>
+            setSelected(new Set(sortedTodos.map((t) => t.id)))
+          }
           onDelete={bulkDelete}
           onMarkDone={() => bulkSetDone(true)}
           onMarkUndone={() => bulkSetDone(false)}
           onSetGroup={bulkSetGroup}
           onSetPriority={bulkSetPriority}
           onSetProgress={bulkSetProgress}
+          onCopyMarkdown={bulkCopyMarkdown}
+          onCopyChecklist={bulkCopyChecklist}
+          onCopyCsv={bulkCopyCsv}
         />
       )}
       {/* Search bar — outside scroll, never clips */}
@@ -1213,10 +1388,84 @@ export function TodoTable() {
             type="button"
             onClick={() => setGlobalFilter("")}
             className="text-xs hover:text-foreground"
+            aria-label="Clear search"
           >
             ✕
           </button>
         )}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <button
+                type="button"
+                className="rounded p-1 hover:bg-background hover:text-foreground transition-colors"
+                aria-label="Task list options"
+                title="Task list options"
+              >
+                <MoreHorizontal className="size-3.5" />
+              </button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem
+              onClick={() =>
+                copyText(
+                  todosToMarkdownChecklist(
+                    table.getFilteredRowModel().rows.map((r) => r.original),
+                  ),
+                )
+              }
+            >
+              <ClipboardCopy className="size-3" />
+              Copy tasks as Markdown
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                copyText(
+                  todosToMarkdownTable(
+                    table.getFilteredRowModel().rows.map((r) => r.original),
+                    groups,
+                    (id) =>
+                      usersList.find((u) => u.id === id)?.name ?? "",
+                  ),
+                )
+              }
+            >
+              <ClipboardCopy className="size-3" />
+              Copy as Markdown table
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                copyText(
+                  todosToCsv(
+                    table.getFilteredRowModel().rows.map((r) => r.original),
+                    groups,
+                    (id) =>
+                      usersList.find((u) => u.id === id)?.name ?? "",
+                  ),
+                )
+              }
+            >
+              <FileDown className="size-3" />
+              Copy as CSV
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() =>
+                setSelected(
+                  new Set(
+                    table
+                      .getFilteredRowModel()
+                      .rows.map((r) => r.original.id),
+                  ),
+                )
+              }
+            >
+              <Check className="size-3" />
+              Select all visible
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Horizontal + vertical scroll area — only the table */}

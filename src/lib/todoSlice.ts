@@ -253,6 +253,15 @@ const todoSlice = createSlice({
       if (!f) return
       f.todos = f.todos.filter((i) => i.id !== action.payload)
     },
+    reorderFile(state, action: PayloadAction<{ fromId: string; toId: string }>) {
+      const { fromId, toId } = action.payload
+      if (fromId === toId) return
+      const from = state.files.findIndex((f) => f.id === fromId)
+      const to = state.files.findIndex((f) => f.id === toId)
+      if (from === -1 || to === -1) return
+      const [moved] = state.files.splice(from, 1)
+      state.files.splice(to, 0, moved)
+    },
     reorder(state, action: PayloadAction<{ fromId: string; toId: string }>) {
       const f = getActive(state)
       if (!f) return
@@ -307,6 +316,7 @@ export const {
   deleteTodo,
   reorder,
   reorderGroup,
+  reorderFile,
   clearAll,
   replaceState,
   renamePriorityValue,

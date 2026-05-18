@@ -48,12 +48,12 @@
     "hash": "5f194429dba5b25a7113937967cbe12b"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/board-view.tsx": {
-    "mtime": 1779068328.0636723,
-    "hash": "aca72d864ff60ce45b0e2256cd0723fd"
+    "mtime": 1779068932.4563904,
+    "hash": "d939c6e6bd7392d8f86754c5a0be5fd2"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/todo-row-actions.tsx": {
-    "mtime": 1779067019.2025952,
-    "hash": "786268695c7f19e6e6176312d55be059"
+    "mtime": 1779085790.3985631,
+    "hash": "e4bc276d4c1691efb63eaccf37b45595"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/analytics-chart.tsx": {
     "mtime": 1778928039.3827565,
@@ -64,8 +64,8 @@
     "hash": "bf395b336ae4d12740146fda5845b808"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/thought-editor.tsx": {
-    "mtime": 1778893080.8423698,
-    "hash": "e3f5f686adda362b0dfad58fd9c03d31"
+    "mtime": 1779085681.522194,
+    "hash": "1388d4fa966c16aead90f90373fd7c25"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/service-worker-register.tsx": {
     "mtime": 1778899072.9525213,
@@ -96,8 +96,8 @@
     "hash": "db7c1fc4361db2a5c48390afb0676bc2"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/todo-table.tsx": {
-    "mtime": 1779033281.286113,
-    "hash": "6d6907c6e02f67dd1b50e61a1308be8c"
+    "mtime": 1779087285.9376237,
+    "hash": "2d1cd2b01acc7a669199cd944eb98056"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/drive-sync-button.tsx": {
     "mtime": 1778920621.7283752,
@@ -120,8 +120,8 @@
     "hash": "2a21bbb1e182ef1407c46589345a9e87"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/sidebar.tsx": {
-    "mtime": 1778923191.5557754,
-    "hash": "56584135148b2220899b1e332626d6ae"
+    "mtime": 1779085612.3811781,
+    "hash": "ebf34c4e91fb5bdc04ebdeebc18b882c"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/user-row-actions.tsx": {
     "mtime": 1778675623.4033594,
@@ -146,6 +146,10 @@
   "/Users/sawissac/Documents/GitHub/planner/src/components/date-range-cell.tsx": {
     "mtime": 1779067637.2831888,
     "hash": "167b1de3f142dd016226b79f2059b2c3"
+  },
+  "/Users/sawissac/Documents/GitHub/planner/src/components/emoji-picker.tsx": {
+    "mtime": 1779085903.8237286,
+    "hash": "bc1585b3640c2bd3b524be22e5d51463"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/components/analytics-breakdowns.tsx": {
     "mtime": 1778919306.755328,
@@ -292,8 +296,8 @@
     "hash": "5a6fd53fdcf2be529e9cc0b718fde352"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/lib/todoSlice.ts": {
-    "mtime": 1779032966.124799,
-    "hash": "055861821223d72d90c2902cfa32b447"
+    "mtime": 1779084615.736386,
+    "hash": "78c103b8e958982d74b8c8007aaa2066"
   },
   "/Users/sawissac/Documents/GitHub/planner/src/lib/aiSlice.ts": {
     "mtime": 1779001343.263397,

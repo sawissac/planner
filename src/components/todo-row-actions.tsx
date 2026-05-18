@@ -460,7 +460,12 @@ export function ThoughtDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   return (
-    <Drawer direction="right" open={open} onOpenChange={onOpenChange}>
+    <Drawer
+      direction="right"
+      open={open}
+      onOpenChange={onOpenChange}
+      handleOnly
+    >
       <DrawerContent
         onClick={(e) => e.stopPropagation()}
         className="w-[90vw]! max-w-[90vw]! sm:w-auto! sm:max-w-[min(960px,90vw)]!"

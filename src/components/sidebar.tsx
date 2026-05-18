@@ -29,10 +29,17 @@ import {
   deleteFile,
   importFiles,
   renameFile,
+  reorderFile,
   setActiveFile,
   type Todo,
   type TodoFile,
 } from "@/lib/todoSlice";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { type User } from "@/lib/userSlice";
 import { setSidebarWidth, setDarkMode } from "@/lib/settingsSlice";
 import { setOpen as setAiOpen } from "@/lib/aiSlice";
@@ -123,6 +130,8 @@ export function Sidebar({
   const fileRef = useRef<HTMLInputElement>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
+  const [dragFileId, setDragFileId] = useState<string | null>(null);
+  const [overFileId, setOverFileId] = useState<string | null>(null);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     open: false,
     title: "",
@@ -277,29 +286,46 @@ export function Sidebar({
           <span className="text-[10px] font-semibold leading-none">{totalDone}</span>
         </span>
         <div className="w-px h-4 bg-border" />
-        <AnimatePresence initial={false}>
-          {files.map((f) => (
-            <motion.button
-              key={f.id}
-              layout
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              transition={{ type: "spring", stiffness: 500, damping: 35 }}
-              type="button"
-              onClick={() => dispatch(setActiveFile(f.id))}
-              title={f.name}
-              className={cn(
-                "p-1.5 rounded-md transition-colors",
-                f.id === activeFileId
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              <FileText className="size-4" />
-            </motion.button>
-          ))}
-        </AnimatePresence>
+        <TooltipProvider delay={150}>
+          <AnimatePresence initial={false}>
+            {files.map((f) => {
+              const done = f.todos.filter((t) => t.done).length;
+              const total = f.todos.length;
+              return (
+                <Tooltip key={f.id}>
+                  <TooltipTrigger
+                    render={
+                      <motion.button
+                        layout
+                        initial={{ opacity: 0, scale: 0.6 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.6 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                        type="button"
+                        onClick={() => dispatch(setActiveFile(f.id))}
+                        aria-label={f.name}
+                        className={cn(
+                          "p-1.5 rounded-md transition-colors",
+                          f.id === activeFileId
+                            ? "bg-primary/15 text-primary"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        )}
+                      >
+                        <FileText className="size-4" />
+                      </motion.button>
+                    }
+                  />
+                  <TooltipContent side="left">
+                    <span className="font-medium">{f.name}</span>
+                    <span className="opacity-70 tabular-nums">
+                      {done}/{total}
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </AnimatePresence>
+        </TooltipProvider>
         <ConfirmDialog
           state={confirmState}
           onOpenChange={(o) => setConfirmState((s) => ({ ...s, open: o }))}
@@ -432,10 +458,44 @@ export function Sidebar({
                 animate={{ opacity: 1, height: "auto", marginTop: 0 }}
                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
                 transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                className="min-w-0"
+              ><div
                 onClick={() => !renaming && dispatch(setActiveFile(f.id))}
+                draggable={!renaming}
+                onDragStart={(e) => {
+                  if (renaming) return;
+                  setDragFileId(f.id);
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", f.id);
+                }}
+                onDragOver={(e) => {
+                  if (!dragFileId || dragFileId === f.id) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (overFileId !== f.id) setOverFileId(f.id);
+                }}
+                onDragLeave={() => {
+                  if (overFileId === f.id) setOverFileId(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const fromId =
+                    e.dataTransfer.getData("text/plain") || dragFileId;
+                  if (fromId && fromId !== f.id) {
+                    dispatch(reorderFile({ fromId, toId: f.id }));
+                  }
+                  setDragFileId(null);
+                  setOverFileId(null);
+                }}
+                onDragEnd={() => {
+                  setDragFileId(null);
+                  setOverFileId(null);
+                }}
                 className={cn(
                   "group relative flex flex-col gap-0.5 rounded-lg px-2 py-1.5 cursor-pointer transition-colors min-w-0",
                   active ? "bg-primary/10" : "hover:bg-muted",
+                  dragFileId === f.id && "opacity-40",
+                  overFileId === f.id && dragFileId !== f.id && "ring-2 ring-primary/40",
                 )}
               >
                 {active && (
@@ -564,7 +624,7 @@ export function Sidebar({
                     </div>
                   </>
                 )}
-              </motion.div>
+              </div></motion.div>
             );
           })}
           </AnimatePresence>
