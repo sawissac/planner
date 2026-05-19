@@ -118,6 +118,13 @@ export function DriveSyncButton() {
           ? sub.message
           : undefined
 
+    const ariaLabel =
+      sub.kind === "offline"
+        ? "Drive offline"
+        : sub.kind === "unsigned"
+          ? "Connect Drive"
+          : "Retry Drive sync"
+
     return (
       <Button
         variant="outline"
@@ -125,6 +132,7 @@ export function DriveSyncButton() {
         onClick={onClick}
         disabled={busy || sub.kind === "offline"}
         title={title}
+        aria-label={ariaLabel}
         className="w-full"
       >
         {icon}
