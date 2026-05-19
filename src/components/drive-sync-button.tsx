@@ -11,6 +11,11 @@ import { useAppDispatch, useAppSelector } from "@/lib/hooks"
 import { setDriveAutoSync } from "@/lib/settingsSlice"
 import type { AppStore } from "@/lib/store"
 
+type DisconnectedSub =
+  | { kind: "offline" }
+  | { kind: "unsigned" }
+  | { kind: "error"; message?: string }
+
 export function DriveSyncButton() {
   const store = useStore() as AppStore
   const dispatch = useAppDispatch()
@@ -73,13 +78,6 @@ export function DriveSyncButton() {
     }
   }
 
-  const disconnected = !signed || !online || status.kind === "error"
-
-  type DisconnectedSub =
-    | { kind: "offline" }
-    | { kind: "unsigned" }
-    | { kind: "error"; message?: string }
-
   const sub: DisconnectedSub | null = !online
     ? { kind: "offline" }
     : !signed
@@ -87,6 +85,8 @@ export function DriveSyncButton() {
       : status.kind === "error"
         ? { kind: "error", message: status.message }
         : null
+
+  const disconnected = sub !== null
 
   if (!signed) {
     return (
