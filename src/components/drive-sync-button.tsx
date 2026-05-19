@@ -86,9 +86,7 @@ export function DriveSyncButton() {
         ? { kind: "error", message: status.message }
         : null
 
-  const disconnected = sub !== null
-
-  if (disconnected && sub) {
+  if (sub) {
     const icon = busy ? (
       <Loader2 className="animate-spin" />
     ) : sub.kind === "error" ? (
