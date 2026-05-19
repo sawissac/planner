@@ -73,6 +73,21 @@ export function DriveSyncButton() {
     }
   }
 
+  const disconnected = !signed || !online || status.kind === "error"
+
+  type DisconnectedSub =
+    | { kind: "offline" }
+    | { kind: "unsigned" }
+    | { kind: "error"; message?: string }
+
+  const sub: DisconnectedSub | null = !online
+    ? { kind: "offline" }
+    : !signed
+      ? { kind: "unsigned" }
+      : status.kind === "error"
+        ? { kind: "error", message: status.message }
+        : null
+
   if (!signed) {
     return (
       <Button variant="outline" size="sm" onClick={handleSignIn} disabled={busy} className="w-full">
