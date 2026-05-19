@@ -38,6 +38,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Users,
   X,
 } from "lucide-react";
 import {
@@ -60,6 +61,7 @@ import {
   type Group,
   type Todo,
 } from "@/lib/todoSlice";
+import type { User } from "@/lib/userSlice";
 import {
   FONT_VAR,
   setColumnSizing,
@@ -604,6 +606,8 @@ function BulkActionBar({
   groups,
   priorities,
   progressOptions,
+  users,
+  assigneeState,
   onClear,
   onSelectAll,
   onDelete,
@@ -612,6 +616,8 @@ function BulkActionBar({
   onSetGroup,
   onSetPriority,
   onSetProgress,
+  onToggleAssignee,
+  onClearAssignees,
   onCopyMarkdown,
   onCopyChecklist,
   onCopyCsv,
@@ -621,6 +627,8 @@ function BulkActionBar({
   groups: Group[];
   priorities: string[];
   progressOptions: string[];
+  users: User[];
+  assigneeState: Record<string, "all" | "some" | "none">;
   onClear: () => void;
   onSelectAll: () => void;
   onDelete: () => void;
@@ -629,6 +637,8 @@ function BulkActionBar({
   onSetGroup: (groupId: string | null) => void;
   onSetPriority: (priority: string | null) => void;
   onSetProgress: (progress: string | null) => void;
+  onToggleAssignee: (userId: string) => void;
+  onClearAssignees: () => void;
   onCopyMarkdown: () => void;
   onCopyChecklist: () => void;
   onCopyCsv: () => void;
@@ -733,6 +743,43 @@ function BulkActionBar({
                 {p}
               </DropdownMenuItem>
             ))}
+          </DropdownMenuSub>
+          <DropdownMenuSub label="Assign" icon={<Users className="size-3.5" />}>
+            {users.length === 0 ? (
+              <DropdownMenuItem disabled>
+                <span className="text-muted-foreground">No users</span>
+              </DropdownMenuItem>
+            ) : (
+              users.map((u) => {
+                const state = assigneeState[u.id] ?? "none";
+                return (
+                  <DropdownMenuItem
+                    key={u.id}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onToggleAssignee(u.id);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "size-3.5",
+                        state === "all"
+                          ? "opacity-100"
+                          : state === "some"
+                            ? "opacity-50"
+                            : "opacity-0",
+                      )}
+                    />
+                    <span className="truncate">{u.name || "Unnamed"}</span>
+                  </DropdownMenuItem>
+                );
+              })
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onClearAssignees}>
+              <X className="size-3.5" />
+              Clear assignees
+            </DropdownMenuItem>
           </DropdownMenuSub>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onCopyChecklist}>
@@ -1313,21 +1360,46 @@ export function TodoTable() {
   };
   const bulkSetDone = (done: boolean) => {
     for (const id of selected) dispatch(updateTodo({ id, done }));
-    setSelected(new Set());
   };
   const bulkSetGroup = (groupId: string | null) => {
     for (const id of selected) dispatch(updateTodo({ id, groupId }));
-    setSelected(new Set());
   };
   const bulkSetPriority = (priority: string | null) => {
     for (const id of selected) dispatch(updateTodo({ id, priority }));
-    setSelected(new Set());
   };
   const bulkSetProgress = (progress: string | null) => {
     for (const id of selected) dispatch(updateTodo({ id, progress }));
-    setSelected(new Set());
   };
   const selectedTodos = sortedTodos.filter((t) => selected.has(t.id));
+  const assigneeState: Record<string, "all" | "some" | "none"> = {};
+  for (const u of usersList) {
+    let n = 0;
+    for (const t of selectedTodos) if (t.assignees.includes(u.id)) n++;
+    assigneeState[u.id] =
+      n === 0 ? "none" : n === selectedTodos.length ? "all" : "some";
+  }
+  const bulkToggleAssignee = (userId: string) => {
+    const state = assigneeState[userId] ?? "none";
+    const shouldRemove = state === "all";
+    for (const t of selectedTodos) {
+      const has = t.assignees.includes(userId);
+      let next: string[];
+      if (shouldRemove) {
+        if (!has) continue;
+        next = t.assignees.filter((a) => a !== userId);
+      } else {
+        if (has) continue;
+        next = [...t.assignees, userId];
+      }
+      dispatch(updateTodo({ id: t.id, assignees: next }));
+    }
+  };
+  const bulkClearAssignees = () => {
+    for (const t of selectedTodos) {
+      if (t.assignees.length === 0) continue;
+      dispatch(updateTodo({ id: t.id, assignees: [] }));
+    }
+  };
   const userNameById = (id: string) =>
     usersList.find((u) => u.id === id)?.name ?? "";
   const bulkCopyMarkdown = () =>
@@ -1361,6 +1433,10 @@ export function TodoTable() {
           onSetGroup={bulkSetGroup}
           onSetPriority={bulkSetPriority}
           onSetProgress={bulkSetProgress}
+          users={usersList}
+          assigneeState={assigneeState}
+          onToggleAssignee={bulkToggleAssignee}
+          onClearAssignees={bulkClearAssignees}
           onCopyMarkdown={bulkCopyMarkdown}
           onCopyChecklist={bulkCopyChecklist}
           onCopyCsv={bulkCopyCsv}

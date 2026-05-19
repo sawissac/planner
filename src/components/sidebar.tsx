@@ -268,25 +268,70 @@ export function Sidebar({
         style={{ width: 48 }}
         className="shrink-0 border-l border-border bg-sidebar text-sidebar-foreground hidden md:flex flex-col items-center py-3 gap-3 overflow-hidden transition-[width] duration-300 ease-in-out"
       >
-        {toggleBtn}
-        {aiBtn}
-        {darkToggleBtn}
-        {fullscreenBtn}
-        <div className="w-px h-4 bg-border" />
-        <span title={`${totalTodos} total`} className="flex flex-col items-center gap-0.5">
-          <ListTodo className="size-3.5 text-muted-foreground" />
-          <span className="text-[10px] font-semibold leading-none">{totalTodos}</span>
-        </span>
-        <span title={`${totalOpen} open`} className="flex flex-col items-center gap-0.5">
-          <ListChecks className="size-3.5 text-muted-foreground" />
-          <span className="text-[10px] font-semibold leading-none">{totalOpen}</span>
-        </span>
-        <span title={`${totalDone} done`} className="flex flex-col items-center gap-0.5">
-          <CircleCheck className="size-3.5 text-muted-foreground" />
-          <span className="text-[10px] font-semibold leading-none">{totalDone}</span>
-        </span>
-        <div className="w-px h-4 bg-border" />
         <TooltipProvider delay={150}>
+          <Tooltip>
+            <TooltipTrigger render={toggleBtn} />
+            <TooltipContent side="left">
+              {open ? "Close sidebar" : "Open sidebar"}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger render={aiBtn} />
+            <TooltipContent side="left">AI chat</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger render={darkToggleBtn} />
+            <TooltipContent side="left">
+              {darkMode ? "Light mode" : "Dark mode"}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger render={fullscreenBtn} />
+            <TooltipContent side="left">
+              {isFs ? "Exit fullscreen" : "Enter fullscreen"}
+            </TooltipContent>
+          </Tooltip>
+          <div className="w-px h-4 bg-border" />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="flex flex-col items-center gap-0.5">
+                  <ListTodo className="size-3.5 text-muted-foreground" />
+                  <span className="text-[10px] font-semibold leading-none">
+                    {totalTodos}
+                  </span>
+                </span>
+              }
+            />
+            <TooltipContent side="left">{totalTodos} total</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="flex flex-col items-center gap-0.5">
+                  <ListChecks className="size-3.5 text-muted-foreground" />
+                  <span className="text-[10px] font-semibold leading-none">
+                    {totalOpen}
+                  </span>
+                </span>
+              }
+            />
+            <TooltipContent side="left">{totalOpen} open</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="flex flex-col items-center gap-0.5">
+                  <CircleCheck className="size-3.5 text-muted-foreground" />
+                  <span className="text-[10px] font-semibold leading-none">
+                    {totalDone}
+                  </span>
+                </span>
+              }
+            />
+            <TooltipContent side="left">{totalDone} done</TooltipContent>
+          </Tooltip>
+          <div className="w-px h-4 bg-border" />
           <AnimatePresence initial={false}>
             {files.map((f) => {
               const done = f.todos.filter((t) => t.done).length;
