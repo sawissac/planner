@@ -18,6 +18,7 @@ export function DriveSyncButton() {
   const [signed, setSigned] = useState(false)
   const [status, setStatus] = useState<SyncStatus>({ kind: "idle" })
   const [busy, setBusy] = useState(false)
+  const [online, setOnline] = useState(true)
 
   useEffect(() => {
     setSigned(isSignedIn())
@@ -26,6 +27,18 @@ export function DriveSyncButton() {
     return () => {
       offAuth()
       offStatus()
+    }
+  }, [])
+
+  useEffect(() => {
+    setOnline(navigator.onLine)
+    const on = () => setOnline(true)
+    const off = () => setOnline(false)
+    window.addEventListener("online", on)
+    window.addEventListener("offline", off)
+    return () => {
+      window.removeEventListener("online", on)
+      window.removeEventListener("offline", off)
     }
   }, [])
 
