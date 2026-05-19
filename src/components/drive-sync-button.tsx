@@ -144,8 +144,6 @@ export function DriveSyncButton() {
   const icon =
     status.kind === "pulling" || status.kind === "pushing" || busy ? (
       <Loader2 className="animate-spin" />
-    ) : status.kind === "error" ? (
-      <AlertCircle />
     ) : (
       <Cloud />
     )
@@ -155,9 +153,7 @@ export function DriveSyncButton() {
       ? "Pulling…"
       : status.kind === "pushing"
         ? "Pushing…"
-        : status.kind === "error"
-          ? "Sync error"
-          : "Synced"
+        : "Synced"
 
   return (
     <div className="flex flex-col gap-2 w-full">
@@ -167,7 +163,7 @@ export function DriveSyncButton() {
           size="sm"
           onClick={handleSync}
           disabled={busy}
-          title={status.kind === "error" ? status.message : label}
+          title={label}
           className="flex-1"
         >
           {icon}
