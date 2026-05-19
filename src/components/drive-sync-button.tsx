@@ -88,11 +88,47 @@ export function DriveSyncButton() {
 
   const disconnected = sub !== null
 
-  if (!signed) {
+  if (disconnected && sub) {
+    const icon = busy ? (
+      <Loader2 className="animate-spin" />
+    ) : sub.kind === "error" ? (
+      <AlertCircle />
+    ) : (
+      <CloudOff />
+    )
+
+    const label =
+      sub.kind === "offline"
+        ? "Offline"
+        : sub.kind === "unsigned"
+          ? "Connect Drive"
+          : "Sync failed — Retry"
+
+    const onClick =
+      sub.kind === "offline"
+        ? undefined
+        : sub.kind === "unsigned"
+          ? handleSignIn
+          : handleSync
+
+    const title =
+      sub.kind === "offline"
+        ? "No internet connection"
+        : sub.kind === "error"
+          ? sub.message
+          : undefined
+
     return (
-      <Button variant="outline" size="sm" onClick={handleSignIn} disabled={busy} className="w-full">
-        {busy ? <Loader2 className="animate-spin" /> : <CloudOff />}
-        Connect Drive
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onClick}
+        disabled={busy || sub.kind === "offline"}
+        title={title}
+        className="w-full"
+      >
+        {icon}
+        {label}
       </Button>
     )
   }
