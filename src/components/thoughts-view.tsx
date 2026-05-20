@@ -97,7 +97,7 @@ const ThoughtEditorPane = forwardRef<
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-md border border-border">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-border">
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         <Button
           size="icon-sm"
@@ -114,7 +114,7 @@ const ThoughtEditorPane = forwardRef<
           </span>
         </span>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto bg-background">
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-background">
         {editorReady ? (
           <ThoughtEditor markdown={value} onChange={handleChange} />
         ) : (
@@ -149,6 +149,17 @@ export function ThoughtsView() {
     open: false,
     title: "",
   });
+
+  const activeFileId = useAppSelector((s) => s.todos.activeFileId);
+  const prevFileIdRef = useRef<string | null>(activeFileId);
+  useEffect(() => {
+    if (prevFileIdRef.current !== activeFileId) {
+      prevFileIdRef.current = activeFileId;
+      setSelectedId(initialId);
+      setView("list");
+      setDirty(false);
+    }
+  }, [activeFileId, initialId]);
 
   const effectiveSelectedId =
     selectedId && todos.some((t) => t.id === selectedId)
@@ -210,7 +221,7 @@ export function ThoughtsView() {
     <div className="grid items-start gap-3 md:grid-cols-[minmax(240px,320px)_1fr]">
       <div
         className={cn(
-          "rounded-md border border-border overflow-y-auto",
+          "min-w-0 rounded-md border border-border overflow-y-auto",
           "max-h-[calc(100vh-160px)] md:sticky md:top-2 md:max-h-[calc(100vh-140px)]",
           view === "editor" ? "hidden md:block" : "block",
         )}
@@ -252,7 +263,7 @@ export function ThoughtsView() {
       </div>
       <div
         className={cn(
-          "md:sticky md:top-2 md:self-start md:max-h-[calc(100vh-140px)]",
+          "min-w-0 md:sticky md:top-2 md:self-start md:max-h-[calc(100vh-140px)]",
           view === "list" ? "hidden md:block" : "block",
         )}
       >

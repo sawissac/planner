@@ -7,6 +7,12 @@
   z-index: 100;
 }
 
+.mdxeditor [class*="_toolbarRoot"] {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .mdxeditor,
 .mdxeditor-popup-container {
   --basePageBg: var(--popover);
