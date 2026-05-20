@@ -13,6 +13,7 @@ import { ArrowLeft } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { updateTodo, type Todo } from "@/lib/todoSlice";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog, type ConfirmState } from "@/components/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 const loadThoughtEditorModule = () => import("@/components/thought-editor");
@@ -96,8 +97,8 @@ const ThoughtEditorPane = forwardRef<
   );
 
   return (
-    <div className="flex min-h-[calc(100vh-220px)] flex-col rounded-md border border-border">
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+    <div className="flex min-h-0 flex-1 flex-col rounded-md border border-border">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         <Button
           size="icon-sm"
           variant="ghost"
@@ -113,7 +114,7 @@ const ThoughtEditorPane = forwardRef<
           </span>
         </span>
       </div>
-      <div className="flex-1 overflow-auto bg-background">
+      <div className="min-h-0 flex-1 overflow-auto bg-background">
         {editorReady ? (
           <ThoughtEditor markdown={value} onChange={handleChange} />
         ) : (
@@ -144,6 +145,10 @@ export function ThoughtsView() {
   const [view, setView] = useState<"list" | "editor">("list");
   const [dirty, setDirty] = useState(false);
   const paneRef = useRef<ThoughtEditorPaneHandle | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmState>({
+    open: false,
+    title: "",
+  });
 
   const effectiveSelectedId =
     selectedId && todos.some((t) => t.id === selectedId)
@@ -161,16 +166,52 @@ export function ThoughtsView() {
   const selected =
     todos.find((t) => t.id === effectiveSelectedId) ?? null;
 
-  const pickRow = (id: string) => {
+  const requestSelect = (id: string, nextView: "list" | "editor") => {
+    if (dirty && id !== effectiveSelectedId) {
+      setConfirm({
+        open: true,
+        title: "Discard unsaved thought?",
+        description: "Your edits to the current thought will be lost.",
+        destructive: true,
+        confirmLabel: "Discard",
+        onConfirm: () => {
+          paneRef.current?.cancel();
+          setSelectedId(id);
+          setView(nextView);
+        },
+      });
+      return;
+    }
     setSelectedId(id);
-    setView("editor");
+    setView(nextView);
+  };
+
+  const pickRow = (id: string) => requestSelect(id, "editor");
+
+  const requestBack = () => {
+    if (dirty) {
+      setConfirm({
+        open: true,
+        title: "Discard unsaved thought?",
+        description: "Your edits to the current thought will be lost.",
+        destructive: true,
+        confirmLabel: "Discard",
+        onConfirm: () => {
+          paneRef.current?.cancel();
+          setView("list");
+        },
+      });
+      return;
+    }
+    setView("list");
   };
 
   return (
-    <div className="grid gap-3 md:grid-cols-[minmax(240px,320px)_1fr]">
+    <div className="grid items-start gap-3 md:grid-cols-[minmax(240px,320px)_1fr]">
       <div
         className={cn(
-          "max-h-[calc(100vh-220px)] overflow-y-auto rounded-md border border-border",
+          "rounded-md border border-border overflow-y-auto",
+          "max-h-[calc(100vh-160px)] md:sticky md:top-2 md:max-h-[calc(100vh-140px)]",
           view === "editor" ? "hidden md:block" : "block",
         )}
       >
@@ -209,17 +250,22 @@ export function ThoughtsView() {
           })}
         </ul>
       </div>
-      <div className={cn(view === "list" ? "hidden md:block" : "block")}>
+      <div
+        className={cn(
+          "md:sticky md:top-2 md:self-start md:max-h-[calc(100vh-140px)]",
+          view === "list" ? "hidden md:block" : "block",
+        )}
+      >
         {selected ? (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 md:h-[calc(100vh-140px)]">
             <ThoughtEditorPane
               key={selected.id}
               ref={paneRef}
               todo={selected}
-              onBack={() => setView("list")}
+              onBack={requestBack}
               onDirtyChange={setDirty}
             />
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex shrink-0 items-center justify-end gap-2">
               <Button
                 size="sm"
                 variant="outline"
@@ -243,6 +289,10 @@ export function ThoughtsView() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        state={confirm}
+        onOpenChange={(open) => setConfirm((c) => ({ ...c, open }))}
+      />
     </div>
   );
 }
