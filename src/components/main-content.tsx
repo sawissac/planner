@@ -20,7 +20,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { setActiveTab, setBoardCompact, setFocusMode } from "@/lib/settingsSlice";
+import {
+  setActiveTab,
+  setBoardCompact,
+  setFocusMode,
+} from "@/lib/settingsSlice";
 import {
   BadgeCheck,
   UsersRound,
@@ -34,10 +38,13 @@ import {
   Minimize2,
   ListIndentIncrease,
   NotebookPen,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimelineView } from "@/components/timeline-view";
 import { BoardView } from "@/components/board-view";
+import { ThoughtsView } from "@/components/thoughts-view";
+import { preloadThoughtEditor } from "@/components/todo-row-actions";
 
 export function MainContent({
   onToggleSidebar,
@@ -97,13 +104,16 @@ export function MainContent({
               aria-label="Options"
               className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium text-muted-foreground transition-all hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <ListIndentIncrease className="size-4" />
+              <Settings className="size-4" />
             </button>
           }
         />
         <DropdownMenuContent align="end" className="w-auto">
           <DropdownMenuItem
-            onClick={() => console.log("Thought Editor")}
+            onClick={() => setTab("thoughts")}
+            onMouseEnter={preloadThoughtEditor}
+            onFocus={preloadThoughtEditor}
+            onPointerDown={preloadThoughtEditor}
             className="whitespace-nowrap"
           >
             <NotebookPen className="size-4" />
@@ -208,6 +218,9 @@ export function MainContent({
       </TabsContent>
       <TabsContent value="timeline">
         <TimelineView />
+      </TabsContent>
+      <TabsContent value="thoughts">
+        <ThoughtsView />
       </TabsContent>
     </Tabs>
   );
