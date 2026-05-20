@@ -13,6 +13,12 @@ import {
   type DateRangeValue,
 } from "@/components/date-range-filter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { setActiveTab, setBoardCompact, setFocusMode } from "@/lib/settingsSlice";
 import {
@@ -26,6 +32,8 @@ import {
   Columns3,
   Maximize2,
   Minimize2,
+  ListIndentIncrease,
+  NotebookPen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimelineView } from "@/components/timeline-view";
@@ -80,6 +88,26 @@ export function MainContent({
           <UsersRound className="size-4" />
         </span>
       </TabsTrigger>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button
+              type="button"
+              title="Options"
+              aria-label="Options"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium text-muted-foreground transition-all hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <ListIndentIncrease className="size-4" />
+            </button>
+          }
+        />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => console.log("Thought Editor")}>
+            <NotebookPen className="size-4" />
+            Thought Editor
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </TabsList>
   );
 
