@@ -14,6 +14,13 @@ import {
   setActiveFile,
   updateTodo,
 } from "../todoSlice"
+import {
+  addProgressOption,
+  removeProgressOption,
+  renameProgressOption,
+  reorderProgressOption,
+  DEFAULT_PROGRESS_OPTIONS,
+} from "../settingsSlice"
 import { undoAction, canUndo } from "../undo"
 
 export const AI_TOOLS: OpenAITool[] = [
@@ -565,6 +572,126 @@ export const AI_TOOLS: OpenAITool[] = [
   {
     type: "function",
     function: {
+      name: "move_card",
+      description:
+        "Move ONE task to a different board column (progress state). Shortcut for update_todo({id, progress}). `column` must match an existing board column exactly (case-sensitive). Empty string clears progress.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Task id. REQUIRED." },
+          column: {
+            type: "string",
+            description: "Target column name from Available progress states. Empty string clears progress. REQUIRED.",
+          },
+        },
+        required: ["id", "column"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "move_cards",
+      description:
+        "Move MANY tasks to the same board column in one call. Shortcut for update_todos({ids, patch:{progress}}). `column` must match an existing board column exactly. Empty string clears progress. Use for 'move these to Done', 'put them in Blocked', bulk kanban drags.",
+      parameters: {
+        type: "object",
+        properties: {
+          ids: { type: "array", items: { type: "string" }, description: "Task ids to move. REQUIRED." },
+          column: {
+            type: "string",
+            description: "Target column name. Empty string clears progress. REQUIRED.",
+          },
+        },
+        required: ["ids", "column"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_board_columns",
+      description:
+        "Return the ordered list of board (Kanban) columns. Columns ARE the progress states from settings — every task whose progress matches a column name shows as a card in that column. Includes which columns are protected defaults (cannot be renamed/deleted).",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_board_column",
+      description:
+        "Add a new board column (progress state). Use when user says 'add column X to the board', 'new lane X', 'create progress state X'. Duplicates (case-insensitive) are ignored.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Column name. Short, Title Case. e.g. 'Blocked', 'In Review', 'Backlog'.",
+          },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "rename_board_column",
+      description:
+        "Rename an existing board column. Also migrates every task currently in that column to the new name so no cards become orphan. Default columns ('Not Started', 'InProgress', 'Done') CANNOT be renamed — returns an error.",
+      parameters: {
+        type: "object",
+        properties: {
+          from: { type: "string", description: "Current column name. REQUIRED." },
+          to: { type: "string", description: "New column name. REQUIRED." },
+        },
+        required: ["from", "to"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_board_column",
+      description:
+        "Remove a board column. Tasks currently in that column get reassigned to `reassignTo` (default: cleared, i.e. no progress). Default columns ('Not Started', 'InProgress', 'Done') CANNOT be deleted — returns an error. Use ONLY on explicit user request.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Column name to delete. REQUIRED." },
+          reassignTo: {
+            type: "string",
+            description:
+              "Optional column name to move affected tasks into. Must exist. Omit or empty string to clear progress on those tasks.",
+          },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reorder_board_column",
+      description:
+        "Move a column to a new position in the board. The column `name` is placed at the slot currently occupied by `before` (existing column at the target position).",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Column being moved. REQUIRED." },
+          before: {
+            type: "string",
+            description: "Target neighbor column. The moved column ends up at this column's current index. REQUIRED.",
+          },
+        },
+        required: ["name", "before"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_capabilities",
       description:
         "Return the list of every tool currently exposed to you, with each tool's description. Use when the user asks 'what can you do', 'list your tools', 'what commands are available', etc. Pure read, no side effects.",
@@ -625,6 +752,13 @@ export type ToolName =
   | "reschedule_overdue"
   | "duplicate_todo"
   | "duplicate_group"
+  | "move_card"
+  | "move_cards"
+  | "list_board_columns"
+  | "add_board_column"
+  | "rename_board_column"
+  | "delete_board_column"
+  | "reorder_board_column"
   | "get_capabilities"
   | "get_app_features"
   | "get_tasks"
@@ -1176,6 +1310,136 @@ export function runTool(
       }),
     )
     return { id: newId, title, sourceId: id }
+  }
+
+  if (name === "move_card") {
+    const id = typeof args.id === "string" ? args.id : ""
+    if (!id) return { error: "id required" }
+    if (typeof args.column !== "string") return { error: "column required" }
+    const column = args.column.trim()
+    const cols = store.getState().settings.progressOptions
+    if (column && !cols.includes(column)) {
+      return { error: `column "${column}" not found`, available: cols }
+    }
+    store.dispatch(updateTodo({ id, progress: column === "" ? null : column }))
+    return { id, column: column || null, moved: true }
+  }
+
+  if (name === "move_cards") {
+    const ids = Array.isArray(args.ids)
+      ? (args.ids as unknown[]).filter((x): x is string => typeof x === "string")
+      : []
+    if (ids.length === 0) return { error: "ids required" }
+    if (typeof args.column !== "string") return { error: "column required" }
+    const column = args.column.trim()
+    const cols = store.getState().settings.progressOptions
+    if (column && !cols.includes(column)) {
+      return { error: `column "${column}" not found`, available: cols }
+    }
+    const progress = column === "" ? null : column
+    for (const id of ids) store.dispatch(updateTodo({ id, progress }))
+    return { moved: ids.length, ids, column: progress }
+  }
+
+  if (name === "list_board_columns") {
+    const state = store.getState()
+    const cols = state.settings.progressOptions
+    const defaults: string[] = [...DEFAULT_PROGRESS_OPTIONS]
+    return {
+      count: cols.length,
+      columns: cols.map((c, i) => ({
+        name: c,
+        index: i,
+        isDefault: defaults.includes(c),
+      })),
+      defaults,
+    }
+  }
+
+  if (name === "add_board_column") {
+    const colName = typeof args.name === "string" ? args.name.trim() : ""
+    if (!colName) return { error: "name required" }
+    const before = store.getState().settings.progressOptions
+    if (before.some((p) => p.toLowerCase() === colName.toLowerCase())) {
+      return { error: `column "${colName}" already exists` }
+    }
+    store.dispatch(addProgressOption(colName))
+    return { name: colName, added: true }
+  }
+
+  if (name === "rename_board_column") {
+    const from = typeof args.from === "string" ? args.from.trim() : ""
+    const to = typeof args.to === "string" ? args.to.trim() : ""
+    if (!from || !to) return { error: "from and to required" }
+    const state = store.getState()
+    const cols = state.settings.progressOptions
+    if (!cols.includes(from)) return { error: `column "${from}" not found` }
+    if ((DEFAULT_PROGRESS_OPTIONS as readonly string[]).includes(from)) {
+      return { error: `column "${from}" is a default and cannot be renamed` }
+    }
+    if (cols.some((p) => p.toLowerCase() === to.toLowerCase() && p !== from)) {
+      return { error: `column "${to}" already exists` }
+    }
+    store.dispatch(renameProgressOption({ from, to }))
+    const migrated: string[] = []
+    for (const file of state.todos.files) {
+      for (const t of file.todos) {
+        if (t.progress === from) {
+          store.dispatch(updateTodo({ id: t.id, progress: to }))
+          migrated.push(t.id)
+        }
+      }
+    }
+    return { from, to, renamed: true, migratedTaskIds: migrated }
+  }
+
+  if (name === "delete_board_column") {
+    const colName = typeof args.name === "string" ? args.name.trim() : ""
+    if (!colName) return { error: "name required" }
+    if ((DEFAULT_PROGRESS_OPTIONS as readonly string[]).includes(colName)) {
+      return { error: `column "${colName}" is a default and cannot be deleted` }
+    }
+    const state = store.getState()
+    const cols = state.settings.progressOptions
+    if (!cols.includes(colName)) return { error: `column "${colName}" not found` }
+    const reassignTo =
+      typeof args.reassignTo === "string" && args.reassignTo.trim()
+        ? args.reassignTo.trim()
+        : null
+    if (reassignTo && !cols.includes(reassignTo)) {
+      return { error: `reassignTo column "${reassignTo}" not found` }
+    }
+    const reassigned: string[] = []
+    for (const file of state.todos.files) {
+      for (const t of file.todos) {
+        if (t.progress === colName) {
+          store.dispatch(updateTodo({ id: t.id, progress: reassignTo }))
+          reassigned.push(t.id)
+        }
+      }
+    }
+    store.dispatch(removeProgressOption(colName))
+    return {
+      name: colName,
+      deleted: true,
+      reassignedTo: reassignTo,
+      reassignedTaskIds: reassigned,
+    }
+  }
+
+  if (name === "reorder_board_column") {
+    const from = typeof args.name === "string" ? args.name.trim() : ""
+    const to = typeof args.before === "string" ? args.before.trim() : ""
+    if (!from || !to) return { error: "name and before required" }
+    const cols = store.getState().settings.progressOptions
+    if (!cols.includes(from)) return { error: `column "${from}" not found` }
+    if (!cols.includes(to)) return { error: `column "${to}" not found` }
+    store.dispatch(reorderProgressOption({ from, to }))
+    return {
+      name: from,
+      before: to,
+      columns: store.getState().settings.progressOptions,
+    }
   }
 
   if (name === "get_capabilities") {

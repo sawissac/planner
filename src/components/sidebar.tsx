@@ -49,6 +49,7 @@ import { nanoid } from "@reduxjs/toolkit";
 import { ConfirmDialog, type ConfirmState } from "./confirm-dialog";
 import { PromptDialog, type PromptState } from "./prompt-dialog";
 import { DriveSyncButton } from "./drive-sync-button";
+import { StorageMeter } from "./storage-meter";
 
 type ExportBundle = { file: TodoFile; users: User[] }
 
@@ -676,6 +677,7 @@ export function Sidebar({
         </div>
       </div>
       <div className="border-t border-border px-3 py-2 shrink-0 flex flex-col gap-2">
+        <StorageMeter />
         <DriveSyncButton />
         <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
           <Link href="/about" className="hover:text-foreground hover:underline">

@@ -33,14 +33,20 @@ import {
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -224,6 +230,7 @@ export function AiChat() {
   const [keysOpen, setKeysOpen] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const [modelPickerOpen, setModelPickerOpen] = useState(false);
 
   const allModels = useMemo(
     () => getAllModels(ollamaModels, openrouterModels),
@@ -311,49 +318,65 @@ export function AiChat() {
           >
             <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
               <Sparkles className="size-4 text-primary" />
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className="inline-flex items-center h-7 px-2 text-xs rounded-md hover:bg-accent"
+              <Popover open={modelPickerOpen} onOpenChange={setModelPickerOpen}>
+                <PopoverTrigger
+                  className="inline-flex items-center gap-1 h-7 px-2 text-xs rounded-md hover:bg-accent"
                   aria-label="Select model"
                 >
-                  {model.label}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-72 overflow-auto">
-                  {PROVIDERS.map((p, idx) => {
-                    const models = allModels.filter((m) => m.provider === p);
-                    return (
-                      <DropdownMenuGroup key={p}>
-                        {idx > 0 && <DropdownMenuSeparator />}
-                        <DropdownMenuLabel className="text-xs">
-                          {PROVIDER_LABEL[p]}
-                        </DropdownMenuLabel>
-                        {models.length === 0 && p === "ollama" && (
-                          <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                            No models. Run <code className="rounded bg-muted px-1">ollama pull &lt;name&gt;</code>.
+                  <span className="truncate max-w-[16rem]">{model.label}</span>
+                  <ChevronsUpDown className="size-3 opacity-50" />
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  className="p-0 w-[20rem]"
+                >
+                  <Command>
+                    <CommandInput placeholder="Search models…" />
+                    <CommandList className="max-h-72">
+                      <CommandEmpty>No matching model.</CommandEmpty>
+                      {PROVIDERS.map((p, idx) => {
+                        const models = allModels.filter((m) => m.provider === p);
+                        return (
+                          <div key={p}>
+                            {idx > 0 && <CommandSeparator />}
+                            <CommandGroup heading={PROVIDER_LABEL[p]}>
+                              {models.length === 0 && p === "ollama" && (
+                                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                  No models. Run <code className="rounded bg-muted px-1">ollama pull &lt;name&gt;</code>.
+                                </div>
+                              )}
+                              {models.length === 0 && p === "openrouter" && (
+                                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                  Loading free models…
+                                </div>
+                              )}
+                              {models.map((m) => (
+                                <CommandItem
+                                  key={m.id}
+                                  value={`${m.label} ${m.id} ${PROVIDER_LABEL[p]}`}
+                                  onSelect={() => {
+                                    dispatch(setModel(m.id));
+                                    setModelPickerOpen(false);
+                                  }}
+                                  className="text-xs"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "size-3",
+                                      m.id === modelId ? "opacity-100" : "opacity-0",
+                                    )}
+                                  />
+                                  <span className="truncate">{m.label}</span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
                           </div>
-                        )}
-                        {models.length === 0 && p === "openrouter" && (
-                          <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                            Loading free models…
-                          </div>
-                        )}
-                        {models.map((m) => (
-                          <DropdownMenuItem
-                            key={m.id}
-                            onClick={() => dispatch(setModel(m.id))}
-                            className={cn(
-                              "text-xs",
-                              m.id === modelId && "bg-accent",
-                            )}
-                          >
-                            {m.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuGroup>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                        );
+                      })}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <div className="flex-1" />
               <Button
                 size="icon-sm"

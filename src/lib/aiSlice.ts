@@ -52,9 +52,20 @@ export type AiState = {
   openrouterModels: ModelOption[]
 }
 
+const MODEL_ID_KEY = "ai.modelId"
+
+function loadStoredModelId(): string {
+  if (typeof window === "undefined") return FREE_MODELS[0].id
+  try {
+    return window.localStorage.getItem(MODEL_ID_KEY) || FREE_MODELS[0].id
+  } catch {
+    return FREE_MODELS[0].id
+  }
+}
+
 const initialState: AiState = {
   open: false,
-  modelId: FREE_MODELS[0].id,
+  modelId: loadStoredModelId(),
   messages: [],
   isStreaming: false,
   error: null,
@@ -86,6 +97,13 @@ const aiSlice = createSlice({
     },
     setModel(state, action: PayloadAction<string>) {
       state.modelId = action.payload
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(MODEL_ID_KEY, action.payload)
+        } catch {
+          /* ignore quota errors */
+        }
+      }
     },
     addMessage: {
       prepare(msg: Omit<ChatMessage, "id">) {

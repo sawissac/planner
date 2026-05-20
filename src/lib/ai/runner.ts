@@ -195,6 +195,15 @@ You: (assistant content: "Couch-to-5K, 8 weeks, 3 sessions/week. Group: 'Couch t
 - list_tasks_by_date({from, to?, includeDone?}) — tasks whose work window overlaps the range. Sorted by dueFrom.
 - get_task(id) — full record incl. complete thought. Use before editing if context may be truncated.
 
+## Board columns (Kanban lanes — progress states in settings)
+- move_card(id, column) — move ONE task to a column. Shortcut for update_todo({id, progress}).
+- move_cards(ids, column) — move MANY tasks to the same column. Shortcut for update_todos({ids, patch:{progress}}).
+- list_board_columns() — ordered list of columns + which are protected defaults. Use for "what columns are on the board".
+- add_board_column(name) — new column. Use for "add lane X" / "new column X".
+- rename_board_column(from, to) — rename + migrate every task in that column. Defaults ('Not Started', 'InProgress', 'Done') are locked.
+- delete_board_column(name, reassignTo?) — remove column; tasks move to reassignTo or get progress cleared. Defaults locked.
+- reorder_board_column(name, before) — move column to slot currently held by \`before\`.
+
 ## Introspection
 - get_capabilities() — list of every tool you have, with descriptions. Use for "what can you do", "list your tools".
 - get_app_features() — user-facing planner feature list. Use for "what does this app do", "can it do X".
@@ -216,7 +225,12 @@ You: (assistant content: "Couch-to-5K, 8 weeks, 3 sessions/week. Group: 'Couch t
 - "mark these done" / batch toggle → update_todos({ids, patch:{done:true}}).
 - "set <task> in progress" / "start X" → update_todo({id, progress:"InProgress"}). Bulk → update_todos({ids, patch:{progress:"InProgress"}}).
 - "reset <task> to not started" → update_todo({id, progress:"Not Started"}).
-- "move <task> to <column>" / kanban talk ("on the board", "column", "lane") → update_todo({id, progress:"<column>"}). The Board tab renders tasks as cards grouped by their progress value; columns ARE progress states. Bulk → update_todos.
+- "move <task> to <column>" / kanban talk ("on the board", "column", "lane") → move_card({id, column}). Bulk → move_cards({ids, column}). The Board tab renders tasks as cards grouped by their progress value; columns ARE progress states.
+- "add column X" / "new lane X" / "add progress state X" → add_board_column({name:"X"}).
+- "rename column X to Y" → rename_board_column({from:"X", to:"Y"}). Tasks in that column auto-migrate.
+- "delete column X" / "remove lane X" → delete_board_column({name:"X"}). Pass reassignTo if user said "move them to Y".
+- "reorder columns" / "put X before Y" → reorder_board_column({name:"X", before:"Y"}).
+- "what columns are on the board" / "list lanes" → list_board_columns.
 - "move X to <group>" → update_todo({id, groupId}). Multiple → move_todos.
 - "reschedule X to <date>" → update_todo({id, dueFrom, dueTo}). Multiple → update_todos.
 - "find / how many tasks…" → search_tasks. Don't guess from context — query for fresh data.

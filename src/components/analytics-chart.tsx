@@ -17,6 +17,7 @@ import {
   AssigneeBreakdown,
   GroupBreakdown,
 } from "@/components/analytics-breakdowns";
+import { AnalyticsWordCloud } from "@/components/analytics-wordcloud";
 
 export const RANGES = [
   { label: "Last 7 days", days: 7 },
@@ -430,6 +431,9 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       </div>
       <div className="min-w-0 md:h-full">
         <GroupBreakdown files={files} rangeDays={rangeDays} />
+      </div>
+      <div className="min-w-0 md:col-span-2">
+        <AnalyticsWordCloud files={files} rangeDays={rangeDays} />
       </div>
     </div>
   );
