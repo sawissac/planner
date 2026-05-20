@@ -101,8 +101,11 @@ export function MainContent({
             </button>
           }
         />
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => console.log("Thought Editor")}>
+        <DropdownMenuContent align="end" className="w-auto">
+          <DropdownMenuItem
+            onClick={() => console.log("Thought Editor")}
+            className="whitespace-nowrap"
+          >
             <NotebookPen className="size-4" />
             Thought Editor
           </DropdownMenuItem>
