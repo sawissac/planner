@@ -1,18 +1,14 @@
-import type { AppStore } from "../store";
 import {
   addMessage,
+  type ChatMessage,
   setError,
   setStreaming,
   truncateAfterLastUser,
-  type ChatMessage,
-} from "../aiSlice";
-import { getAllModels } from "../aiSlice";
-import {
-  chatCompletion,
-  getApiKey,
-  type OpenAIMessage,
-  type OpenAIToolCall,
-} from "./providers";
+} from "@/stores/slices/aiSlice";
+import { getAllModels } from "@/stores/slices/aiSlice";
+import type { AppStore } from "@/stores/store";
+
+import { chatCompletion, getApiKey, type OpenAIMessage, type OpenAIToolCall } from "./providers";
 import { AI_TOOLS, runTool } from "./tools";
 
 const MAX_TOOL_ITERATIONS = 100;
@@ -24,30 +20,28 @@ const THIS_NOUN_RE =
   /\bthis\s+(course|project|plan|file|list|trip|workspace|board|sprint|thing|one|stuff)\b/i;
 
 function annotateUserText(store: AppStore, text: string): string {
-  if (!THIS_NOUN_RE.test(text)) return text;
+  if (!THIS_NOUN_RE.test(text)) {
+    return text;
+  }
   const state = store.getState();
   const file = state.todos.files.find((f) => f.id === state.todos.activeFileId);
-  if (!file) return text;
+  if (!file) {
+    return text;
+  }
   return `${text}\n\n[resolved by app: "this <noun>" = active file "${file.name}" (id=${file.id}). Answer from its tasks/groups. Do NOT ask which one.]`;
 }
 
 function shouldForceTool(history: ChatMessage[]): boolean {
   for (let i = history.length - 1; i >= 0; i--) {
     const m = history[i];
-    if (m.role === "user" && !m.hidden) return PLAN_INTENT_RE.test(m.content);
+    if (m.role === "user" && !m.hidden) {
+      return PLAN_INTENT_RE.test(m.content);
+    }
   }
   return false;
 }
 
-const WEEKDAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -91,20 +85,24 @@ function buildContext(store: AppStore): string {
   }
   lines.push("");
   lines.push(`Existing users (${users.length}):`);
-  if (users.length === 0) lines.push("  (none)");
-  else
-    for (const u of users)
-      lines.push(
-        `  - id=${u.id} name="${u.name}"${u.agenda ? ` agenda="${u.agenda}"` : ""}`,
-      );
+  if (users.length === 0) {
+    lines.push("  (none)");
+  } else {
+    for (const u of users) {
+      lines.push(`  - id=${u.id} name="${u.name}"${u.agenda ? ` agenda="${u.agenda}"` : ""}`);
+    }
+  }
   lines.push("");
   if (file) {
     lines.push(`Active file: "${file.name}" (id=${file.id})`);
     lines.push(`Existing groups (${file.groups.length}):`);
-    if (file.groups.length === 0) lines.push("  (none)");
-    else
-      for (const g of file.groups)
+    if (file.groups.length === 0) {
+      lines.push("  (none)");
+    } else {
+      for (const g of file.groups) {
         lines.push(`  - id=${g.id} name="${g.name}"`);
+      }
+    }
     lines.push("");
     const groupName = (id: string | null) =>
       id ? (file.groups.find((g) => g.id === id)?.name ?? id) : null;
@@ -114,8 +112,9 @@ function buildContext(store: AppStore): string {
     lines.push(
       `Existing tasks (${file.todos.length} total — ${open} open, ${done} done). Do NOT recreate these. When listing tasks to the user, show the group NAME not the id:`,
     );
-    if (file.todos.length === 0) lines.push("  (none)");
-    else
+    if (file.todos.length === 0) {
+      lines.push("  (none)");
+    } else {
       for (const t of file.todos) {
         const gname = groupName(t.groupId);
         const anames = t.assignees.map(userName);
@@ -127,10 +126,9 @@ function buildContext(store: AppStore): string {
           `  - id=${t.id} "${t.title}"${t.priority ? ` [p=${t.priority}]` : ""}${t.progress ? ` [progress=${t.progress}]` : ""}${gname ? ` [group="${gname}"]` : ""}${assigneeStr}${t.done ? " [done]" : ""}`,
         );
       }
+    }
   } else {
-    lines.push(
-      "No active file selected. Tell the user to create or select one before planning.",
-    );
+    lines.push("No active file selected. Tell the user to create or select one before planning.");
   }
   return lines.join("\n");
 }
@@ -324,16 +322,12 @@ After tools complete, give a tight summary (≤5 lines): what changed, counts, d
 ${buildContext(store)}`;
 }
 
-function toOpenAIMessages(
-  store: AppStore,
-  history: ChatMessage[],
-): OpenAIMessage[] {
-  const msgs: OpenAIMessage[] = [
-    { role: "system", content: systemPrompt(store) },
-  ];
+function toOpenAIMessages(store: AppStore, history: ChatMessage[]): OpenAIMessage[] {
+  const msgs: OpenAIMessage[] = [{ role: "system", content: systemPrompt(store) }];
   for (const m of history) {
-    if (m.role === "user") msgs.push({ role: "user", content: m.content });
-    else if (m.role === "assistant") {
+    if (m.role === "user") {
+      msgs.push({ role: "user", content: m.content });
+    } else if (m.role === "assistant") {
       if (m.toolCalls && m.toolCalls.length > 0) {
         msgs.push({
           role: "assistant",
@@ -356,19 +350,16 @@ function toOpenAIMessages(
 
 async function runLoop(store: AppStore, signal: AbortSignal): Promise<void> {
   const state = store.getState();
-  const modelOpt = getAllModels(
-    state.ai.ollamaModels,
-    state.ai.openrouterModels,
-  ).find((m) => m.id === state.ai.modelId);
+  const modelOpt = getAllModels(state.ai.ollamaModels, state.ai.openrouterModels).find(
+    (m) => m.id === state.ai.modelId,
+  );
   if (!modelOpt) {
     store.dispatch(setError("Model not found"));
     return;
   }
   const apiKey = getApiKey(modelOpt.provider);
   if (!apiKey && modelOpt.provider !== "ollama") {
-    store.dispatch(
-      setError(`Missing API key for ${modelOpt.provider}. Add it in settings.`),
-    );
+    store.dispatch(setError(`Missing API key for ${modelOpt.provider}. Add it in settings.`));
     return;
   }
 
@@ -395,15 +386,13 @@ async function runLoop(store: AppStore, signal: AbortSignal): Promise<void> {
         signal,
       });
       const choice = res.choices?.[0];
-      if (!choice) throw new Error("Empty response");
+      if (!choice) {
+        throw new Error("Empty response");
+      }
       const msg = choice.message;
       const rawCalls: OpenAIToolCall[] = msg.tool_calls ?? [];
-      const validCalls = rawCalls.filter((c) =>
-        validToolNames.has(c.function.name),
-      );
-      const invalidCalls = rawCalls.filter(
-        (c) => !validToolNames.has(c.function.name),
-      );
+      const validCalls = rawCalls.filter((c) => validToolNames.has(c.function.name));
+      const invalidCalls = rawCalls.filter((c) => !validToolNames.has(c.function.name));
 
       store.dispatch(
         addMessage({
@@ -418,7 +407,9 @@ async function runLoop(store: AppStore, signal: AbortSignal): Promise<void> {
       );
 
       if (validCalls.length === 0) {
-        const stuck = invalidCalls.length > 0 || !msg.content?.trim() ||
+        const stuck =
+          invalidCalls.length > 0 ||
+          !msg.content?.trim() ||
           /\b(clarify|more (info|context|detail)|could you|please (tell|provide|specify)|what (would|kind|day|time)|let me know|need to know)\b/i.test(
             msg.content ?? "",
           );
@@ -444,11 +435,7 @@ async function runLoop(store: AppStore, signal: AbortSignal): Promise<void> {
       }
 
       for (const call of validCalls) {
-        const result = runTool(
-          store,
-          call.function.name,
-          call.function.arguments,
-        );
+        const result = runTool(store, call.function.name, call.function.arguments);
         store.dispatch(
           addMessage({
             role: "tool",
@@ -460,7 +447,9 @@ async function runLoop(store: AppStore, signal: AbortSignal): Promise<void> {
     }
     store.dispatch(setError("Tool iteration limit reached"));
   } catch (e) {
-    if ((e as Error).name === "AbortError") return;
+    if ((e as Error).name === "AbortError") {
+      return;
+    }
     store.dispatch(setError((e as Error).message));
   } finally {
     store.dispatch(setStreaming(false));
@@ -472,16 +461,11 @@ export async function runChat(
   userText: string,
   signal: AbortSignal,
 ): Promise<void> {
-  store.dispatch(
-    addMessage({ role: "user", content: annotateUserText(store, userText) }),
-  );
+  store.dispatch(addMessage({ role: "user", content: annotateUserText(store, userText) }));
   await runLoop(store, signal);
 }
 
-export async function retryChat(
-  store: AppStore,
-  signal: AbortSignal,
-): Promise<void> {
+export async function retryChat(store: AppStore, signal: AbortSignal): Promise<void> {
   const history = store.getState().ai.messages;
   const hasUser = history.some((m) => m.role === "user");
   if (!hasUser) {

@@ -1,11 +1,11 @@
-import Link from "next/link"
-import type { Metadata } from "next"
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Planner — local-first task & todo planner with AI",
   description:
     "A fast, local-first planner with timelines, analytics, an AI planning assistant, and optional Google Drive backup.",
-}
+};
 
 export default function Home() {
   return (
@@ -28,9 +28,8 @@ export default function Home() {
           </h1>
 
           <p className="lp-fade-up lp-d3 mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
-            A fast, local-first planner with timelines, analytics, an AI
-            planning assistant, and optional Google Drive backup. Built for the
-            browser. Yours alone.
+            A fast, local-first planner with timelines, analytics, an AI planning assistant, and
+            optional Google Drive backup. Built for the browser. Yours alone.
           </p>
 
           <div className="lp-fade-up lp-d4 mt-10 flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
@@ -40,7 +39,15 @@ export default function Home() {
             >
               <span className="lp-shimmer absolute inset-0" aria-hidden />
               <span className="relative">Open the app</span>
-              <svg className="relative h-5 w-5 transition group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                className="relative h-5 w-5 transition group-hover:translate-x-0.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M5 12h14" />
                 <path d="m13 6 6 6-6 6" />
               </svg>
@@ -54,9 +61,15 @@ export default function Home() {
           </div>
 
           <ul className="lp-fade-up lp-d5 mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground lg:justify-start">
-            <li className="inline-flex items-center gap-1.5"><Check /> No account</li>
-            <li className="inline-flex items-center gap-1.5"><Check /> Works offline</li>
-            <li className="inline-flex items-center gap-1.5"><Check /> Open source feel</li>
+            <li className="inline-flex items-center gap-1.5">
+              <Check /> No account
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <Check /> Works offline
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <Check /> Open source feel
+            </li>
           </ul>
         </div>
 
@@ -98,14 +111,20 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-6 text-xs text-muted-foreground sm:flex-row">
           <p>Planner — local-first task planner.</p>
           <nav className="flex items-center gap-4">
-            <Link href="/about" className="hover:text-foreground">About</Link>
-            <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
-            <Link href="/terms" className="hover:text-foreground">Terms</Link>
+            <Link href="/about" className="hover:text-foreground">
+              About
+            </Link>
+            <Link href="/privacy" className="hover:text-foreground">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-foreground">
+              Terms
+            </Link>
           </nav>
         </div>
       </footer>
     </main>
-  )
+  );
 }
 
 function BackgroundLayer() {
@@ -146,15 +165,39 @@ function BackgroundLayer() {
           </linearGradient>
         </defs>
         <g className="lp-spin-slow" style={{ transformOrigin: "100px 100px" }}>
-          <circle cx="100" cy="100" r="80" fill="none" stroke="url(#lp-ring)" strokeWidth="0.8" strokeDasharray="2 6" />
-          <circle cx="100" cy="100" r="60" fill="none" stroke="url(#lp-ring)" strokeWidth="0.6" strokeDasharray="1 5" />
+          <circle
+            cx="100"
+            cy="100"
+            r="80"
+            fill="none"
+            stroke="url(#lp-ring)"
+            strokeWidth="0.8"
+            strokeDasharray="2 6"
+          />
+          <circle
+            cx="100"
+            cy="100"
+            r="60"
+            fill="none"
+            stroke="url(#lp-ring)"
+            strokeWidth="0.6"
+            strokeDasharray="1 5"
+          />
         </g>
         <g className="lp-spin-rev" style={{ transformOrigin: "100px 100px" }}>
-          <circle cx="100" cy="100" r="40" fill="none" stroke="url(#lp-ring)" strokeWidth="0.6" strokeDasharray="1 4" />
+          <circle
+            cx="100"
+            cy="100"
+            r="40"
+            fill="none"
+            stroke="url(#lp-ring)"
+            strokeWidth="0.6"
+            strokeDasharray="1 4"
+          />
         </g>
       </svg>
     </div>
-  )
+  );
 }
 
 function HeroIllustration() {
@@ -187,8 +230,24 @@ function HeroIllustration() {
           {/* back card (timeline preview) */}
           <g transform="translate(36 24) rotate(-3 240 180)" opacity="0.9">
             <rect width="380" height="220" rx="20" fill="var(--card)" stroke="var(--border)" />
-            <rect x="20" y="20" width="80" height="10" rx="5" fill="var(--muted-foreground)" opacity="0.35" />
-            <rect x="20" y="38" width="48" height="6" rx="3" fill="var(--muted-foreground)" opacity="0.22" />
+            <rect
+              x="20"
+              y="20"
+              width="80"
+              height="10"
+              rx="5"
+              fill="var(--muted-foreground)"
+              opacity="0.35"
+            />
+            <rect
+              x="20"
+              y="38"
+              width="48"
+              height="6"
+              rx="3"
+              fill="var(--muted-foreground)"
+              opacity="0.22"
+            />
             {/* timeline bars */}
             {[
               { y: 70, x: 20, w: 180, c: "var(--primary)" },
@@ -207,14 +266,24 @@ function HeroIllustration() {
                 fill={b.c}
                 opacity={0.5}
                 className="lp-tl-bar"
-                style={{ animationDelay: `${0.2 + i * 0.12}s`, transformOrigin: `${b.x}px ${b.y}px` }}
+                style={{
+                  animationDelay: `${0.2 + i * 0.12}s`,
+                  transformOrigin: `${b.x}px ${b.y}px`,
+                }}
               />
             ))}
           </g>
 
           {/* main card (tasks) */}
           <g transform="translate(96 96)">
-            <rect width="400" height="300" rx="22" fill="url(#hero-card)" stroke="var(--border)" strokeWidth="1" />
+            <rect
+              width="400"
+              height="300"
+              rx="22"
+              fill="url(#hero-card)"
+              stroke="var(--border)"
+              strokeWidth="1"
+            />
 
             {/* header */}
             <g>
@@ -292,7 +361,10 @@ function HeroIllustration() {
                   fill="var(--primary)"
                   opacity={0.55 + (i % 3) * 0.12}
                   className="lp-bar"
-                  style={{ transformOrigin: `${12 + i * 28}px ${40}px`, animationDelay: `${0.5 + i * 0.04}s` }}
+                  style={{
+                    transformOrigin: `${12 + i * 28}px ${40}px`,
+                    animationDelay: `${0.5 + i * 0.04}s`,
+                  }}
                 />
               ))}
             </g>
@@ -301,11 +373,15 @@ function HeroIllustration() {
           {/* AI sparkle bubble */}
           <g className="lp-bubble" style={{ animationDelay: "0.5s" }}>
             <circle cx="486" cy="92" r="28" fill="url(#hero-accent)" />
-            <circle cx="486" cy="92" r="36" fill="var(--primary)" opacity="0.18" filter="url(#hero-glow)" />
-            <path
-              d="M486 76 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 z"
-              fill="white"
+            <circle
+              cx="486"
+              cy="92"
+              r="36"
+              fill="var(--primary)"
+              opacity="0.18"
+              filter="url(#hero-glow)"
             />
+            <path d="M486 76 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 z" fill="white" />
             <path
               d="M504 108 l1.6 4 l4 1.6 l-4 1.6 l-1.6 4 l-1.6 -4 l-4 -1.6 l4 -1.6 z"
               fill="white"
@@ -335,7 +411,7 @@ function HeroIllustration() {
         </svg>
       </div>
     </div>
-  )
+  );
 }
 
 function FeatureCard({
@@ -344,13 +420,15 @@ function FeatureCard({
   icon,
   delay,
 }: {
-  title: string
-  desc: string
-  icon: React.ReactNode
-  delay: string
+  title: string;
+  desc: string;
+  icon: React.ReactNode;
+  delay: string;
 }) {
   return (
-    <div className={`lp-fade-up ${delay} group relative overflow-hidden rounded-2xl border border-border bg-card/60 p-6 backdrop-blur transition hover:border-primary/40 hover:shadow-lg`}>
+    <div
+      className={`lp-fade-up ${delay} group relative overflow-hidden rounded-2xl border border-border bg-card/60 p-6 backdrop-blur transition hover:border-primary/40 hover:shadow-lg`}
+    >
       <div className="lp-card-glow absolute inset-0" aria-hidden />
       <div className="relative">
         <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
@@ -360,55 +438,135 @@ function FeatureCard({
         <p className="mt-1.5 text-sm text-muted-foreground">{desc}</p>
       </div>
     </div>
-  )
+  );
 }
 
 function Check() {
   return (
-    <svg className="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className="h-3.5 w-3.5 text-primary"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M5 12l5 5L20 7" />
     </svg>
-  )
+  );
 }
 
 function TimelineIcon() {
   return (
-    <svg viewBox="0 0 32 32" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 32 32"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="4" y="7" width="14" height="4" rx="1.5" className="lp-tl-bar" />
-      <rect x="8" y="14" width="18" height="4" rx="1.5" className="lp-tl-bar" style={{ animationDelay: "0.15s" }} />
-      <rect x="6" y="21" width="12" height="4" rx="1.5" className="lp-tl-bar" style={{ animationDelay: "0.3s" }} />
+      <rect
+        x="8"
+        y="14"
+        width="18"
+        height="4"
+        rx="1.5"
+        className="lp-tl-bar"
+        style={{ animationDelay: "0.15s" }}
+      />
+      <rect
+        x="6"
+        y="21"
+        width="12"
+        height="4"
+        rx="1.5"
+        className="lp-tl-bar"
+        style={{ animationDelay: "0.3s" }}
+      />
     </svg>
-  )
+  );
 }
 
 function ChartIcon() {
   return (
-    <svg viewBox="0 0 32 32" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 32 32"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="6" y1="26" x2="26" y2="26" />
-      <rect x="8" y="16" width="3" height="10" rx="1" className="lp-bar" style={{ transformOrigin: "9.5px 26px" }} />
-      <rect x="14" y="10" width="3" height="16" rx="1" className="lp-bar" style={{ transformOrigin: "15.5px 26px", animationDelay: "0.15s" }} />
-      <rect x="20" y="18" width="3" height="8" rx="1" className="lp-bar" style={{ transformOrigin: "21.5px 26px", animationDelay: "0.3s" }} />
+      <rect
+        x="8"
+        y="16"
+        width="3"
+        height="10"
+        rx="1"
+        className="lp-bar"
+        style={{ transformOrigin: "9.5px 26px" }}
+      />
+      <rect
+        x="14"
+        y="10"
+        width="3"
+        height="16"
+        rx="1"
+        className="lp-bar"
+        style={{ transformOrigin: "15.5px 26px", animationDelay: "0.15s" }}
+      />
+      <rect
+        x="20"
+        y="18"
+        width="3"
+        height="8"
+        rx="1"
+        className="lp-bar"
+        style={{ transformOrigin: "21.5px 26px", animationDelay: "0.3s" }}
+      />
     </svg>
-  )
+  );
 }
 
 function SparkIcon() {
   return (
-    <svg viewBox="0 0 32 32" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 32 32"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M16 4l2.4 6.4L24 12l-5.6 1.6L16 20l-2.4-6.4L8 12l5.6-1.6L16 4z" />
       <path d="M24 20l1 2.6L28 24l-3 1.4L24 28l-1-2.6L20 24l3-1.4L24 20z" />
     </svg>
-  )
+  );
 }
 
 function CloudIcon() {
   return (
-    <svg viewBox="0 0 32 32" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 32 32"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M9 22h13a5 5 0 0 0 .8-9.94A7 7 0 0 0 9 13a5 5 0 0 0 0 9z" />
       <path className="lp-arrow" d="M16 18v-6" />
       <path className="lp-arrow" style={{ animationDelay: "0.2s" }} d="m13 15 3-3 3 3" />
     </svg>
-  )
+  );
 }
 
 const landingCss = `
@@ -525,4 +683,4 @@ const landingCss = `
     transform: none !important;
   }
 }
-`
+`;

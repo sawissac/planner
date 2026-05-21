@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+build
+dist
+coverage
+pnpm-lock.yaml
+graphify-out
+public
+next-env.d.ts
+tsconfig.tsbuildinfo

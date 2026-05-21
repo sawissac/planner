@@ -1,9 +1,11 @@
+import "@/styles/globals.css";
+
 import type { Metadata, Viewport } from "next";
-import { Roboto, Poppins, Caveat } from "next/font/google";
+import { Caveat, Poppins, Roboto } from "next/font/google";
 import Script from "next/script";
-import "./globals.css";
-import { Providers } from "@/components/providers";
-import { ServiceWorkerRegister } from "@/components/service-worker-register";
+
+import { ServiceWorkerRegister } from "@/components/customs/ServiceWorkerRegister";
+import { Providers } from "@/providers/StoreProvider";
 
 const roboto = Roboto({
   variable: "--font-roboto",

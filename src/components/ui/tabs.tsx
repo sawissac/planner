@@ -1,12 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
 
 const TabsContext = React.createContext<{
-  value: string
-  onChange: (v: string) => void
-}>({ value: "", onChange: () => {} })
+  value: string;
+  onChange: (v: string) => void;
+}>({ value: "", onChange: () => {} });
 
 function Tabs({
   value,
@@ -15,24 +16,26 @@ function Tabs({
   className,
   children,
 }: {
-  value?: string
-  onValueChange?: (v: string) => void
-  defaultValue?: string
-  className?: string
-  children: React.ReactNode
+  value?: string;
+  onValueChange?: (v: string) => void;
+  defaultValue?: string;
+  className?: string;
+  children: React.ReactNode;
 }) {
-  const [internal, setInternal] = React.useState(defaultValue ?? "")
-  const controlled = value !== undefined
-  const current = controlled ? value! : internal
+  const [internal, setInternal] = React.useState(defaultValue ?? "");
+  const controlled = value !== undefined;
+  const current = controlled ? value : internal;
   const onChange = (v: string) => {
-    if (!controlled) setInternal(v)
-    onValueChange?.(v)
-  }
+    if (!controlled) {
+      setInternal(v);
+    }
+    onValueChange?.(v);
+  };
   return (
     <TabsContext.Provider value={{ value: current, onChange }}>
       <div className={cn("flex flex-col", className)}>{children}</div>
     </TabsContext.Provider>
-  )
+  );
 }
 
 function TabsList({ className, children }: { className?: string; children: React.ReactNode }) {
@@ -45,12 +48,20 @@ function TabsList({ className, children }: { className?: string; children: React
     >
       {children}
     </div>
-  )
+  );
 }
 
-function TabsTrigger({ value, className, children }: { value: string; className?: string; children: React.ReactNode }) {
-  const ctx = React.useContext(TabsContext)
-  const active = ctx.value === value
+function TabsTrigger({
+  value,
+  className,
+  children,
+}: {
+  value: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const ctx = React.useContext(TabsContext);
+  const active = ctx.value === value;
   return (
     <button
       type="button"
@@ -63,12 +74,22 @@ function TabsTrigger({ value, className, children }: { value: string; className?
     >
       {children}
     </button>
-  )
+  );
 }
 
-function TabsContent({ value, className, children }: { value: string; className?: string; children: React.ReactNode }) {
-  const ctx = React.useContext(TabsContext)
-  if (ctx.value !== value) return null
+function TabsContent({
+  value,
+  className,
+  children,
+}: {
+  value: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const ctx = React.useContext(TabsContext);
+  if (ctx.value !== value) {
+    return null;
+  }
   return (
     <div
       className={cn(
@@ -78,7 +99,7 @@ function TabsContent({ value, className, children }: { value: string; className?
     >
       {children}
     </div>
-  )
+  );
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsContent, TabsList, TabsTrigger };
