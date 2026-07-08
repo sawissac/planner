@@ -1,10 +1,20 @@
+import {
+  ArrowRight,
+  BarChart3,
+  CalendarRange,
+  Check,
+  CheckCheck,
+  CloudUpload,
+  Sparkles,
+  User,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Planner — local-first task & todo planner with AI",
   description:
-    "A fast, local-first planner with timelines, analytics, an AI planning assistant, and optional Google Drive backup.",
+    "A fast, local-first planner with timelines, analytics, an AI planning assistant, and optional cloud sync.",
 };
 
 export default function Home() {
@@ -29,7 +39,7 @@ export default function Home() {
 
           <p className="lp-fade-up lp-d3 mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
             A fast, local-first planner with timelines, analytics, an AI planning assistant, and
-            optional Google Drive backup. Built for the browser. Yours alone.
+            optional cloud sync. Built for the browser. Yours alone.
           </p>
 
           <div className="lp-fade-up lp-d4 mt-10 flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
@@ -39,18 +49,7 @@ export default function Home() {
             >
               <span className="lp-shimmer absolute inset-0" aria-hidden />
               <span className="relative">Open the app</span>
-              <svg
-                className="relative h-5 w-5 transition group-hover:translate-x-0.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M5 12h14" />
-                <path d="m13 6 6 6-6 6" />
-              </svg>
+              <ArrowRight className="relative h-5 w-5 transition group-hover:translate-x-0.5" />
             </Link>
             <Link
               href="/about"
@@ -62,13 +61,13 @@ export default function Home() {
 
           <ul className="lp-fade-up lp-d5 mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground lg:justify-start">
             <li className="inline-flex items-center gap-1.5">
-              <Check /> No account
+              <Check className="h-3.5 w-3.5 text-primary" strokeWidth={3} /> No account
             </li>
             <li className="inline-flex items-center gap-1.5">
-              <Check /> Works offline
+              <Check className="h-3.5 w-3.5 text-primary" strokeWidth={3} /> Works offline
             </li>
             <li className="inline-flex items-center gap-1.5">
-              <Check /> Open source feel
+              <Check className="h-3.5 w-3.5 text-primary" strokeWidth={3} /> Open source feel
             </li>
           </ul>
         </div>
@@ -83,25 +82,25 @@ export default function Home() {
           <FeatureCard
             title="AI assistant"
             desc="Describe a goal. Get a grouped, scheduled plan."
-            icon={<SparkIcon />}
+            icon={<Sparkles className="h-5 w-5" />}
             delay="lp-d1"
           />
           <FeatureCard
             title="Timelines"
             desc="Drag, drop, resize. See your week at a glance."
-            icon={<TimelineIcon />}
+            icon={<CalendarRange className="h-5 w-5" />}
             delay="lp-d2"
           />
           <FeatureCard
             title="Analytics"
             desc="Heatmaps and breakdowns of completed work."
-            icon={<ChartIcon />}
+            icon={<BarChart3 className="h-5 w-5" />}
             delay="lp-d3"
           />
           <FeatureCard
-            title="Drive backup"
-            desc="Optional sync to a hidden folder in your own Drive."
-            icon={<CloudIcon />}
+            title="Cloud sync"
+            desc="Optional account-backed backup, off by default."
+            icon={<CloudUpload className="h-5 w-5" />}
             delay="lp-d4"
           />
         </div>
@@ -381,32 +380,25 @@ function HeroIllustration() {
               opacity="0.18"
               filter="url(#hero-glow)"
             />
-            <path d="M486 76 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 z" fill="white" />
-            <path
-              d="M504 108 l1.6 4 l4 1.6 l-4 1.6 l-1.6 4 l-1.6 -4 l-4 -1.6 l4 -1.6 z"
-              fill="white"
-              opacity="0.85"
-            />
+            <foreignObject x="470" y="76" width="32" height="32">
+              <Sparkles className="h-8 w-8 text-white" strokeWidth={2} />
+            </foreignObject>
           </g>
 
           {/* user avatar bubble */}
           <g className="lp-bubble" style={{ animationDelay: "0.9s" }}>
             <circle cx="76" cy="402" r="22" fill="var(--chart-3)" />
-            <circle cx="76" cy="394" r="7" fill="white" opacity="0.95" />
-            <path d="M62 412 a14 14 0 0 1 28 0" fill="white" opacity="0.9" />
+            <foreignObject x="63" y="389" width="26" height="26">
+              <User className="h-6.5 w-6.5 text-white" strokeWidth={2.2} />
+            </foreignObject>
           </g>
 
           {/* check bubble */}
           <g className="lp-bubble" style={{ animationDelay: "1.2s" }}>
             <circle cx="500" cy="380" r="20" fill="var(--chart-4)" />
-            <path
-              d="M491 380 l6 6 l12 -12"
-              fill="none"
-              stroke="white"
-              strokeWidth="2.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <foreignObject x="488" y="368" width="24" height="24">
+              <CheckCheck className="h-6 w-6 text-white" strokeWidth={2.6} />
+            </foreignObject>
           </g>
         </svg>
       </div>
@@ -438,134 +430,6 @@ function FeatureCard({
         <p className="mt-1.5 text-sm text-muted-foreground">{desc}</p>
       </div>
     </div>
-  );
-}
-
-function Check() {
-  return (
-    <svg
-      className="h-3.5 w-3.5 text-primary"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12l5 5L20 7" />
-    </svg>
-  );
-}
-
-function TimelineIcon() {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="4" y="7" width="14" height="4" rx="1.5" className="lp-tl-bar" />
-      <rect
-        x="8"
-        y="14"
-        width="18"
-        height="4"
-        rx="1.5"
-        className="lp-tl-bar"
-        style={{ animationDelay: "0.15s" }}
-      />
-      <rect
-        x="6"
-        y="21"
-        width="12"
-        height="4"
-        rx="1.5"
-        className="lp-tl-bar"
-        style={{ animationDelay: "0.3s" }}
-      />
-    </svg>
-  );
-}
-
-function ChartIcon() {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="6" y1="26" x2="26" y2="26" />
-      <rect
-        x="8"
-        y="16"
-        width="3"
-        height="10"
-        rx="1"
-        className="lp-bar"
-        style={{ transformOrigin: "9.5px 26px" }}
-      />
-      <rect
-        x="14"
-        y="10"
-        width="3"
-        height="16"
-        rx="1"
-        className="lp-bar"
-        style={{ transformOrigin: "15.5px 26px", animationDelay: "0.15s" }}
-      />
-      <rect
-        x="20"
-        y="18"
-        width="3"
-        height="8"
-        rx="1"
-        className="lp-bar"
-        style={{ transformOrigin: "21.5px 26px", animationDelay: "0.3s" }}
-      />
-    </svg>
-  );
-}
-
-function SparkIcon() {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 4l2.4 6.4L24 12l-5.6 1.6L16 20l-2.4-6.4L8 12l5.6-1.6L16 4z" />
-      <path d="M24 20l1 2.6L28 24l-3 1.4L24 28l-1-2.6L20 24l3-1.4L24 20z" />
-    </svg>
-  );
-}
-
-function CloudIcon() {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M9 22h13a5 5 0 0 0 .8-9.94A7 7 0 0 0 9 13a5 5 0 0 0 0 9z" />
-      <path className="lp-arrow" d="M16 18v-6" />
-      <path className="lp-arrow" style={{ animationDelay: "0.2s" }} d="m13 15 3-3 3 3" />
-    </svg>
   );
 }
 
@@ -617,11 +481,6 @@ const landingCss = `
   from { transform: scaleX(0); }
   to   { transform: scaleX(1); }
 }
-@keyframes lp-arrow {
-  0%   { opacity: 0; transform: translateY(4px); }
-  60%  { opacity: 1; transform: translateY(0); }
-  100% { opacity: 1; transform: translateY(-2px); }
-}
 
 .lp-fade-up { opacity: 0; animation: lp-fade-up 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
 .lp-d1 { animation-delay: 0.05s; }
@@ -672,12 +531,11 @@ const landingCss = `
 
 .lp-bar { transform: scaleY(0); transform-box: fill-box; animation: lp-bar-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; animation-delay: 0.2s; }
 .lp-tl-bar { transform: scaleX(0); transform-box: fill-box; transform-origin: left center; animation: lp-tl-bar 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; animation-delay: 0.2s; }
-.lp-arrow { animation: lp-arrow 1.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   .lp-fade-up, .lp-float, .lp-row, .lp-check, .lp-cell, .lp-bubble,
   .lp-spin-slow, .lp-spin-rev, .lp-orb, .lp-shimmer, .lp-dot,
-  .lp-bar, .lp-tl-bar, .lp-arrow {
+  .lp-bar, .lp-tl-bar {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

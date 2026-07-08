@@ -5,10 +5,16 @@ import { replaceState } from "@/stores/slices/todoSlice";
 import { replaceUsers } from "@/stores/slices/userSlice";
 import type { AppStore } from "@/stores/store";
 
-import { fetchRemote, isSignedIn, onAuthChange, pushRemote, type RemotePayload } from "./drive";
+import {
+  fetchRemote,
+  isSignedIn,
+  onAuthChange,
+  pushRemote,
+  type RemotePayload,
+} from "./cloud-sync-backend";
 
-const DEVICE_KEY = "planner:drive:device";
-const LAST_PULL_KEY = "planner:drive:lastPull";
+const DEVICE_KEY = "planner:cloud:device";
+const LAST_PULL_KEY = "planner:cloud:lastPull";
 
 function getDeviceId(): string {
   let id = localStorage.getItem(DEVICE_KEY);
@@ -103,7 +109,7 @@ export async function pushNow(appStore: AppStore): Promise<void> {
   }
 }
 
-export function subscribeDriveSync(appStore: AppStore, delayMs = 3000): () => void {
+export function subscribeCloudSync(appStore: AppStore, delayMs = 3000): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let lastTodos = appStore.getState().todos;
   let lastSettings = appStore.getState().settings;
@@ -113,7 +119,7 @@ export function subscribeDriveSync(appStore: AppStore, delayMs = 3000): () => vo
     if (!isSignedIn()) {
       return;
     }
-    if (!appStore.getState().settings.driveAutoSync) {
+    if (!appStore.getState().settings.cloudAutoSync) {
       return;
     }
     if (timer) {

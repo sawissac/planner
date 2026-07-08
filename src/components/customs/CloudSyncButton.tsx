@@ -1,15 +1,16 @@
 "use client";
 
 import { AlertCircle, Cloud, CloudOff, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useStore } from "react-redux";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { isSignedIn, onAuthChange, signIn, signOut } from "@/lib/drive";
-import { onStatus, pullOnce, pushNow, type SyncStatus } from "@/lib/drive-sync";
+import { onStatus, pullOnce, pushNow, type SyncStatus } from "@/lib/cloud-sync";
+import { isSignedIn, onAuthChange, signOut } from "@/lib/cloud-sync-backend";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
-import { setDriveAutoSync } from "@/stores/slices/settingsSlice";
+import { setCloudAutoSync } from "@/stores/slices/settingsSlice";
 import type { AppStore } from "@/stores/store";
 
 type DisconnectedSub =
@@ -17,10 +18,10 @@ type DisconnectedSub =
   | { kind: "unsigned" }
   | { kind: "error"; message?: string };
 
-export function DriveSyncButton() {
+export function CloudSyncButton() {
   const store = useStore() as AppStore;
   const dispatch = useAppDispatch();
-  const autoSync = useAppSelector((s) => s.settings.driveAutoSync);
+  const autoSync = useAppSelector((s) => s.settings.cloudAutoSync);
   const [signed, setSigned] = useState(false);
   const [status, setStatus] = useState<SyncStatus>({ kind: "idle" });
   const [busy, setBusy] = useState(false);
@@ -47,18 +48,6 @@ export function DriveSyncButton() {
       window.removeEventListener("offline", off);
     };
   }, []);
-
-  const handleSignIn = async () => {
-    setBusy(true);
-    try {
-      await signIn();
-      await pullOnce(store);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const handleSignOut = async () => {
     setBusy(true);
@@ -100,11 +89,8 @@ export function DriveSyncButton() {
       sub.kind === "offline"
         ? "Offline"
         : sub.kind === "unsigned"
-          ? "Connect Drive"
+          ? "Connect account"
           : "Sync failed — Retry";
-
-    const onClick =
-      sub.kind === "offline" ? undefined : sub.kind === "unsigned" ? handleSignIn : handleSync;
 
     const title =
       sub.kind === "offline"
@@ -113,21 +99,29 @@ export function DriveSyncButton() {
           ? sub.message
           : undefined;
 
-    const ariaLabel =
-      sub.kind === "offline"
-        ? "Drive offline"
-        : sub.kind === "unsigned"
-          ? "Connect Drive"
-          : "Retry Drive sync";
+    if (sub.kind === "unsigned") {
+      return (
+        <Button
+          render={<Link href="/login" aria-label="Sign in to sync" />}
+          nativeButton={false}
+          variant="outline"
+          size="sm"
+          className="w-full"
+        >
+          {icon}
+          {label}
+        </Button>
+      );
+    }
 
     return (
       <Button
         variant="outline"
         size="sm"
-        onClick={onClick}
+        onClick={sub.kind === "offline" ? undefined : handleSync}
         disabled={busy || sub.kind === "offline"}
         title={title}
-        aria-label={ariaLabel}
+        aria-label={sub.kind === "offline" ? "Sync offline" : "Retry cloud sync"}
         className="w-full"
       >
         {icon}
@@ -171,11 +165,11 @@ export function DriveSyncButton() {
         </Button>
       </div>
       <label className="flex items-center justify-between gap-2 px-1 text-xs text-muted-foreground cursor-pointer select-none">
-        <span>Auto-save to Drive</span>
+        <span>Auto-save to cloud</span>
         <Switch
           checked={autoSync}
-          onCheckedChange={(v) => dispatch(setDriveAutoSync(v))}
-          aria-label="Toggle Drive auto-save"
+          onCheckedChange={(v) => dispatch(setCloudAutoSync(v))}
+          aria-label="Toggle cloud auto-save"
         />
       </label>
     </div>

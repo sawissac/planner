@@ -744,7 +744,7 @@ export const AI_TOOLS: OpenAITool[] = [
     function: {
       name: "get_app_features",
       description:
-        "Return the user-facing feature list of this planner app (groups, priorities, assignees, multi-file workspaces, Google Drive sync, undo/redo, dark mode, AI assistant, etc.). Use when the user asks 'what does this app do', 'what features does it have', 'can it do X', etc.",
+        "Return the user-facing feature list of this planner app (groups, priorities, assignees, multi-file workspaces, cloud sync, undo/redo, dark mode, AI assistant, etc.). Use when the user asks 'what does this app do', 'what features does it have', 'can it do X', etc.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1630,8 +1630,8 @@ export function runTool(store: AppStore, name: string, argsJson: string): ToolRe
           summary: "Up to 100 steps of history for any todo/group/file/user mutation.",
         },
         {
-          name: "Google Drive sync",
-          summary: "Optional auto-sync of all planner data to a Drive folder; toggle in Settings.",
+          name: "Cloud sync",
+          summary: "Optional account-backed auto-sync of all planner data; toggle in Settings.",
         },
         {
           name: "Theming",

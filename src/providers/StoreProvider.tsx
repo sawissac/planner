@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Provider } from "react-redux";
 
-import { subscribeDriveSync } from "@/lib/drive-sync";
+import { subscribeCloudSync } from "@/lib/cloud-sync";
 import { hydrate, subscribePersist } from "@/lib/persistence";
 import { useAppSelector } from "@/stores/hooks";
 import { makeStore } from "@/stores/store";
@@ -56,14 +56,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let unsubPersist: (() => void) | null = null;
-    let unsubDrive: (() => void) | null = null;
+    let unsubCloud: (() => void) | null = null;
     let cancelled = false;
     hydrate(store).finally(() => {
       if (cancelled) {
         return;
       }
       unsubPersist = subscribePersist(store);
-      unsubDrive = subscribeDriveSync(store);
+      unsubCloud = subscribeCloudSync(store);
       setReady(true);
     });
     return () => {
@@ -71,8 +71,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       if (unsubPersist) {
         unsubPersist();
       }
-      if (unsubDrive) {
-        unsubDrive();
+      if (unsubCloud) {
+        unsubCloud();
       }
     };
   }, [store]);

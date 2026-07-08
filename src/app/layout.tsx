@@ -2,7 +2,6 @@ import "@/styles/globals.css";
 
 import type { Metadata, Viewport } from "next";
 import { Caveat, Poppins, Roboto } from "next/font/google";
-import Script from "next/script";
 
 import { ServiceWorkerRegister } from "@/components/customs/ServiceWorkerRegister";
 import { Providers } from "@/providers/StoreProvider";
@@ -28,7 +27,7 @@ const caveat = Caveat({
 export const metadata: Metadata = {
   title: "Planner",
   description:
-    "Local-first task and todo planner with optional Google Drive backup. Multiple files, timelines, analytics, dark mode.",
+    "Local-first task and todo planner with optional cloud sync. Multiple files, timelines, analytics, dark mode.",
   manifest: "/manifest.webmanifest",
   applicationName: "Planner",
   appleWebApp: {
@@ -47,8 +46,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0d12" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -72,7 +71,6 @@ export default function RootLayout({
       >
         <Providers>{children}</Providers>
         <ServiceWorkerRegister />
-        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
       </body>
     </html>
   );

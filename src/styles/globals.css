@@ -180,12 +180,120 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* =========================================================================
+   FLAT MINIMAL MODERN DESIGN SYSTEM — ported from Toolkits (wauxaistudio)
+   -------------------------------------------------------------------------
+   Principles: neutral surfaces with one near-black accent, soft hairline
+   borders, gentle blurred elevation (no hard offsets), rounded corners,
+   quiet "lift" interactions. The `--nb-*` token names are kept so
+   `shadow-nb` / `.nb-surface` consumers retheme automatically.
+   ========================================================================= */
+
+:root {
+  /* Rounded blocks — modern minimal corners. */
+  --radius: 0.625rem;
+
+  /* --- Surfaces (clean neutral, subtle elevation) ----------------------- */
+  --background: #f8fafc; /* slate-50 ground */
+  --foreground: #0f172a; /* slate-900 text */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  /* --- Accent (single black voice) -------------------------------------- */
+  --primary: #141414; /* near-black */
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9; /* slate-100 */
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b; /* slate-500 */
+  --accent: #f1f5f9; /* neutral slate hover wash */
+  --accent-foreground: #141414;
+  --destructive: #ef4444;
+
+  /* --- Lines & focus ------------------------------------------------------ */
+  --border: #e2e8f0; /* slate-200 */
+  --input: #e2e8f0;
+  --ring: #141414;
+
+  /* --- Data viz (modern, harmonious) -------------------------------------- */
+  --chart-1: #6366f1; /* indigo */
+  --chart-2: #06b6d4; /* cyan */
+  --chart-3: #f59e0b; /* amber */
+  --chart-4: #10b981; /* emerald */
+  --chart-5: #ec4899; /* pink */
+
+  /* --- Sidebar ------------------------------------------------------------ */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #141414;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #141414;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #141414;
+
+  /* --- Elevation primitives (soft, blurred — no hard offset) -------------- */
+  --nb-border-width: 1px;
+  --nb-border-width-lg: 1px;
+  --nb-shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06), 0 1px 1px 0 rgb(15 23 42 / 0.04);
+  --nb-shadow: 0 4px 12px -2px rgb(15 23 42 / 0.1), 0 2px 6px -2px rgb(15 23 42 / 0.06);
+  --nb-shadow-lg: 0 12px 28px -6px rgb(15 23 42 / 0.16), 0 6px 12px -4px rgb(15 23 42 / 0.08);
+}
+
+.dark {
+  /* NEUTRAL MODERN DARK — calm zinc/slate surfaces in 3 elevation steps
+     (bg < card < muted), soft hairline borders, soft blurred elevation. */
+
+  --background: #0b0d12; /* near-black ground */
+  --foreground: #e5e7eb; /* zinc-200 text */
+  --card: #14171f;
+  --card-foreground: #e5e7eb;
+  --popover: #14171f;
+  --popover-foreground: #e5e7eb;
+
+  --primary: #f4f4f5; /* zinc-100 — bright on dark */
+  --primary-foreground: #0b0d12;
+  --secondary: #14171f;
+  --secondary-foreground: #e5e7eb;
+  --muted: #1c2030; /* top elevation step */
+  --muted-foreground: #9aa3b5;
+  --accent: #1c2030;
+  --accent-foreground: #e5e7eb;
+  --destructive: #f87171;
+
+  --border: #262b38;
+  --input: #262b38;
+  --ring: #e5e7eb;
+
+  --chart-1: #818cf8;
+  --chart-2: #22d3ee;
+  --chart-3: #fbbf24;
+  --chart-4: #34d399;
+  --chart-5: #f472b6;
+
+  --sidebar: #0b0d12;
+  --sidebar-foreground: #e5e7eb;
+  --sidebar-primary: #f4f4f5;
+  --sidebar-primary-foreground: #0b0d12;
+  --sidebar-accent: #1c2030;
+  --sidebar-accent-foreground: #e5e7eb;
+  --sidebar-border: #262b38;
+  --sidebar-ring: #e5e7eb;
+
+  --nb-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --nb-shadow: 0 4px 14px -2px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+  --nb-shadow-lg: 0 14px 32px -6px rgb(0 0 0 / 0.6), 0 6px 14px -4px rgb(0 0 0 / 0.45);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-roboto);
+  --font-display: var(--font-poppins);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -215,82 +323,30 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 12px);
+  --radius-3xl: calc(var(--radius) + 20px);
+  --radius-4xl: calc(var(--radius) + 28px);
+
+  /* Hard offset shadows as Tailwind utilities: shadow-nb / -sm / -lg. */
+  --shadow-nb-sm: var(--nb-shadow-sm);
+  --shadow-nb: var(--nb-shadow);
+  --shadow-nb-lg: var(--nb-shadow-lg);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.55 0.22 264);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.94 0.04 264);
-  --accent-foreground: oklch(0.4 0.18 264);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.65 0.18 264);
-  --chart-1: oklch(0.7 0.17 174);
-  --chart-2: oklch(0.72 0.19 58);
-  --chart-3: oklch(0.6 0.2 264);
-  --chart-4: oklch(0.65 0.22 340);
-  --chart-5: oklch(0.6 0.18 300);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.55 0.22 264);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.94 0.04 264);
-  --sidebar-accent-foreground: oklch(0.4 0.18 264);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.65 0.18 264);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.7 0.18 264);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.25 0.05 264);
-  --accent-foreground: oklch(0.8 0.14 264);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.18 264);
-  --chart-1: oklch(0.72 0.17 174);
-  --chart-2: oklch(0.74 0.19 58);
-  --chart-3: oklch(0.65 0.2 264);
-  --chart-4: oklch(0.68 0.22 340);
-  --chart-5: oklch(0.65 0.18 300);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.7 0.18 264);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.25 0.05 264);
-  --sidebar-accent-foreground: oklch(0.8 0.14 264);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.7 0.18 264);
+  /* Motion tokens — every animation references these, no magic numbers.
+     Enter = standard ease; exit = accelerate ease + ~30% shorter. */
+  --motion-duration-instant: 80ms;
+  --motion-duration-fast: 150ms;
+  --motion-duration-base: 220ms;
+  --motion-duration-slow: 320ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @layer base {
@@ -298,9 +354,234 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    /* Custom brand cursor — hotspot at arrow tip (3,3). */
+    cursor:
+      url("/cursor-default.svg") 3 3,
+      auto;
   }
   html {
     @apply font-sans;
   }
+  /* Interactive elements get the pointer variant. */
+  a,
+  button,
+  [role="button"],
+  summary,
+  label[for],
+  select,
+  [data-slot="trigger"],
+  .cursor-pointer {
+    cursor:
+      url("/cursor-pointer.svg") 3 3,
+      pointer;
+  }
+  /* Text-entry keeps a caret; disabled keeps the blocked cursor. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]),
+  textarea,
+  [contenteditable="true"] {
+    cursor: text;
+  }
+  button:disabled,
+  [aria-disabled="true"],
+  [data-disabled] {
+    cursor: not-allowed;
+  }
+  /* Dark mode — the default cursor is dark-filled and vanishes on the dark
+     background, so swap to light-filled variants. */
+  .dark body {
+    cursor:
+      url("/cursor-default-dark.svg") 3 3,
+      auto;
+  }
+  .dark a,
+  .dark button,
+  .dark [role="button"],
+  .dark summary,
+  .dark label[for],
+  .dark select,
+  .dark [data-slot="trigger"],
+  .dark .cursor-pointer {
+    cursor:
+      url("/cursor-pointer-dark.svg") 3 3,
+      pointer;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display font-bold;
+  }
+  /* Rounded by default — any full-box bordered element (the `border` or
+     `border-2` width token applies to all sides) gets the theme radius, so
+     blocks built with raw `border-2 border-foreground` round without per-file
+     edits. Explicit `rounded-*` utilities sit in the utilities layer and
+     still win. Table parts are excluded — rounding cells looks wrong. */
+  :where([class~="border"], [class~="border-2"]):not(table, thead, tbody, tr, th, td) {
+    border-radius: var(--radius);
+  }
+}
+
+@layer components {
+  /* nb-surface — the canonical block: hairline border + soft elevation +
+     rounded corners. Border uses the soft `border` token in both modes. */
+  .nb-surface {
+    border: var(--nb-border-width) solid var(--color-border);
+    box-shadow: var(--nb-shadow);
+    background-color: var(--color-card);
+    border-radius: var(--radius);
+  }
+  .nb-surface-lg {
+    border: var(--nb-border-width-lg) solid var(--color-border);
+    box-shadow: var(--nb-shadow-lg);
+    background-color: var(--color-card);
+    border-radius: var(--radius);
+  }
+
+  /* nb-press — quiet interaction: hover lifts 1px (soft shadow), active
+     settles back. No hard offset jumps. */
+  .nb-press {
+    transition:
+      transform var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .nb-press:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--nb-shadow-lg);
+  }
+  .nb-press:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: var(--nb-shadow-sm);
+  }
+}
+
+/* Accessibility — honour reduced-motion: drop transforms/slides, keep only
+   short opacity changes. Motion is feedback, never a gate. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: var(--motion-duration-fast) !important;
+    transition-property: opacity !important;
+    scroll-behavior: auto !important;
+  }
+  /* No translate jumps on press when motion is reduced. */
+  .nb-press:hover:not(:disabled),
+  .nb-press:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* =========================================================================
+   HERO BACKGROUND MOTION — slow ambient drift. Pure decoration, behind
+   content, pointer-events:none. Honoured by the reduced-motion block above.
+   ========================================================================= */
+@keyframes nb-grid-pan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    /* One full tile (26px) so the loop is seamless. */
+    background-position: 26px 26px;
+  }
+}
+
+@keyframes nb-float {
+  0% {
+    transform: translateY(0) rotate(var(--nb-float-rot, 0deg));
+  }
+  50% {
+    transform: translateY(-22px) rotate(calc(var(--nb-float-rot, 0deg) + 6deg));
+  }
+  100% {
+    transform: translateY(0) rotate(var(--nb-float-rot, 0deg));
+  }
+}
+
+.animate-grid-pan {
+  animation: nb-grid-pan 7s linear infinite;
+}
+
+.animate-float {
+  animation: nb-float var(--nb-float-dur, 9s) ease-in-out infinite;
+  animation-delay: var(--nb-float-delay, 0s);
+}
+
+/* =========================================================================
+   MINIMAL SCROLLBAR — thin, rounded, soft fill, no borders.
+   Firefox uses scrollbar-color/width; WebKit/Blink use ::-webkit-scrollbar.
+   ========================================================================= */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-foreground) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--primary);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* =========================================================================
+   SOFT BORDER INK — retarget every `border-foreground` utility to the soft
+   hairline `border` tone in BOTH light and dark, so lines read as quiet
+   definition rather than heavy outlines. Text `foreground` is untouched.
+   Placed outside any @layer so it overrides the Tailwind utilities
+   regardless of source order.
+   ========================================================================= */
+.border-foreground {
+  border-color: var(--color-border);
+}
+.border-foreground\/15,
+.border-foreground\/30,
+.border-foreground\/40 {
+  border-color: color-mix(in oklab, var(--color-border) 55%, transparent);
+}
+
+/* =========================================================================
+   SHIKI LINE NUMBERS — `.shiki-lines` wraps Shiki output when line numbers
+   are on. Shiki emits one `<span class="line">` per source line; a CSS
+   counter renders a right-aligned gutter without touching highlighted
+   tokens themselves.
+   ========================================================================= */
+.shiki-lines code {
+  counter-reset: shiki-line;
+}
+.shiki-lines .line::before {
+  counter-increment: shiki-line;
+  content: counter(shiki-line);
+  display: inline-block;
+  width: 2.5ch;
+  margin-right: 1.25rem;
+  text-align: right;
+  color: color-mix(in oklab, currentColor 35%, transparent);
+  user-select: none;
 }

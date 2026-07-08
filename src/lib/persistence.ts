@@ -160,7 +160,12 @@ function migrateSettings(v: Partial<SettingsState>): SettingsState {
     titleFontWeight: v.titleFontWeight!,
     sidebarWidth: v.sidebarWidth!,
     sidebarOpen: typeof v.sidebarOpen === "boolean" ? v.sidebarOpen : true,
-    driveAutoSync: typeof v.driveAutoSync === "boolean" ? v.driveAutoSync : true,
+    cloudAutoSync:
+      typeof v.cloudAutoSync === "boolean"
+        ? v.cloudAutoSync
+        : typeof (v as { driveAutoSync?: unknown }).driveAutoSync === "boolean"
+          ? (v as { driveAutoSync?: boolean }).driveAutoSync!
+          : true,
     columnSizing: v.columnSizing!,
     userColumnSizing:
       typeof v.userColumnSizing === "object" && v.userColumnSizing !== null

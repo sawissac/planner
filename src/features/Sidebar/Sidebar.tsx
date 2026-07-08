@@ -23,8 +23,8 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { CloudSyncButton } from "@/components/customs/CloudSyncButton";
 import { ConfirmDialog, type ConfirmState } from "@/components/customs/ConfirmDialog";
-import { DriveSyncButton } from "@/components/customs/DriveSyncButton";
 import { PromptDialog, type PromptState } from "@/components/customs/PromptDialog";
 import { StorageMeter } from "@/components/customs/StorageMeter";
 import { Button } from "@/components/ui/button";
@@ -706,7 +706,7 @@ export function Sidebar({
       </div>
       <div className="border-t border-border px-3 py-2 shrink-0 flex flex-col gap-2">
         <StorageMeter />
-        <DriveSyncButton />
+        <CloudSyncButton />
         <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
           <Link href="/about" className="hover:text-foreground hover:underline">
             About

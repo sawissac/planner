@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { AppSwitcherRail } from "@/components/customs/AppSwitcherRail";
 import { MainContent } from "@/components/customs/MainContent";
 import { ShortcutsDialog, useShortcutsController } from "@/components/customs/ShortcutsDialog";
 import { AiChat } from "@/features/AiChat/AiChat";
@@ -112,6 +113,9 @@ export function AppShell() {
 
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden relative">
+      <div className="hidden md:flex">
+        <AppSwitcherRail />
+      </div>
       <main className="flex-1 p-3 md:p-6 flex flex-col gap-4 overflow-auto min-w-0">
         <MainContent
           onToggleSidebar={toggleSidebar}

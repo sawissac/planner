@@ -47,7 +47,7 @@ export type SettingsState = {
   titleFontWeight: FontWeight;
   sidebarWidth: number;
   sidebarOpen: boolean;
-  driveAutoSync: boolean;
+  cloudAutoSync: boolean;
   columnSizing: Record<string, number>;
   userColumnSizing: Record<string, number>;
   priorityOptions: string[];
@@ -71,7 +71,7 @@ const initialState: SettingsState = {
   titleFontWeight: 400,
   sidebarWidth: 320,
   sidebarOpen: true,
-  driveAutoSync: true,
+  cloudAutoSync: true,
   columnSizing: {},
   userColumnSizing: {},
   priorityOptions: [...DEFAULT_PRIORITY_OPTIONS],
@@ -108,8 +108,8 @@ const settingsSlice = createSlice({
     setSidebarOpen(state, action: PayloadAction<boolean>) {
       state.sidebarOpen = action.payload;
     },
-    setDriveAutoSync(state, action: PayloadAction<boolean>) {
-      state.driveAutoSync = action.payload;
+    setCloudAutoSync(state, action: PayloadAction<boolean>) {
+      state.cloudAutoSync = action.payload;
     },
     setColumnSizing(state, action: PayloadAction<Record<string, number>>) {
       state.columnSizing = action.payload;
@@ -233,7 +233,7 @@ const settingsSlice = createSlice({
       state.titleFontWeight = action.payload.titleFontWeight;
       state.sidebarWidth = action.payload.sidebarWidth;
       state.sidebarOpen = action.payload.sidebarOpen ?? true;
-      state.driveAutoSync = action.payload.driveAutoSync ?? true;
+      state.cloudAutoSync = action.payload.cloudAutoSync ?? true;
       state.columnSizing = action.payload.columnSizing;
       state.userColumnSizing = action.payload.userColumnSizing ?? {};
       state.priorityOptions = action.payload.priorityOptions;
@@ -259,7 +259,7 @@ export const {
   setFontWeight,
   setSidebarWidth,
   setSidebarOpen,
-  setDriveAutoSync,
+  setCloudAutoSync,
   setColumnSizing,
   setUserColumnSizing,
   addPriorityOption,
