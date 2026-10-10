@@ -6,16 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * Resolve the public site origin used to build auth-email links.
- *
- * Prefers `NEXT_PUBLIC_SITE_URL` so confirmation/reset links always point at
- * the real deployed site instead of whatever host the request came in on.
- * Falls back to request headers for local dev.
+ * Derived from the incoming request headers.
  */
 async function getOrigin(): Promise<string> {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL;
-  if (configured) {
-    return configured.replace(/\/$/, "");
-  }
   const h = await headers();
   const origin = h.get("origin");
   if (origin) {

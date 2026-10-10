@@ -1,0 +1,123 @@
+/* compacto-ui — Tailwind v4 theme layer.
+ *
+ * `@theme inline` is mandatory here, not a style choice: the --color-app-*
+ * entries must stay as var(--app-*) REFERENCES so the ten runtime palettes can
+ * repaint them by writing --app-* onto documentElement. A plain `@theme` would
+ * resolve and freeze today's hex values into the generated utilities, and every
+ * palette but the default would silently stop working. */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* The app-* namespace -> Tailwind utilities (bg-app-panel, text-app-dim,
+     border-app-border-accent, ...). This is the ONLY color vocabulary the
+     library speaks. */
+  --color-app-bg: var(--app-bg);
+  --color-app-panel: var(--app-panel);
+  --color-app-sidebar: var(--app-sidebar);
+  --color-app-hover: var(--app-hover);
+  --color-app-selected: var(--app-selected);
+  --color-app-border: var(--app-border);
+  --color-app-border-mid: var(--app-border-mid);
+  --color-app-border-accent: var(--app-border-accent);
+  --color-app-accent: var(--app-accent);
+  --color-app-accent-dim: var(--app-accent-dim);
+  --color-app-accent-faint: var(--app-accent-faint);
+  --color-app-text: var(--app-text);
+  --color-app-bright: var(--app-bright);
+  --color-app-dim: var(--app-dim);
+  --color-app-editor: var(--app-editor);
+  --color-app-gutter: var(--app-gutter);
+  --color-app-success: var(--app-success);
+  --color-app-warn: var(--app-warn);
+  --color-app-error: var(--app-error);
+  --color-app-on-solid: var(--app-on-solid);
+
+  /* Font namespaces the primitives use. The consumer supplies the actual faces
+     by setting --app-font-* in its own :root (typically to a next/font CSS
+     variable); unset, these fall back to system stacks so the package still
+     looks deliberate standalone.
+
+     The vocabulary is the type rule the design system is built on: aside from
+     code, every string is either a TITLE or a DESCRIPTION. */
+  --font-sans: var(--app-font-sans, ui-sans-serif, system-ui, sans-serif);
+  --font-description: var(--app-font-description, var(--font-sans));
+  --font-title: var(--app-font-title, var(--font-sans));
+  --font-display: var(--app-font-display, var(--font-title));
+  --font-mono: var(
+    --app-font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace
+  );
+}
+
+/* Flat "tag" fill: a tinted block derived from the element's own text color,
+   so a tag needs one color decision instead of three. Tailwind's /opacity
+   modifier is a no-op on currentColor, hence the explicit color-mix. */
+@utility tint-current {
+  background-color: color-mix(in srgb, currentColor 12%, transparent);
+  border-color: color-mix(in srgb, currentColor 28%, transparent);
+}
+
+/* Overlay motion, owned here so the package has zero CSS peer dependencies.
+   Every floating surface — tooltip, popover, menu, select, dialog — rises 6px
+   into place rather than scaling. The consuming apps previously got this from
+   tw-animate-css; the library deliberately does not depend on it. */
+@keyframes compacto-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes compacto-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes compacto-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Indeterminate progress. A segment sweeps the channel rather than pulsing in
+   place, so "working, length unknown" never reads as "stalled at 40%". Owned
+   here for the same reason as the fade keyframes: zero CSS peer dependencies. */
+@keyframes compacto-progress-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(350%);
+  }
+}
+
+/* Alias kept so class strings ported from the apps stay byte-identical during
+   migration. Scheduled for removal once both consumers are on the package. */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

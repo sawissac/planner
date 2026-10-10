@@ -1,0 +1,11 @@
+/* compacto-ui — the one import this app's Tailwind entry needs.
+ *
+ *   @import "tailwindcss";
+ *   @import "../styles/index.css";
+ *
+ * Order matters: tokens define the custom properties, theme maps them into
+ * Tailwind's namespace, texture holds the plain classes Sidebar's `texture`
+ * prop applies. */
+@import "./tokens.css";
+@import "./theme.css";
+@import "./texture.css";

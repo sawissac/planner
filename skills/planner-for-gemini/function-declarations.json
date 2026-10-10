@@ -1,0 +1,103 @@
+[
+  {
+    "name": "get_thought",
+    "description": "Read a Planner task's thought (the plan, Markdown). Returns {thought}.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "todo_id": {
+          "type": "string",
+          "description": "Task id: the segment after /api/plan/ in the pasted URL."
+        },
+        "file_id": {
+          "type": "string",
+          "description": "The fileId query value from the pasted URL. Send it whenever known."
+        }
+      },
+      "required": ["todo_id"]
+    }
+  },
+  {
+    "name": "list_comments",
+    "description": "Read a task's thought and its comments, oldest first. Returns {thought, comments: [{id, comment}]}; with open=true settled comments (Done notes, fully resolved requests) are left out and {settled: n} says how many.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "todo_id": { "type": "string", "description": "Task id." },
+        "file_id": { "type": "string", "description": "File id from the pasted URL." },
+        "open": { "type": "boolean", "description": "Leave out settled comments." }
+      },
+      "required": ["todo_id"]
+    }
+  },
+  {
+    "name": "get_comment",
+    "description": "Read one comment. Returns {thought, comment}.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "todo_id": { "type": "string", "description": "Task id." },
+        "comment_id": {
+          "type": "string",
+          "description": "Comment id: the segment after /comment/ in the pasted URL."
+        },
+        "file_id": { "type": "string", "description": "File id from the pasted URL." }
+      },
+      "required": ["todo_id", "comment_id"]
+    }
+  },
+  {
+    "name": "add_comment",
+    "description": "Append a new comment to a task; the server picks its id. Returns {id, thought, comment}.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "todo_id": { "type": "string", "description": "Task id." },
+        "file_id": { "type": "string", "description": "File id from the pasted URL." },
+        "body": { "type": "string", "description": "Comment text in Markdown. Must not be empty." }
+      },
+      "required": ["todo_id", "body"]
+    }
+  },
+  {
+    "name": "put_comment",
+    "description": "Create the comment with this id, or replace its body if it exists. Use only when a specific id is wanted.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "todo_id": { "type": "string", "description": "Task id." },
+        "comment_id": { "type": "string", "description": "Comment id to create or replace." },
+        "file_id": { "type": "string", "description": "File id from the pasted URL." },
+        "body": { "type": "string", "description": "Comment text in Markdown. Must not be empty." }
+      },
+      "required": ["todo_id", "comment_id", "body"]
+    }
+  },
+  {
+    "name": "edit_comment",
+    "description": "Replace the whole body of an existing comment (no merge). Fails with 404 if the comment does not exist.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "todo_id": { "type": "string", "description": "Task id." },
+        "comment_id": { "type": "string", "description": "Comment id to edit." },
+        "file_id": { "type": "string", "description": "File id from the pasted URL." },
+        "body": { "type": "string", "description": "The full new comment text in Markdown." }
+      },
+      "required": ["todo_id", "comment_id", "body"]
+    }
+  },
+  {
+    "name": "delete_comment",
+    "description": "Delete a comment. Not undoable: only after the user confirmed or named the exact comment.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "todo_id": { "type": "string", "description": "Task id." },
+        "comment_id": { "type": "string", "description": "Comment id to delete." },
+        "file_id": { "type": "string", "description": "File id from the pasted URL." }
+      },
+      "required": ["todo_id", "comment_id"]
+    }
+  }
+]

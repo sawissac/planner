@@ -107,7 +107,10 @@ export function AnalyticsHeatmap({ files, rangeDays }: Props) {
     const color = d3
       .scaleSequential()
       .domain([0, maxAvg])
-      .interpolator(d3.interpolateRgbBasis(["#dcfce7", "#86efac", "#22c55e", "#15803d"]));
+      .interpolator(
+        (t) =>
+          `color-mix(in srgb, var(--app-accent) ${Math.round(20 + t * 80)}%, var(--app-panel))`,
+      );
 
     // hour labels — every 2 hours
     for (let h = 0; h < 24; h += 2) {
@@ -117,7 +120,7 @@ export function AnalyticsHeatmap({ files, rangeDays }: Props) {
         .attr("x", x)
         .attr("y", hourLabelH - 7)
         .attr("text-anchor", "middle")
-        .attr("fill", "#9ca3af")
+        .style("fill", "var(--app-dim)")
         .attr("font-size", "11")
         .text(hourLabel(h));
     }
@@ -131,7 +134,7 @@ export function AnalyticsHeatmap({ files, rangeDays }: Props) {
         .attr("x", labelW - 6)
         .attr("y", y + cellH / 2 + 4)
         .attr("text-anchor", "end")
-        .attr("fill", "#6b7280")
+        .style("fill", "var(--app-dim)")
         .attr("font-size", "12")
         .text(DAYS_DISPLAY[d]);
 
@@ -145,8 +148,8 @@ export function AnalyticsHeatmap({ files, rangeDays }: Props) {
           .attr("width", cellW)
           .attr("height", cellH)
           .attr("rx", 5)
-          .attr("fill", cell.avg === 0 ? "#f9fafb" : color(cell.avg))
-          .attr("stroke", "#e5e7eb")
+          .style("fill", cell.avg === 0 ? "var(--app-hover)" : color(cell.avg))
+          .style("stroke", "var(--app-border)")
           .attr("stroke-width", 0.5);
       }
     }
@@ -156,8 +159,9 @@ export function AnalyticsHeatmap({ files, rangeDays }: Props) {
       .select("body")
       .append("div")
       .style("position", "fixed")
-      .style("background", "#111827")
-      .style("color", "#f9fafb")
+      .style("background", "var(--app-panel)")
+      .style("color", "var(--app-text)")
+      .style("border", "1px solid var(--app-border-mid)")
       .style("padding", "8px 12px")
       .style("border-radius", "8px")
       .style("font-size", "13px")
@@ -204,25 +208,30 @@ export function AnalyticsHeatmap({ files, rangeDays }: Props) {
   }, [cells, containerWidth]);
 
   return (
-    <div className="rounded-xl border bg-card p-6 h-full flex flex-col">
+    <div className="rounded-xl border bg-app-panel p-6 h-full flex flex-col">
       <div className="text-base font-bold flex items-center gap-2">
         <Clock className="size-4" />
         Activity Contributions by Hour
       </div>
-      <div className="mt-0.5 mb-5 text-sm text-muted-foreground">
+      <div className="mt-0.5 mb-5 text-sm text-app-dim">
         Average done todos per hour across the week
       </div>
       <div ref={containerRef} className="flex-1 overflow-x-auto">
         <svg ref={svgRef} className="overflow-visible block" />
       </div>
-      <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+      <div className="mt-4 flex items-center justify-between text-xs text-app-dim">
         <span />
         <div className="flex items-center gap-2">
           <span>Less</span>
-          {["#f9fafb", "#bbf7d0", "#4ade80", "#15803d"].map((c) => (
+          {[
+            "var(--app-hover)",
+            "color-mix(in srgb, var(--app-accent) 35%, var(--app-panel))",
+            "color-mix(in srgb, var(--app-accent) 65%, var(--app-panel))",
+            "var(--app-accent)",
+          ].map((c) => (
             <div
               key={c}
-              style={{ background: c, border: "1px solid #e5e7eb" }}
+              style={{ background: c, border: "1px solid var(--app-border)" }}
               className="w-4 h-4 rounded"
             />
           ))}

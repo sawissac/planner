@@ -9,7 +9,13 @@ import {
   replaceSettings,
   type SettingsState,
 } from "@/stores/slices/settingsSlice";
-import { replaceState, type Todo, type TodoFile, type TodosState } from "@/stores/slices/todoSlice";
+import {
+  replaceState,
+  type ThoughtComment,
+  type Todo,
+  type TodoFile,
+  type TodosState,
+} from "@/stores/slices/todoSlice";
 import { type UsersState } from "@/stores/slices/userSlice";
 import type { AppStore } from "@/stores/store";
 
@@ -43,6 +49,7 @@ function isTodoLike(v: unknown): v is {
   assignees?: unknown[];
   groupId?: string | null;
   thought?: unknown;
+  comments?: unknown;
 } {
   if (!v || typeof v !== "object") {
     return false;
@@ -53,6 +60,19 @@ function isTodoLike(v: unknown): v is {
     typeof o.title === "string" &&
     typeof o.done === "boolean" &&
     typeof o.createdAt === "number"
+  );
+}
+
+function isThoughtCommentLike(v: unknown): v is ThoughtComment {
+  if (!v || typeof v !== "object") {
+    return false;
+  }
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.id === "string" &&
+    typeof o.body === "string" &&
+    typeof o.createdAt === "number" &&
+    typeof o.updatedAt === "number"
   );
 }
 
@@ -81,6 +101,7 @@ function migrateTodo(v: unknown): Todo | null {
       ? (o.assignees as string[]).filter((x) => typeof x === "string")
       : [],
     thought: typeof o.thought === "string" ? o.thought : "",
+    comments: Array.isArray(o.comments) ? o.comments.filter(isThoughtCommentLike) : [],
   };
 }
 
@@ -179,8 +200,7 @@ function migrateSettings(v: Partial<SettingsState>): SettingsState {
       Array.isArray(v.progressOptions) && v.progressOptions.every((p) => typeof p === "string")
         ? v.progressOptions
         : [...DEFAULT_PROGRESS_OPTIONS],
-    focusMode: typeof v.focusMode === "boolean" ? v.focusMode : false,
-    darkMode: typeof v.darkMode === "boolean" ? v.darkMode : false,
+    focusMode: typeof v.focusMode === "boolean" ? v.focusMode : true,
     pageSize: typeof v.pageSize === "number" ? v.pageSize : 30,
     sorting:
       Array.isArray(v.sorting) &&

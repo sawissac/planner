@@ -2,8 +2,8 @@
 
 import {
   type ColumnDef,
+  type ColumnDefTemplate,
   type ColumnSizingState,
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
@@ -43,27 +43,41 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AssigneeCell } from "@/components/customs/AssigneeCell";
+import { ConfirmDialog, type ConfirmState, useConfirm } from "@/components/customs/ConfirmDialog";
 import { DateRangeCell } from "@/components/customs/DateRangeCell";
 import { PriorityCell } from "@/components/customs/PriorityCell";
 import { ProgressCell } from "@/components/customs/ProgressCell";
 import { PromptDialog, type PromptState } from "@/components/customs/PromptDialog";
-import { TodoRowActions } from "@/components/customs/TodoRowActions";
+import { preloadThoughtEditor, TodoRowActions } from "@/components/customs/TodoRowActions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu-extras";
+import { Input } from "@/components/ui/input";
+import { FocusThoughtPanel } from "@/features/TodoTable/FocusThoughtPanel";
+import { useAdoptSavedThought } from "@/hooks/useAdoptSavedThought";
 import { useTouchRowDrag } from "@/hooks/useTouchRowDrag";
-import { cn } from "@/lib/utils";
+import { copyText } from "@/lib/clipboard";
+import { cn } from "@/lib/cn";
+import { readOpenThought, writeOpenThought } from "@/lib/thought-open";
+import * as ui from "@/lib/ui-styles";
+import { useHydrated } from "@/providers/StoreProvider";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import {
   FONT_VAR,
   type FontSize,
   type FontWeight,
+  PAGE_SIZE_OPTIONS,
   setColumnSizing,
   setGlobalFilter as setPersistedGlobalFilter,
   setGroupFilter as setPersistedGroupFilter,
@@ -160,22 +174,16 @@ function todosToCsv(rows: Todo[], groups: Group[], userNameById: (id: string) =>
   return out.join("\n");
 }
 
-async function copyText(text: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand("copy");
-    } finally {
-      ta.remove();
-    }
-  }
+/**
+ * `flexRender` without the remount. It renders a function template as
+ * `<Template />`, and `columns` is rebuilt whenever the todos change — a new
+ * component type each time, so every cell remounted on every edit: an open
+ * thought dialog jumped back to the top after a save or comment, and the
+ * focus-mode editor lost its state. The templates here call no hooks, so
+ * calling them directly is safe.
+ */
+function renderTemplate<P extends object>(template: ColumnDefTemplate<P> | undefined, props: P) {
+  return typeof template === "function" ? template(props) : template;
 }
 
 type RowMeta = {
@@ -190,6 +198,15 @@ type RowMeta = {
   sorting: SortingState;
   setSort: (id: string, desc: boolean | null) => void;
   focusMode: boolean;
+  thoughtId: string | null;
+  openThought: (id: string) => void;
+  thoughtDraft: string;
+  setThoughtDraft: (md: string) => void;
+  closeThought: () => void;
+  thoughtDirty: boolean;
+  thoughtEditorKey: number;
+  /** Space the inline editor leaves on the right for the sticky actions column. */
+  thoughtRightInset: number;
 };
 
 type SortOption = { label: string; desc: boolean; icon: React.ReactNode };
@@ -210,25 +227,23 @@ function SortDropdown({
   const active = sorting.find((s) => s.id === colId) ?? null;
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            className="flex items-center gap-1 hover:text-foreground transition-colors"
-          >
-            {label}
-            {active ? (
-              active.desc ? (
-                <ArrowDown className="size-3" />
-              ) : (
-                <ArrowUp className="size-3" />
-              )
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-1 hover:text-app-bright transition-colors"
+        >
+          {label}
+          {active ? (
+            active.desc ? (
+              <ArrowDown className="size-3" />
             ) : (
-              <ArrowUpDown className="size-3 opacity-40" />
-            )}
-          </button>
-        }
-      />
+              <ArrowUp className="size-3" />
+            )
+          ) : (
+            <ArrowUpDown className="size-3 opacity-40" />
+          )}
+        </button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
         {options.map((opt) => (
           <DropdownMenuItem
@@ -236,7 +251,7 @@ function SortDropdown({
             onClick={() => setSort(colId, opt.desc)}
             className="flex items-center gap-2"
           >
-            <span className="text-muted-foreground [&_svg]:size-3.5">{opt.icon}</span>
+            <span className="text-app-dim [&_svg]:size-3.5">{opt.icon}</span>
             <span className="flex-1">{opt.label}</span>
             {active?.desc === opt.desc && <Check className="size-3 ml-auto" />}
           </DropdownMenuItem>
@@ -244,10 +259,7 @@ function SortDropdown({
         {active && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => setSort(colId, null)}
-              className="text-muted-foreground"
-            >
+            <DropdownMenuItem onClick={() => setSort(colId, null)} className="text-app-dim">
               Clear sort
             </DropdownMenuItem>
           </>
@@ -283,11 +295,11 @@ function TitleCell({ todo, meta }: { todo: Todo; meta: RowMeta }) {
         }}
         onBlur={meta.commit}
         style={style}
-        className="w-full rounded-md border border-border bg-background p-0 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="w-full rounded-md border border-app-border bg-app-bg p-0 outline-none focus-visible:ring-3 focus-visible:ring-app-accent/50"
       />
     );
   }
-  return (
+  const titleEl = (
     <span
       style={style}
       onDoubleClick={() => {
@@ -297,11 +309,51 @@ function TitleCell({ todo, meta }: { todo: Todo; meta: RowMeta }) {
       className={cn(
         "block leading-tight cursor-default",
         meta.focusMode ? "whitespace-nowrap" : "truncate",
-        todo.done && "text-muted-foreground line-through",
+        todo.done && "text-app-dim line-through",
       )}
     >
       {todo.title}
     </span>
+  );
+  if (!meta.focusMode) {
+    return titleEl;
+  }
+  const hasThought = (todo.thought ?? "").trim().length > 0;
+  const active = meta.thoughtId === todo.id;
+  return (
+    <div className="flex flex-col items-start gap-1">
+      {titleEl}
+      <button
+        type="button"
+        data-testid={`todo-row-${todo.id}-thought-button`}
+        aria-pressed={active}
+        onMouseEnter={preloadThoughtEditor}
+        onFocus={preloadThoughtEditor}
+        onClick={(e) => {
+          e.stopPropagation();
+          meta.openThought(todo.id);
+        }}
+        // Keep row shortcuts (Space toggles, Enter edits) off this button.
+        onKeyDown={(e) => e.stopPropagation()}
+        className={cn(
+          "rounded text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-app-accent/50",
+          active ? "text-app-accent" : "text-app-dim hover:text-app-accent",
+        )}
+      >
+        {hasThought ? "See thoughts" : "Create thoughts"}
+      </button>
+      {active && (
+        <FocusThoughtPanel
+          todo={todo}
+          value={meta.thoughtDraft}
+          onChange={meta.setThoughtDraft}
+          onClose={meta.closeThought}
+          dirty={meta.thoughtDirty}
+          editorKey={meta.thoughtEditorKey}
+          rightInset={meta.thoughtRightInset}
+        />
+      )}
+    </div>
   );
 }
 
@@ -317,24 +369,22 @@ function GroupFilterHeader({
   const active = value !== null;
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            className="flex items-center gap-1 hover:text-foreground transition-colors"
-          >
-            Group
-            <Filter className={cn("size-3", active ? "text-primary" : "opacity-40")} />
-          </button>
-        }
-      />
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-1 hover:text-app-bright transition-colors"
+        >
+          Group
+          <Filter className={cn("size-3", active ? "text-app-accent" : "opacity-40")} />
+        </button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         <DropdownMenuItem onClick={() => onChange(null)} className="flex items-center gap-2">
           <span className="flex-1">All groups</span>
           {value === null && <Check className="size-3" />}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onChange("__none__")} className="flex items-center gap-2">
-          <span className="flex-1 text-muted-foreground">No group</span>
+          <span className="flex-1 text-app-dim">No group</span>
           {value === "__none__" && <Check className="size-3" />}
         </DropdownMenuItem>
         {groups.length > 0 && <DropdownMenuSeparator />}
@@ -344,7 +394,7 @@ function GroupFilterHeader({
             onClick={() => onChange(g.id)}
             className="flex items-center gap-2"
           >
-            <Folder className="size-3 text-muted-foreground shrink-0" />
+            <Folder className="size-3 text-app-dim shrink-0" />
             <span className="flex-1 truncate">{g.name}</span>
             {value === g.id && <Check className="size-3 shrink-0" />}
           </DropdownMenuItem>
@@ -366,24 +416,22 @@ function PriorityFilterHeader({
   const active = value !== null;
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            className="flex items-center gap-1 hover:text-foreground transition-colors"
-          >
-            Priority
-            <Filter className={cn("size-3", active ? "text-primary" : "opacity-40")} />
-          </button>
-        }
-      />
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-1 hover:text-app-bright transition-colors"
+        >
+          Priority
+          <Filter className={cn("size-3", active ? "text-app-accent" : "opacity-40")} />
+        </button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
         <DropdownMenuItem onClick={() => onChange(null)} className="flex items-center gap-2">
           <span className="flex-1">All priorities</span>
           {value === null && <Check className="size-3" />}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onChange("__none__")} className="flex items-center gap-2">
-          <span className="flex-1 text-muted-foreground">No priority</span>
+          <span className="flex-1 text-app-dim">No priority</span>
           {value === "__none__" && <Check className="size-3" />}
         </DropdownMenuItem>
         {options.length > 0 && <DropdownMenuSeparator />}
@@ -410,24 +458,22 @@ function ProgressFilterHeader({
   const active = value !== null;
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            className="flex items-center gap-1 hover:text-foreground transition-colors"
-          >
-            Progress
-            <Filter className={cn("size-3", active ? "text-primary" : "opacity-40")} />
-          </button>
-        }
-      />
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-1 hover:text-app-bright transition-colors"
+        >
+          Progress
+          <Filter className={cn("size-3", active ? "text-app-accent" : "opacity-40")} />
+        </button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
         <DropdownMenuItem onClick={() => onChange(null)} className="flex items-center gap-2">
           <span className="flex-1">All progress</span>
           {value === null && <Check className="size-3" />}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onChange("__none__")} className="flex items-center gap-2">
-          <span className="flex-1 text-muted-foreground">No progress</span>
+          <span className="flex-1 text-app-dim">No progress</span>
           {value === "__none__" && <Check className="size-3" />}
         </DropdownMenuItem>
         {options.length > 0 && <DropdownMenuSeparator />}
@@ -444,6 +490,7 @@ function ProgressFilterHeader({
 
 function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
   const currentGroup = groups.find((g) => g.id === todo.groupId) ?? null;
   const [prompt, setPrompt] = useState<PromptState>({ open: false, title: "" });
 
@@ -462,32 +509,30 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => e.stopPropagation()}
-              className="h-7 w-full justify-between gap-1 px-2 text-xs font-normal"
-            >
-              {currentGroup ? (
-                <span className="flex items-center gap-1 truncate">
-                  <Folder className="size-3 shrink-0 text-muted-foreground" />
-                  {currentGroup.name}
-                </span>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-              <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
-            </Button>
-          }
-        />
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => e.stopPropagation()}
+            className="h-7 w-full justify-between gap-1 px-2 text-xs font-normal"
+          >
+            {currentGroup ? (
+              <span className="flex items-center gap-1 truncate">
+                <Folder className="size-3 shrink-0 text-app-dim" />
+                {currentGroup.name}
+              </span>
+            ) : (
+              <span className="text-app-dim">—</span>
+            )}
+            <ChevronDown className="size-3 shrink-0 text-app-dim" />
+          </Button>
+        </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-48">
           <DropdownMenuItem
             onClick={() => dispatch(updateTodo({ id: todo.id, groupId: null }))}
             className="flex items-center gap-2"
           >
-            <span className="flex-1 text-muted-foreground">No group</span>
+            <span className="flex-1 text-app-dim">No group</span>
             {!todo.groupId && <Check className="size-3" />}
           </DropdownMenuItem>
           {groups.length > 0 && <DropdownMenuSeparator />}
@@ -497,7 +542,7 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
               onClick={() => dispatch(updateTodo({ id: todo.id, groupId: g.id }))}
               className="flex items-center gap-2"
             >
-              <Folder className="size-3 text-muted-foreground shrink-0" />
+              <Folder className="size-3 text-app-dim shrink-0" />
               <span className="flex-1 truncate">{g.name}</span>
               {todo.groupId === g.id && <Check className="size-3 shrink-0" />}
               <button
@@ -515,7 +560,7 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
                     },
                   });
                 }}
-                className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="rounded p-0.5 text-app-dim hover:bg-app-hover hover:text-app-bright"
                 aria-label={`Rename ${g.name}`}
               >
                 <Pencil className="size-3" />
@@ -524,9 +569,15 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  dispatch(deleteGroup(g.id));
+                  confirm({
+                    title: `Delete group "${g.name}"?`,
+                    description: "Its tasks stay and become ungrouped.",
+                    confirmLabel: "Delete",
+                    destructive: true,
+                    onConfirm: () => dispatch(deleteGroup(g.id)),
+                  });
                 }}
-                className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                className="rounded p-0.5 text-app-dim hover:bg-app-error/10 hover:text-app-error"
                 aria-label={`Delete ${g.name}`}
               >
                 <Trash2 className="size-3" />
@@ -535,7 +586,7 @@ function GroupCell({ todo, groups }: { todo: Todo; groups: Group[] }) {
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={openNewGroup} className="flex items-center gap-2">
-            <Plus className="size-3 shrink-0 text-muted-foreground" />
+            <Plus className="size-3 shrink-0 text-app-dim" />
             <span>New group…</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -590,17 +641,17 @@ function BulkActionBar({
 }) {
   const allSelected = count >= total && total > 0;
   return (
-    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-border bg-popover/95 backdrop-blur px-1.5 py-1 shadow-lg max-w-[calc(100vw-2rem)]">
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-app-border bg-app-panel/95 px-1.5 py-1 max-w-[calc(100vw-2rem)]">
       <button
         type="button"
         onClick={allSelected ? onClear : onSelectAll}
-        className="rounded-full px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors tabular-nums"
+        className="rounded-full px-2.5 py-1 text-xs font-medium hover:bg-app-sidebar transition-colors tabular-nums"
         title={allSelected ? "Clear selection" : `Select all ${total}`}
       >
-        <span className="text-primary">{count}</span>
-        <span className="text-muted-foreground"> / {total}</span>
+        <span className="text-app-accent">{count}</span>
+        <span className="text-app-dim"> / {total}</span>
       </button>
-      <div className="h-4 w-px bg-border mx-0.5" />
+      <div className="h-4 w-px bg-app-border mx-0.5" />
       <Button
         size="icon-sm"
         variant="ghost"
@@ -627,46 +678,44 @@ function BulkActionBar({
         onClick={onDelete}
         aria-label="Delete"
         title="Delete selected"
-        className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+        className="rounded-full text-app-error hover:bg-app-error/10 hover:text-app-error"
       >
         <Trash2 className="size-3.5" />
       </Button>
-      <div className="h-4 w-px bg-border mx-0.5" />
+      <div className="h-4 w-px bg-app-border mx-0.5" />
       <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              aria-label="More bulk actions"
-              title="More actions"
-              className="rounded-full"
-            >
-              <MoreHorizontal className="size-3.5" />
-            </Button>
-          }
-        />
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label="More bulk actions"
+            title="More actions"
+            className="rounded-full"
+          >
+            <MoreHorizontal className="size-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
         <DropdownMenuContent align="center" className="w-56">
           <DropdownMenuItem onClick={onSelectAll} disabled={allSelected}>
             <Check className="size-3.5" />
             Select all visible
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuSub label="Set group" icon={<Folder className="size-3.5" />}>
+          <BulkSubmenu label="Set group" icon={<Folder className="size-3.5" />}>
             <DropdownMenuItem onClick={() => onSetGroup(null)}>
-              <span className="text-muted-foreground">No group</span>
+              <span className="text-app-dim">No group</span>
             </DropdownMenuItem>
             {groups.length > 0 && <DropdownMenuSeparator />}
             {groups.map((g) => (
               <DropdownMenuItem key={g.id} onClick={() => onSetGroup(g.id)}>
-                <Folder className="size-3.5 text-muted-foreground" />
+                <Folder className="size-3.5 text-app-dim" />
                 <span className="truncate">{g.name}</span>
               </DropdownMenuItem>
             ))}
-          </DropdownMenuSub>
-          <DropdownMenuSub label="Set priority" icon={<Filter className="size-3.5" />}>
+          </BulkSubmenu>
+          <BulkSubmenu label="Set priority" icon={<Filter className="size-3.5" />}>
             <DropdownMenuItem onClick={() => onSetPriority(null)}>
-              <span className="text-muted-foreground">No priority</span>
+              <span className="text-app-dim">No priority</span>
             </DropdownMenuItem>
             {priorities.length > 0 && <DropdownMenuSeparator />}
             {priorities.map((p) => (
@@ -674,10 +723,10 @@ function BulkActionBar({
                 {p}
               </DropdownMenuItem>
             ))}
-          </DropdownMenuSub>
-          <DropdownMenuSub label="Set progress" icon={<Filter className="size-3.5" />}>
+          </BulkSubmenu>
+          <BulkSubmenu label="Set progress" icon={<Filter className="size-3.5" />}>
             <DropdownMenuItem onClick={() => onSetProgress(null)}>
-              <span className="text-muted-foreground">No progress</span>
+              <span className="text-app-dim">No progress</span>
             </DropdownMenuItem>
             {progressOptions.length > 0 && <DropdownMenuSeparator />}
             {progressOptions.map((p) => (
@@ -685,11 +734,11 @@ function BulkActionBar({
                 {p}
               </DropdownMenuItem>
             ))}
-          </DropdownMenuSub>
-          <DropdownMenuSub label="Assign" icon={<Users className="size-3.5" />}>
+          </BulkSubmenu>
+          <BulkSubmenu label="Assign" icon={<Users className="size-3.5" />}>
             {users.length === 0 ? (
               <DropdownMenuItem disabled>
-                <span className="text-muted-foreground">No users</span>
+                <span className="text-app-dim">No users</span>
               </DropdownMenuItem>
             ) : (
               users.map((u) => {
@@ -697,7 +746,7 @@ function BulkActionBar({
                 return (
                   <DropdownMenuItem
                     key={u.id}
-                    onClick={(e) => {
+                    onSelect={(e) => {
                       e.preventDefault();
                       onToggleAssignee(u.id);
                     }}
@@ -722,7 +771,7 @@ function BulkActionBar({
               <X className="size-3.5" />
               Clear assignees
             </DropdownMenuItem>
-          </DropdownMenuSub>
+          </BulkSubmenu>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onCopyChecklist}>
             <ClipboardCopy className="size-3.5" />
@@ -752,7 +801,45 @@ function BulkActionBar({
   );
 }
 
-function DropdownMenuSub({
+/**
+ * Last column of a row: the full options menu normally; in focus mode, where
+ * that menu is hidden with the rest of the chrome, a lone delete button.
+ * Deleting asks first, like the menu's Delete and the Del key.
+ */
+function RowActionsCell({ id }: { id: string }) {
+  const focusMode = useAppSelector((s) => s.settings.focusMode);
+  const dispatch = useAppDispatch();
+  const confirm = useConfirm();
+  return (
+    <div className="flex justify-end">
+      {focusMode ? (
+        <button
+          type="button"
+          aria-label="Delete task"
+          title="Delete task"
+          data-testid={`todo-row-${id}-delete-button`}
+          onClick={(e) => {
+            e.stopPropagation();
+            confirm({
+              title: "Delete task?",
+              description: "This task will be permanently removed.",
+              confirmLabel: "Delete",
+              destructive: true,
+              onConfirm: () => dispatch(deleteTodo(id)),
+            });
+          }}
+          className={cn(ui.iconBtnDanger, "size-7 [&_svg]:size-3.5")}
+        >
+          <Trash2 />
+        </button>
+      ) : (
+        <TodoRowActions id={id} />
+      )}
+    </div>
+  );
+}
+
+function BulkSubmenu({
   label,
   icon,
   children,
@@ -761,29 +848,14 @@ function DropdownMenuSub({
   icon: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              setOpen(true);
-            }}
-            className="flex w-full select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            {icon}
-            <span className="flex-1 text-left">{label}</span>
-            <ChevronRight className="size-3.5 opacity-60" />
-          </button>
-        }
-      />
-      <DropdownMenuContent side="right" align="start" className="w-48">
-        {children}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        {icon}
+        <span className="flex-1 text-left">{label}</span>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="w-48">{children}</DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 
@@ -821,15 +893,23 @@ export function TodoTable() {
     },
     [dispatch, sorting],
   );
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: persistedPageSize,
-  });
-  useEffect(() => {
-    if (pagination.pageSize !== persistedPageSize) {
-      dispatch(setPersistedPageSize(pagination.pageSize));
-    }
-  }, [pagination.pageSize, persistedPageSize, dispatch]);
+  // Page size lives in settings (the table pager and the Settings dialog both
+  // write it); only the page index is local.
+  const [pageIndex, setPageIndex] = useState(0);
+  const pagination = useMemo<PaginationState>(
+    () => ({ pageIndex, pageSize: persistedPageSize }),
+    [pageIndex, persistedPageSize],
+  );
+  const setPagination = useCallback(
+    (updater: PaginationState | ((prev: PaginationState) => PaginationState)) => {
+      const next = typeof updater === "function" ? updater(pagination) : updater;
+      setPageIndex(next.pageIndex);
+      if (next.pageSize !== persistedPageSize) {
+        dispatch(setPersistedPageSize(next.pageSize));
+      }
+    },
+    [pagination, persistedPageSize, dispatch],
+  );
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const {
@@ -853,6 +933,92 @@ export function TodoTable() {
   const todos = useMemo(() => activeFile?.todos ?? [], [activeFile]);
   const groups = useMemo(() => activeFile?.groups ?? [], [activeFile]);
   const fontFamily = FONT_VAR[tableFont];
+
+  // Focus mode's inline thought editor: which task it is open under, and its
+  // draft. The draft lives here, not in the panel, because the panel sits in
+  // a virtualized row that unmounts when scrolled out of view.
+  const [thoughtId, setThoughtId] = useState<string | null>(null);
+  const [thoughtDraft, setThoughtDraft] = useState("");
+  const [confirm, setConfirm] = useState<ConfirmState>({ open: false, title: "" });
+  const hydrated = useHydrated();
+  const fileId = activeFile?.id ?? null;
+  // Which file the open editor was last restored for; cleared when focus
+  // mode turns off so turning it back on reopens the same editor.
+  const restoredFileRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusMode) {
+      setThoughtId(null);
+      restoredFileRef.current = null;
+    }
+  }, [focusMode]);
+  // Reopen the editor that was open before a reload or file switch.
+  useEffect(() => {
+    if (!hydrated || !focusMode || !fileId || restoredFileRef.current === fileId) {
+      return;
+    }
+    restoredFileRef.current = fileId;
+    const savedId = readOpenThought("focus", fileId)?.id;
+    const saved = savedId ? todos.find((t) => t.id === savedId) : undefined;
+    setThoughtId(saved?.id ?? null);
+    setThoughtDraft(saved?.thought ?? "");
+  }, [hydrated, focusMode, fileId, todos]);
+  const setOpenThoughtId = (id: string | null) => {
+    setThoughtId(id);
+    if (fileId) {
+      writeOpenThought("focus", fileId, id ? { id } : null);
+    }
+  };
+  const openTodo = thoughtId ? todos.find((t) => t.id === thoughtId) : undefined;
+  // A task deleted with its editor open leaves no edits behind to lose.
+  const thoughtDirty = !!openTodo && thoughtDraft !== (openTodo.thought ?? "");
+  const thoughtEditorKey = useAdoptSavedThought(
+    openTodo?.id ?? null,
+    openTodo?.thought ?? "",
+    thoughtDraft,
+    setThoughtDraft,
+  );
+  const openThought = (id: string) => {
+    if (id === thoughtId) {
+      return;
+    }
+    const show = () => {
+      setOpenThoughtId(id);
+      setThoughtDraft(todos.find((t) => t.id === id)?.thought ?? "");
+    };
+    if (thoughtDirty) {
+      setConfirm({
+        open: true,
+        title: "Discard unsaved thought?",
+        description: "Your edits to the current thought will be lost.",
+        destructive: true,
+        confirmLabel: "Discard",
+        onConfirm: show,
+      });
+      return;
+    }
+    show();
+  };
+  const closeThought = () => {
+    if (thoughtDirty) {
+      setConfirm({
+        open: true,
+        title: "Discard unsaved thought?",
+        description: "Your edits to the current thought will be lost.",
+        destructive: true,
+        confirmLabel: "Discard",
+        onConfirm: () => setOpenThoughtId(null),
+      });
+      return;
+    }
+    setOpenThoughtId(null);
+  };
+  // Bring the editor into view once, when it opens — not on every remount
+  // of its virtualized row.
+  useEffect(() => {
+    if (thoughtId) {
+      rowRefs.current.get(thoughtId)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [thoughtId]);
 
   const commitEdit = () => {
     if (!editingId) {
@@ -946,6 +1112,14 @@ export function TodoTable() {
     fontWeight: titleFontWeight,
     sorting,
     setSort,
+    thoughtId,
+    openThought,
+    thoughtDraft,
+    setThoughtDraft,
+    closeThought,
+    thoughtDirty,
+    thoughtEditorKey,
+    thoughtRightInset: 0,
   };
 
   const columns = useMemo<ColumnDef<Todo>[]>(
@@ -956,7 +1130,7 @@ export function TodoTable() {
         size: 40,
         enableResizing: false,
         cell: () => (
-          <GripVertical className="size-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+          <GripVertical className="size-4 text-app-dim cursor-grab active:cursor-grabbing" />
         ),
       },
       {
@@ -968,8 +1142,7 @@ export function TodoTable() {
           return (
             <div onClick={(e) => e.stopPropagation()} className="flex">
               <Checkbox
-                checked={allSelected}
-                indeterminate={someSelected}
+                checked={allSelected ? true : someSelected ? "indeterminate" : false}
                 onCheckedChange={(checked) => {
                   setSelected(() => (checked === true ? new Set(ids) : new Set()));
                 }}
@@ -1016,8 +1189,8 @@ export function TodoTable() {
             className={cn(
               "size-4 rounded border-2 flex items-center justify-center transition-colors shrink-0 cursor-pointer",
               row.original.done
-                ? "bg-primary border-primary"
-                : "border-muted-foreground/40 hover:border-primary",
+                ? "bg-app-accent border-app-accent"
+                : "border-app-dim/40 hover:border-app-accent",
             )}
           >
             <AnimatePresence initial={false}>
@@ -1030,7 +1203,7 @@ export function TodoTable() {
                   transition={{ type: "spring", stiffness: 600, damping: 20 }}
                   className="flex items-center justify-center"
                 >
-                  <Check className="size-3 text-primary-foreground" strokeWidth={3} />
+                  <Check className="size-3 text-app-on-solid" strokeWidth={3} />
                 </motion.span>
               )}
             </AnimatePresence>
@@ -1171,11 +1344,7 @@ export function TodoTable() {
         header: "",
         size: 48,
         enableResizing: false,
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <TodoRowActions id={row.original.id} />
-          </div>
-        ),
+        cell: ({ row }) => <RowActionsCell id={row.original.id} />,
       },
     ],
     [
@@ -1229,7 +1398,8 @@ export function TodoTable() {
   const rowVirtualizer = useVirtualizer({
     count: paginatedRows.length,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 41,
+    // Focus mode adds the thoughts button under each title.
+    estimateSize: () => (focusMode ? 61 : 41),
     overscan: 12,
   });
 
@@ -1243,9 +1413,20 @@ export function TodoTable() {
   // Refocus row when editing exits
   useEffect(() => {
     if (editingId === null && focusedId) {
-      rowRefs.current.get(focusedId)?.focus();
+      // preventScroll: a <tr> is wider than the viewport, so a plain focus()
+      // scrolls the table sideways and cuts off the title column.
+      rowRefs.current.get(focusedId)?.focus({ preventScroll: true });
     }
   }, [editingId, focusedId]);
+
+  // Vertical-only scroll to a row (by its position in the rendered page),
+  // paired with focus({ preventScroll }) so keyboard nav never pans sideways.
+  const scrollRowIntoView = (id: string) => {
+    const i = paginatedRows.findIndex((r) => r.original.id === id);
+    if (i >= 0) {
+      rowVirtualizer.scrollToIndex(i, { align: "auto" });
+    }
+  };
 
   const handleRowKey = (e: React.KeyboardEvent, todo: Todo, index: number) => {
     if (editingId) {
@@ -1267,11 +1448,20 @@ export function TodoTable() {
     }
     if (e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
-      dispatch(deleteTodo(todo.id));
-      const next = todos[index + 1] ?? todos[index - 1];
-      if (next) {
-        setFocusedId(next.id);
-      }
+      setConfirm({
+        open: true,
+        title: "Delete task?",
+        description: `"${todo.title || "(untitled)"}" will be permanently removed.`,
+        confirmLabel: "Delete",
+        destructive: true,
+        onConfirm: () => {
+          dispatch(deleteTodo(todo.id));
+          const next = todos[index + 1] ?? todos[index - 1];
+          if (next) {
+            setFocusedId(next.id);
+          }
+        },
+      });
       return;
     }
     if (e.key === "ArrowDown") {
@@ -1279,7 +1469,8 @@ export function TodoTable() {
       const next = todos[index + 1];
       if (next) {
         setFocusedId(next.id);
-        rowRefs.current.get(next.id)?.focus();
+        rowRefs.current.get(next.id)?.focus({ preventScroll: true });
+        scrollRowIntoView(next.id);
       }
       return;
     }
@@ -1288,7 +1479,8 @@ export function TodoTable() {
       const prev = todos[index - 1];
       if (prev) {
         setFocusedId(prev.id);
-        rowRefs.current.get(prev.id)?.focus();
+        rowRefs.current.get(prev.id)?.focus({ preventScroll: true });
+        scrollRowIntoView(prev.id);
       }
       return;
     }
@@ -1305,17 +1497,27 @@ export function TodoTable() {
 
   if (!activeFile) {
     return (
-      <div className="rounded-lg border border-border p-8 text-center text-muted-foreground">
+      <div className="rounded-lg border border-app-border p-8 text-center text-app-dim">
         No file selected. Create or import one from the sidebar.
       </div>
     );
   }
 
   const bulkDelete = () => {
-    for (const id of selected) {
-      dispatch(deleteTodo(id));
-    }
-    setSelected(new Set());
+    const ids = [...selected];
+    setConfirm({
+      open: true,
+      title: ids.length === 1 ? "Delete 1 task?" : `Delete ${ids.length} tasks?`,
+      description: "The selected tasks will be permanently removed.",
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: () => {
+        for (const id of ids) {
+          dispatch(deleteTodo(id));
+        }
+        setSelected(new Set());
+      },
+    });
   };
   const bulkSetDone = (done: boolean) => {
     for (const id of selected) {
@@ -1382,11 +1584,17 @@ export function TodoTable() {
   const bulkCopyChecklist = () => copyText(todosToMarkdownChecklist(selectedTodos));
   const bulkCopyCsv = () => copyText(todosToCsv(selectedTodos, groups, userNameById));
 
+  // Actions column plus a 12px gap.
+  meta.thoughtRightInset = (table.getColumn("actions")?.getSize() ?? 0) + 12;
+
   return (
     <div
       className={cn(
-        "rounded-lg border flex flex-col max-h-[calc(100vh-10rem)] w-full transition-colors relative",
-        focusMode ? "border-transparent" : "border-border",
+        "rounded-lg border flex flex-col w-full transition-colors relative",
+        focusMode ? "border-transparent" : "border-app-border",
+        // An open thought editor gets its full height: drop the cap so the
+        // list grows and the page scrolls instead of clipping the editor.
+        !openTodo && "max-h-[calc(100vh-10rem)]",
       )}
     >
       {selected.size > 0 && (
@@ -1416,43 +1624,36 @@ export function TodoTable() {
       {/* Search bar — outside scroll, never clips */}
       <div
         className={cn(
-          "bg-muted border-b border-border px-3 py-1.5 shrink-0 flex items-center gap-2 text-muted-foreground transition-opacity",
+          "bg-app-sidebar border-b border-app-border px-3 py-1.5 shrink-0 flex items-center gap-2 text-app-dim transition-opacity",
           focusMode && "opacity-0 pointer-events-none",
         )}
       >
-        <Search className="size-3.5 shrink-0" />
-        <input
+        <Input
           value={globalFilter}
           onChange={(e) => {
             setGlobalFilter(e.target.value);
             setPagination((p) => ({ ...p, pageIndex: 0 }));
           }}
           placeholder="Search tasks…"
-          className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          icon={Search}
+          onClear={() => {
+            setGlobalFilter("");
+            setPagination((p) => ({ ...p, pageIndex: 0 }));
+          }}
+          clearLabel="Clear search"
+          className="h-7 border-transparent bg-transparent hover:border-transparent focus:ring-0 focus:border-transparent"
         />
-        {globalFilter && (
-          <button
-            type="button"
-            onClick={() => setGlobalFilter("")}
-            className="text-xs hover:text-foreground"
-            aria-label="Clear search"
-          >
-            ✕
-          </button>
-        )}
         <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <button
-                type="button"
-                className="rounded p-1 hover:bg-background hover:text-foreground transition-colors"
-                aria-label="Task list options"
-                title="Task list options"
-              >
-                <MoreHorizontal className="size-3.5" />
-              </button>
-            }
-          />
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="rounded p-1 hover:bg-app-bg hover:text-app-bright transition-colors"
+              aria-label="Task list options"
+              title="Task list options"
+            >
+              <MoreHorizontal className="size-3.5" />
+            </button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem
               onClick={() =>
@@ -1506,13 +1707,19 @@ export function TodoTable() {
       </div>
 
       {/* Horizontal + vertical scroll area — only the table */}
-      <div ref={scrollContainerRef} className="overflow-auto flex-1 min-h-0">
+      {/* pb-3: room for the horizontal scrollbar. macOS draws overlay
+          scrollbars on top of content, which hid the last row behind it. */}
+      <div
+        ref={scrollContainerRef}
+        data-todo-scroller
+        className="overflow-auto flex-1 min-h-0 pb-3"
+      >
         <table
           className={cn(
             "text-sm border-separate border-spacing-0 [&_th]:border-r [&_th]:border-b [&_td]:border-r [&_td]:border-b [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_tbody_tr:last-child_td]:border-b-0",
             focusMode
               ? "[&_th]:border-transparent [&_td]:border-transparent"
-              : "[&_th]:border-border [&_td]:border-border",
+              : "[&_th]:border-app-border [&_td]:border-app-border",
           )}
           style={{
             width: table.getTotalSize(),
@@ -1522,7 +1729,7 @@ export function TodoTable() {
         >
           <thead
             className={cn(
-              "bg-muted sticky top-0 z-10",
+              "bg-app-sidebar sticky top-0 z-10",
               focusMode && "opacity-0 pointer-events-none",
             )}
           >
@@ -1533,21 +1740,23 @@ export function TodoTable() {
                     key={h.id}
                     style={{ width: h.getSize() }}
                     className={cn(
-                      "relative text-left font-medium px-3 py-2 text-muted-foreground select-none transition-opacity",
-                      h.id === "drag" && "sticky left-0 bg-muted z-20",
-                      h.id === "done" && "sticky left-[32px] bg-muted z-20",
+                      "relative text-left font-medium px-3 py-2 text-app-dim select-none transition-opacity",
+                      h.id === "drag" && "sticky left-0 bg-app-sidebar z-20",
+                      h.id === "done" && "sticky left-[32px] bg-app-sidebar z-20",
                       h.id === "actions" &&
-                        "sticky right-0 bg-muted z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
+                        "sticky right-0 bg-app-sidebar z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
                     )}
                   >
-                    {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
+                    {h.isPlaceholder
+                      ? null
+                      : renderTemplate(h.column.columnDef.header, h.getContext())}
                     {h.column.getCanResize() && (
                       <div
                         onMouseDown={h.getResizeHandler()}
                         onTouchStart={h.getResizeHandler()}
                         className={cn(
                           "absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none touch-none",
-                          h.column.getIsResizing() ? "bg-primary" : "hover:bg-primary/30",
+                          h.column.getIsResizing() ? "bg-app-accent" : "hover:bg-app-accent/30",
                         )}
                       />
                     )}
@@ -1559,20 +1768,20 @@ export function TodoTable() {
           <tbody>
             {/* Add-todo row — sticky at top */}
             <tr className={cn("transition-opacity")}>
-              <td className="px-3 py-2 align-middle sticky left-0 top-0 bg-background border-b border-border z-30">
+              <td className="px-3 py-2 align-middle sticky left-0 top-0 bg-app-bg border-b border-app-border z-30">
                 <Plus
                   className={cn(
-                    "size-4 text-muted-foreground",
+                    "size-4 text-app-dim",
                     focusMode && "opacity-0 pointer-events-none",
                   )}
                 />
               </td>
-              <td className="px-3 py-2 align-middle  bg-background text-muted-foreground border-b border-border z-30" />
+              <td className="px-3 py-2 align-middle  bg-app-bg text-app-dim border-b border-app-border z-30" />
               {!focusMode && (
-                <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-background text-muted-foreground border-b border-border z-30" />
+                <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-app-bg text-app-dim border-b border-app-border z-30" />
               )}
               <td
-                className="px-3 py-2 align-middle sticky top-0 bg-background text-muted-foreground border-b border-border z-20"
+                className="px-3 py-2 align-middle sticky top-0 bg-app-bg text-app-dim border-b border-app-border z-20"
                 colSpan={columns.length - (focusMode ? 2 : 3)}
               >
                 <input
@@ -1589,21 +1798,33 @@ export function TodoTable() {
                     fontFamily,
                     fontSize: `${titleFontSize}px`,
                     fontWeight: titleFontWeight,
+                    // Span the Title column, not the whole row: this cell
+                    // colSpans every column and is wider than the viewport,
+                    // so a full-width input made focusing it pan the table.
+                    width: table.getColumn("title")?.getSize(),
                   }}
-                  className="w-full bg-transparent p-0 outline-none placeholder:text-muted-foreground placeholder:font-normal"
+                  className="max-w-full bg-transparent p-0 outline-none placeholder:text-app-dim placeholder:font-normal"
                 />
               </td>
             </tr>
 
             {paginatedRows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-3 py-8 text-center text-muted-foreground"
-                >
-                  Start typing above and press Enter
-                </td>
-              </tr>
+              focusMode ? (
+                // Focus mode: line the hint up under the add-task input
+                // instead of centring it across the (very wide) table.
+                <tr>
+                  <td colSpan={2} />
+                  <td colSpan={columns.length - 2} className="px-3 py-3 text-left text-app-dim">
+                    Start typing above and press Enter
+                  </td>
+                </tr>
+              ) : (
+                <tr>
+                  <td colSpan={columns.length} className="px-3 py-8 text-center text-app-dim">
+                    Start typing above and press Enter
+                  </td>
+                </tr>
+              )
             ) : (
               <>
                 {paddingTop > 0 && (
@@ -1619,9 +1840,11 @@ export function TodoTable() {
                     <tr
                       key={row.id}
                       data-row-id={id}
+                      data-index={virtualRow.index}
                       ref={(el) => {
                         if (el) {
                           rowRefs.current.set(id, el);
+                          rowVirtualizer.measureElement(el);
                         } else {
                           rowRefs.current.delete(id);
                         }
@@ -1629,7 +1852,9 @@ export function TodoTable() {
                       tabIndex={editingId === id ? -1 : 0}
                       onFocus={() => setFocusedId(id)}
                       onKeyDown={(e) => handleRowKey(e, row.original, todos.indexOf(row.original))}
-                      draggable={editingId !== id && sorting.length === 0}
+                      // Not while its thought editor is open: a draggable
+                      // ancestor breaks text selection inside the editor.
+                      draggable={editingId !== id && thoughtId !== id && sorting.length === 0}
                       onDragStart={(e) => {
                         if (sorting.length > 0) {
                           return;
@@ -1670,12 +1895,12 @@ export function TodoTable() {
                         setOverId(null);
                       }}
                       className={cn(
-                        "transition-colors outline-none hover:bg-muted/50",
+                        "transition-colors outline-none hover:bg-app-sidebar/50",
                         (dragId === id || touchDragId === id) && "opacity-40",
                         ((overId === id && dragId !== id) ||
                           (touchOverId === id && touchDragId !== id)) &&
-                          "bg-primary/20",
-                        isFocused && "bg-primary/2",
+                          "bg-app-accent/20",
+                        isFocused && "bg-app-accent/2",
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
@@ -1691,7 +1916,10 @@ export function TodoTable() {
                               : undefined
                           }
                           className={cn(
-                            "px-3 py-2 align-middle transition-opacity",
+                            "px-3 py-2 transition-opacity",
+                            // Keep grip/checkbox/delete level with the title
+                            // when the row grows to hold the thought editor.
+                            thoughtId === id ? "align-top" : "align-middle",
                             cell.column.id === "drag" && "touch-none",
                             !(focusMode && cell.column.id === "title") && "truncate",
                             focusMode &&
@@ -1701,26 +1929,20 @@ export function TodoTable() {
                                 "group",
                                 "assignees",
                                 "completedIn",
-                                "actions",
                               ].includes(cell.column.id) &&
                               "opacity-0 pointer-events-none",
                             cell.column.id === "drag" &&
                               cn(
                                 "sticky left-0 z-1",
                                 isFocused
-                                  ? "shadow-[inset_2px_0_0_var(--color-primary)] bg-background"
-                                  : "bg-background",
+                                  ? "shadow-[inset_2px_0_0_var(--app-accent)] bg-app-bg"
+                                  : "bg-app-bg",
                               ),
-                            cell.column.id === "done" &&
-                              cn("sticky left-[32px] z-1", "bg-background"),
-                            cell.column.id === "actions" &&
-                              cn(
-                                "sticky right-0 z-1 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
-                                "bg-background",
-                              ),
+                            cell.column.id === "done" && cn("sticky left-[32px] z-1", "bg-app-bg"),
+                            cell.column.id === "actions" && cn("sticky right-0 z-1", "bg-app-bg"),
                           )}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {renderTemplate(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
                     </tr>
@@ -1740,54 +1962,52 @@ export function TodoTable() {
       {/* Bottom bar — outside scroll, never clips */}
       <div
         className={cn(
-          "border-t border-border px-3 py-1.5 text-xs text-muted-foreground bg-muted flex gap-3 flex-wrap items-center shrink-0 transition-opacity",
+          "border-t border-app-border px-3 py-1.5 text-xs text-app-dim bg-app-sidebar flex gap-3 flex-wrap items-center shrink-0 transition-opacity",
           focusMode && "opacity-0 pointer-events-none",
         )}
       >
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-app-border rounded text-[10px] leading-none font-mono">
             ↑↓
           </kbd>
           <span>move</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-app-border rounded text-[10px] leading-none font-mono">
             ↵
           </kbd>
           <span>edit</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-app-border rounded text-[10px] leading-none">
             Space
           </kbd>
           <span>toggle</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-app-border rounded text-[10px] leading-none">
             Del
           </kbd>
           <span>delete</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-app-border rounded text-[10px] leading-none">
             Esc
           </kbd>
           <span>cancel</span>
         </span>
         <div className="ml-auto flex items-center gap-2">
           <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <button
-                  type="button"
-                  className="flex items-center gap-1 border border-border rounded px-1.5 py-0.5 hover:bg-muted transition-colors"
-                >
-                  {pagination.pageSize} / page <ChevronDown className="size-3 opacity-60" />
-                </button>
-              }
-            />
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1 border border-app-border rounded px-1.5 py-0.5 hover:bg-app-sidebar transition-colors"
+              >
+                {pagination.pageSize} / page <ChevronDown className="size-3 opacity-60" />
+              </button>
+            </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-32">
-              {[30, 100, 200, 300].map((s) => (
+              {PAGE_SIZE_OPTIONS.map((s) => (
                 <DropdownMenuItem
                   key={s}
                   onClick={() => setPagination({ pageIndex: 0, pageSize: s })}
@@ -1804,7 +2024,7 @@ export function TodoTable() {
             type="button"
             onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))}
             disabled={!canPrev}
-            className="p-0.5 rounded disabled:opacity-30 hover:text-foreground"
+            className="p-0.5 rounded disabled:opacity-30 hover:text-app-bright"
           >
             <ChevronLeft className="size-3.5" />
           </button>
@@ -1812,12 +2032,13 @@ export function TodoTable() {
             type="button"
             onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))}
             disabled={!canNext}
-            className="p-0.5 rounded disabled:opacity-30 hover:text-foreground"
+            className="p-0.5 rounded disabled:opacity-30 hover:text-app-bright"
           >
             <ChevronRight className="size-3.5" />
           </button>
         </div>
       </div>
+      <ConfirmDialog state={confirm} onOpenChange={(open) => setConfirm((c) => ({ ...c, open }))} />
     </div>
   );
 }

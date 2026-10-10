@@ -2,15 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { AppSwitcherRail } from "@/components/customs/AppSwitcherRail";
 import { MainContent } from "@/components/customs/MainContent";
 import { ShortcutsDialog, useShortcutsController } from "@/components/customs/ShortcutsDialog";
 import { AiChat } from "@/features/AiChat/AiChat";
-import { Sidebar } from "@/features/Sidebar/Sidebar";
+import { SettingsDialog } from "@/features/Settings/SettingsDialog";
+import { AppSidebar } from "@/features/Sidebar/Sidebar";
 import { redoAction, undoAction } from "@/lib/undo";
 import { useHydrated } from "@/providers/StoreProvider";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
-import { setDarkMode, setFocusMode, setSidebarOpen } from "@/stores/slices/settingsSlice";
+import { setFocusMode, setSidebarOpen } from "@/stores/slices/settingsSlice";
 
 const INTRO_DELAY_MS = 450;
 
@@ -19,9 +19,10 @@ export function AppShell() {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [introOpen, setIntroOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const dispatch = useAppDispatch();
-  const darkMode = useAppSelector((s) => s.settings.darkMode);
   const focusMode = useAppSelector((s) => s.settings.focusMode);
+  const providersRequest = useAppSelector((s) => s.ai.providersRequest);
   const hydrated = useHydrated();
 
   useEffect(() => {
@@ -91,6 +92,19 @@ export function AppShell() {
       dispatch(setSidebarOpen(!sidebarOpenPersisted));
     }
   };
+
+  // "Show AI providers" (rail button, chat key button) opens a closed sidebar.
+  useEffect(() => {
+    if (providersRequest === 0) {
+      return;
+    }
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setMobileOpen(true);
+    } else {
+      dispatch(setSidebarOpen(true));
+    }
+  }, [providersRequest, dispatch]);
+
   const toggleFullscreen = () => {
     if (typeof document === "undefined") {
       return;
@@ -101,26 +115,28 @@ export function AppShell() {
       document.documentElement.requestFullscreen?.();
     }
   };
-  const toggleDark = () => dispatch(setDarkMode(!darkMode));
   const toggleFocus = () => dispatch(setFocusMode(!focusMode));
 
   const { open: helpOpen, setOpen: setHelpOpen } = useShortcutsController({
     onToggleSidebar: toggleSidebar,
     onToggleFullscreen: toggleFullscreen,
-    onToggleDark: toggleDark,
     onToggleFocus: toggleFocus,
   });
 
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden relative">
-      <div className="hidden md:flex">
-        <AppSwitcherRail />
-      </div>
+      <AppSidebar
+        open={sidebarOpen}
+        onToggle={toggleSidebar}
+        onOpenSettings={() => setSettingsOpen(true)}
+        isMobile={isMobile}
+      />
       <main className="flex-1 p-3 md:p-6 flex flex-col gap-4 overflow-auto min-w-0">
         <MainContent
           onToggleSidebar={toggleSidebar}
           sidebarOpen={sidebarOpen}
           onOpenShortcuts={() => setHelpOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
       </main>
       {isMobile && sidebarOpen && (
@@ -130,8 +146,8 @@ export function AppShell() {
           aria-hidden
         />
       )}
-      <Sidebar open={sidebarOpen} onToggle={toggleSidebar} isMobile={isMobile} />
       <ShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <AiChat />
     </div>
   );

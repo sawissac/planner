@@ -3,7 +3,10 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Provider } from "react-redux";
 
+import { ConfirmProvider } from "@/components/customs/ConfirmDialog";
 import { subscribeCloudSync } from "@/lib/cloud-sync";
+import { appThemeCssVars } from "@/lib/color-themes";
+import { resolvePalette } from "@/lib/palette";
 import { hydrate, subscribePersist } from "@/lib/persistence";
 import { useAppSelector } from "@/stores/hooks";
 import { makeStore } from "@/stores/store";
@@ -11,42 +14,20 @@ import { makeStore } from "@/stores/store";
 export const HydrationContext = createContext(false);
 export const useHydrated = () => useContext(HydrationContext);
 
-function hexToOklch(hex: string): string | null {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) {
-    return null;
-  }
-  const n = parseInt(m[1], 16);
-  const r = ((n >> 16) & 0xff) / 255;
-  const g = ((n >> 8) & 0xff) / 255;
-  const b = (n & 0xff) / 255;
-  return `rgb(${Math.round(r * 255)} ${Math.round(g * 255)} ${Math.round(b * 255)})`;
-}
-
+/**
+ * Paints the active compacto-ui palette (`settings.accentColor` holds its key)
+ * onto the root element as `--app-*` variables. Light palettes only — the
+ * `.dark` class is never set.
+ */
 function ThemeApplier() {
-  const darkMode = useAppSelector((s) => s.settings.darkMode);
-  const accent = useAppSelector((s) => s.settings.accentColor);
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-  }, [darkMode]);
+  const paletteKey = useAppSelector((s) => s.settings.accentColor);
   useEffect(() => {
     const root = document.documentElement;
-    if (!accent) {
-      root.style.removeProperty("--primary");
-      root.style.removeProperty("--ring");
-      root.style.removeProperty("--sidebar-primary");
-      root.style.removeProperty("--chart-4");
-      return;
+    const { theme } = resolvePalette(paletteKey);
+    for (const [name, value] of Object.entries(appThemeCssVars(theme))) {
+      root.style.setProperty(name, value);
     }
-    const value = hexToOklch(accent);
-    if (!value) {
-      return;
-    }
-    root.style.setProperty("--primary", value);
-    root.style.setProperty("--ring", value);
-    root.style.setProperty("--sidebar-primary", value);
-    root.style.setProperty("--chart-4", value);
-  }, [accent]);
+  }, [paletteKey]);
   return null;
 }
 
@@ -81,9 +62,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <Provider store={store}>
       <HydrationContext.Provider value={ready}>
         <ThemeApplier />
-        <div data-hydrated={ready} className="contents">
-          {children}
-        </div>
+        <ConfirmProvider>
+          <div data-hydrated={ready} className="contents">
+            {children}
+          </div>
+        </ConfirmProvider>
       </HydrationContext.Provider>
     </Provider>
   );

@@ -9,9 +9,10 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu-extras";
+import { Input } from "@/components/ui/input";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import { updateTodo } from "@/stores/slices/todoSlice";
 import { addUser } from "@/stores/slices/userSlice";
@@ -49,46 +50,39 @@ export function AssigneeCell({ id, assignees }: { id: string; assignees: string[
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => e.stopPropagation()}
-            className="h-7 w-full justify-between gap-1 px-2 font-normal"
-          >
-            {assignedUsers.length === 0 ? (
-              <span className="text-xs text-muted-foreground">—</span>
-            ) : single ? (
-              <span className="flex items-center gap-1.5 min-w-0">
-                <Avatar
-                  size={20}
-                  name={assignedUsers[0].id}
-                  variant="beam"
-                  colors={AVATAR_COLORS}
-                />
-                <span className="text-xs truncate">{assignedUsers[0].name}</span>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => e.stopPropagation()}
+          className="h-7 w-full justify-between gap-1 px-2 font-normal"
+        >
+          {assignedUsers.length === 0 ? (
+            <span className="text-xs text-app-dim">—</span>
+          ) : single ? (
+            <span className="flex items-center gap-1.5 min-w-0">
+              <Avatar size={20} name={assignedUsers[0].id} variant="beam" colors={AVATAR_COLORS} />
+              <span className="text-xs truncate">{assignedUsers[0].name}</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 min-w-0">
+              <span className="flex items-center">
+                {assignedUsers.slice(0, 5).map((u, i) => (
+                  <span
+                    key={u.id}
+                    style={{ marginLeft: i === 0 ? 0 : -6, zIndex: 5 - i }}
+                    className="relative rounded-full ring-1 ring-app-bg"
+                  >
+                    <Avatar size={20} name={u.id} variant="beam" colors={AVATAR_COLORS} />
+                  </span>
+                ))}
               </span>
-            ) : (
-              <span className="flex items-center gap-1.5 min-w-0">
-                <span className="flex items-center">
-                  {assignedUsers.slice(0, 5).map((u, i) => (
-                    <span
-                      key={u.id}
-                      style={{ marginLeft: i === 0 ? 0 : -6, zIndex: 5 - i }}
-                      className="relative rounded-full ring-1 ring-background"
-                    >
-                      <Avatar size={20} name={u.id} variant="beam" colors={AVATAR_COLORS} />
-                    </span>
-                  ))}
-                </span>
-                <span className="text-xs truncate">Assignee {assignedUsers.length}</span>
-              </span>
-            )}
-            <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
-          </Button>
-        }
-      />
+              <span className="text-xs truncate">Assignee {assignedUsers.length}</span>
+            </span>
+          )}
+          <ChevronDown className="size-3 shrink-0 text-app-dim" />
+        </Button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         {users.map((u) => (
           <DropdownMenuCheckboxItem
@@ -120,7 +114,7 @@ export function AssigneeCell({ id, assignees }: { id: string; assignees: string[
         )}
         <DropdownMenuSeparator />
         <div className="flex items-center gap-1 px-1.5 py-1" onClick={(e) => e.stopPropagation()}>
-          <input
+          <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -131,7 +125,6 @@ export function AssigneeCell({ id, assignees }: { id: string; assignees: string[
               e.stopPropagation();
             }}
             placeholder="Add user..."
-            className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           />
           <Button size="icon-sm" variant="ghost" onClick={addNew} aria-label="Add user">
             <Plus className="size-3.5" />

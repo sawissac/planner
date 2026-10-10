@@ -1,0 +1,71 @@
+/* compacto-ui — OPT-IN shadcn semantic aliases.
+ *
+ * The library itself emits ZERO semantic utilities. This file exists only so a
+ * consuming app whose own feature code still writes `bg-primary` /
+ * `text-muted-foreground` / `border-border` keeps rendering while it migrates
+ * to the --app-* vocabulary.
+ *
+ * The mapping is lifted from the semantic half of the apps' own themeCssVars(),
+ * so behaviour is identical to what they render today.
+ *
+ * Delete the import when a grep for semantic utilities in your src/ comes back
+ * empty. Scheduled for removal in v2.0.0. */
+
+:root,
+.dark {
+  --background: var(--app-bg);
+  --foreground: var(--app-bright);
+  --card: var(--app-panel);
+  --card-foreground: var(--app-bright);
+  --popover: var(--app-panel);
+  --popover-foreground: var(--app-bright);
+  --primary: var(--app-accent);
+  --primary-foreground: var(--app-on-solid);
+  --secondary: var(--app-sidebar);
+  --secondary-foreground: var(--app-bright);
+  --muted: var(--app-sidebar);
+  --muted-foreground: var(--app-dim);
+  --accent: var(--app-hover);
+  --accent-foreground: var(--app-bright);
+  --destructive: var(--app-error);
+  --border: var(--app-border);
+  --input: var(--app-border-mid);
+  --ring: var(--app-accent);
+  --sidebar: var(--app-sidebar);
+  --sidebar-foreground: var(--app-bright);
+  --sidebar-primary: var(--app-accent);
+  --sidebar-primary-foreground: var(--app-on-solid);
+  --sidebar-accent: var(--app-hover);
+  --sidebar-accent-foreground: var(--app-bright);
+  --sidebar-border: var(--app-border);
+  --sidebar-ring: var(--app-accent);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}

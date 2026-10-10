@@ -3,15 +3,17 @@
 import { ChevronDown, Pencil, Plus, X } from "lucide-react";
 import { useState } from "react";
 
+import { useConfirm } from "@/components/customs/ConfirmDialog";
 import { PromptDialog, type PromptState } from "@/components/customs/PromptDialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu-extras";
+import { Input } from "@/components/ui/input";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import {
   addPriorityOption,
@@ -22,22 +24,23 @@ import {
 import { renamePriorityValue, updateTodo } from "@/stores/slices/todoSlice";
 
 const DEFAULTS = new Set<string>(DEFAULT_PRIORITY_OPTIONS);
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 
 const PRIORITY_COLOR: Record<string, string> = {
-  highest: "bg-red-500/15 text-red-600 dark:text-red-400",
-  critical: "bg-red-500/15 text-red-600 dark:text-red-400",
-  must: "bg-orange-500/15 text-orange-600 dark:text-orange-400",
-  high: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  deferred: "bg-muted text-muted-foreground",
+  highest: "text-app-error border tint-current",
+  critical: "text-app-error border tint-current",
+  must: "text-app-warn border tint-current",
+  high: "text-app-warn border tint-current",
+  deferred: "bg-app-sidebar text-app-dim",
 };
 
 function colorFor(p: string): string {
-  return PRIORITY_COLOR[p.toLowerCase()] ?? "bg-blue-500/15 text-blue-600 dark:text-blue-400";
+  return PRIORITY_COLOR[p.toLowerCase()] ?? "text-app-accent border tint-current";
 }
 
 export function PriorityCell({ id, priority }: { id: string; priority: string | null }) {
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
   const options = useAppSelector((s) => s.settings.priorityOptions);
   const [draft, setDraft] = useState("");
   const [prompt, setPrompt] = useState<PromptState>({ open: false, title: "" });
@@ -77,25 +80,23 @@ export function PriorityCell({ id, priority }: { id: string; priority: string | 
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => e.stopPropagation()}
-              className="h-7 w-full justify-between gap-1 px-2 text-xs font-normal"
-            >
-              {priority ? (
-                <span className={cn("rounded-md px-1.5 py-0.5 capitalize", colorFor(priority))}>
-                  {priority}
-                </span>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-              <ChevronDown className="size-3 text-muted-foreground" />
-            </Button>
-          }
-        />
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => e.stopPropagation()}
+            className="h-7 w-full justify-between gap-1 px-2 text-xs font-normal"
+          >
+            {priority ? (
+              <span className={cn("rounded-md px-1.5 py-0.5 capitalize", colorFor(priority))}>
+                {priority}
+              </span>
+            ) : (
+              <span className="text-app-dim">—</span>
+            )}
+            <ChevronDown className="size-3 text-app-dim" />
+          </Button>
+        </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
           {options.map((p) => (
             <DropdownMenuItem
@@ -119,7 +120,7 @@ export function PriorityCell({ id, priority }: { id: string; priority: string | 
                       e.stopPropagation();
                       openRename(p);
                     }}
-                    className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="rounded p-0.5 text-app-dim hover:bg-app-hover hover:text-app-bright"
                     aria-label={`Rename ${p}`}
                   >
                     <Pencil className="size-3" />
@@ -128,12 +129,20 @@ export function PriorityCell({ id, priority }: { id: string; priority: string | 
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      dispatch(removePriorityOption(p));
-                      if (priority === p) {
-                        setPriority(null);
-                      }
+                      confirm({
+                        title: `Delete priority "${p}"?`,
+                        description: "It will be removed from the priority options.",
+                        confirmLabel: "Delete",
+                        destructive: true,
+                        onConfirm: () => {
+                          dispatch(removePriorityOption(p));
+                          if (priority === p) {
+                            setPriority(null);
+                          }
+                        },
+                      });
                     }}
-                    className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    className="rounded p-0.5 text-app-dim hover:bg-app-error/10 hover:text-app-error"
                     aria-label={`Remove ${p}`}
                   >
                     <X className="size-3" />
@@ -150,7 +159,7 @@ export function PriorityCell({ id, priority }: { id: string; priority: string | 
           )}
           <DropdownMenuSeparator />
           <div className="flex items-center gap-1 px-1.5 py-1" onClick={(e) => e.stopPropagation()}>
-            <input
+            <Input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -161,7 +170,6 @@ export function PriorityCell({ id, priority }: { id: string; priority: string | 
                 e.stopPropagation();
               }}
               placeholder="Add new..."
-              className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             />
             <Button size="icon-sm" variant="ghost" onClick={addNew} aria-label="Add priority">
               <Plus className="size-3.5" />

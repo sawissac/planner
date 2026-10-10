@@ -5,10 +5,15 @@ import {
   setStreaming,
   truncateAfterLastUser,
 } from "@/stores/slices/aiSlice";
-import { getAllModels } from "@/stores/slices/aiSlice";
+import { getAllModels, resolveKey } from "@/stores/slices/aiSlice";
 import type { AppStore } from "@/stores/store";
 
-import { chatCompletion, getApiKey, type OpenAIMessage, type OpenAIToolCall } from "./providers";
+import {
+  chatCompletion,
+  type OpenAIMessage,
+  type OpenAIToolCall,
+  PROVIDER_LABEL,
+} from "./providers";
 import { AI_TOOLS, runTool } from "./tools";
 
 const MAX_TOOL_ITERATIONS = 100;
@@ -350,16 +355,16 @@ function toOpenAIMessages(store: AppStore, history: ChatMessage[]): OpenAIMessag
 
 async function runLoop(store: AppStore, signal: AbortSignal): Promise<void> {
   const state = store.getState();
-  const modelOpt = getAllModels(state.ai.ollamaModels, state.ai.openrouterModels).find(
-    (m) => m.id === state.ai.modelId,
-  );
+  const modelOpt = getAllModels(state.ai.openrouterModels).find((m) => m.id === state.ai.modelId);
   if (!modelOpt) {
     store.dispatch(setError("Model not found"));
     return;
   }
-  const apiKey = getApiKey(modelOpt.provider);
-  if (!apiKey && modelOpt.provider !== "ollama") {
-    store.dispatch(setError(`Missing API key for ${modelOpt.provider}. Add it in settings.`));
+  const apiKey = resolveKey(state.ai, modelOpt.provider)?.key;
+  if (!apiKey) {
+    store.dispatch(
+      setError(`No ${PROVIDER_LABEL[modelOpt.provider]} API key. Add one with the key button.`),
+    );
     return;
   }
 

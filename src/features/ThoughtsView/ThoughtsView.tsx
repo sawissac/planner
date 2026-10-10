@@ -5,8 +5,16 @@ import dynamic from "next/dynamic";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
 import { ConfirmDialog, type ConfirmState } from "@/components/customs/ConfirmDialog";
+import { CopyApiUrlButton } from "@/components/customs/CopyApiUrlButton";
+import { RefreshThoughtButton } from "@/components/customs/RefreshThoughtButton";
+import { ThoughtComments } from "@/components/customs/ThoughtComments";
+import { TokenCount } from "@/components/customs/TokenCount";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { useAdoptSavedThought } from "@/hooks/useAdoptSavedThought";
+import { useDraftSaver } from "@/hooks/useDraftSaver";
+import { cn } from "@/lib/cn";
+import { readOpenThought, writeOpenThought } from "@/lib/thought-open";
+import { useHydrated } from "@/providers/StoreProvider";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import { type Todo, updateTodo } from "@/stores/slices/todoSlice";
 
@@ -14,9 +22,7 @@ const loadThoughtEditorModule = () => import("@/components/customs/ThoughtEditor
 
 const ThoughtEditor = dynamic(() => loadThoughtEditorModule().then((m) => m.ThoughtEditor), {
   ssr: false,
-  loading: () => (
-    <div className="min-h-40 px-3 py-2 text-sm text-muted-foreground">Loading editor…</div>
-  ),
+  loading: () => <div className="min-h-40 px-3 py-2 text-sm text-app-dim">Loading editor…</div>,
 });
 
 function stripMarkdown(md: string, limit = 80): string {
@@ -55,6 +61,7 @@ const ThoughtEditorPane = forwardRef<
   const initial = todo.thought ?? "";
   const [value, setValue] = useState(initial);
   const [editorReady, setEditorReady] = useState(false);
+  const editorKey = useAdoptSavedThought(todo.id, initial, value, setValue);
 
   useEffect(() => {
     let rafId = 0;
@@ -74,13 +81,22 @@ const ThoughtEditorPane = forwardRef<
     onDirtyChange(next !== initial);
   };
 
+  const save = () => {
+    dispatch(updateTodo({ id: todo.id, thought: value }));
+    onDirtyChange(false);
+  };
+
+  // "Copy context" saves the draft first, so the copy reads what is on screen.
+  useDraftSaver(todo.id, () => {
+    if (value !== initial) {
+      save();
+    }
+  });
+
   useImperativeHandle(
     ref,
     () => ({
-      save: () => {
-        dispatch(updateTodo({ id: todo.id, thought: value }));
-        onDirtyChange(false);
-      },
+      save,
       cancel: () => {
         setValue(initial);
         onDirtyChange(false);
@@ -90,8 +106,8 @@ const ThoughtEditorPane = forwardRef<
   );
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-border">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-app-border">
+      <div className="flex shrink-0 items-center gap-2 border-b border-app-border px-3 py-2">
         <Button
           size="icon-sm"
           variant="ghost"
@@ -102,16 +118,26 @@ const ThoughtEditorPane = forwardRef<
           <ArrowLeft className="size-4" />
         </Button>
         <span className="flex-1 truncate text-sm font-medium">
-          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">
+          <span className="rounded bg-app-accent/10 px-1.5 py-0.5 text-app-accent">
             {todo.title?.trim() || "(untitled)"}
           </span>
         </span>
+        <RefreshThoughtButton showLabel data-testid="thought-refresh-button" />
+        <CopyApiUrlButton todoId={todo.id} showLabel />
       </div>
-      <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-background">
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-app-bg">
         {editorReady ? (
-          <ThoughtEditor markdown={value} onChange={handleChange} />
+          <>
+            <ThoughtEditor key={editorKey} markdown={value} onChange={handleChange} />
+            <div className="flex justify-end px-3 pb-1.5">
+              <TokenCount text={value} data-testid="thought-token-count" />
+            </div>
+            <div className="border-t border-app-border">
+              <ThoughtComments todo={todo} />
+            </div>
+          </>
         ) : (
-          <div className="min-h-40 px-3 py-2 text-sm text-muted-foreground">Loading editor…</div>
+          <div className="min-h-40 px-3 py-2 text-sm text-app-dim">Loading editor…</div>
         )}
       </div>
     </div>
@@ -144,22 +170,36 @@ export function ThoughtsView() {
   });
 
   const activeFileId = useAppSelector((s) => s.todos.activeFileId);
-  const prevFileIdRef = useRef<string | null>(activeFileId);
+  const hydrated = useHydrated();
+  // On mount and on every file switch, reopen the task that was open in
+  // this file last time (see `thought-open.ts`), else the default pick.
+  const restoredFileRef = useRef<string | null>(null);
   useEffect(() => {
-    if (prevFileIdRef.current !== activeFileId) {
-      prevFileIdRef.current = activeFileId;
-      setSelectedId(initialId);
-      setView("list");
-      setDirty(false);
+    if (!hydrated || !activeFileId || restoredFileRef.current === activeFileId) {
+      return;
     }
-  }, [activeFileId, initialId]);
+    restoredFileRef.current = activeFileId;
+    const saved = readOpenThought("thoughts", activeFileId);
+    const found = !!saved && todos.some((t) => t.id === saved.id);
+    setSelectedId(found ? saved.id : initialId);
+    setView(found && saved.editor ? "editor" : "list");
+    setDirty(false);
+  }, [hydrated, activeFileId, todos, initialId]);
+
+  const show = (id: string | null, nextView: "list" | "editor") => {
+    setSelectedId(id);
+    setView(nextView);
+    if (activeFileId) {
+      writeOpenThought("thoughts", activeFileId, id ? { id, editor: nextView === "editor" } : null);
+    }
+  };
 
   const effectiveSelectedId =
     selectedId && todos.some((t) => t.id === selectedId) ? selectedId : initialId;
 
   if (!file || todos.length === 0) {
     return (
-      <div className="flex min-h-60 items-center justify-center text-sm text-muted-foreground">
+      <div className="flex min-h-60 items-center justify-center text-sm text-app-dim">
         No tasks in this file.
       </div>
     );
@@ -177,14 +217,12 @@ export function ThoughtsView() {
         confirmLabel: "Discard",
         onConfirm: () => {
           paneRef.current?.cancel();
-          setSelectedId(id);
-          setView(nextView);
+          show(id, nextView);
         },
       });
       return;
     }
-    setSelectedId(id);
-    setView(nextView);
+    show(id, nextView);
   };
 
   const pickRow = (id: string) => requestSelect(id, "editor");
@@ -199,24 +237,24 @@ export function ThoughtsView() {
         confirmLabel: "Discard",
         onConfirm: () => {
           paneRef.current?.cancel();
-          setView("list");
+          show(effectiveSelectedId, "list");
         },
       });
       return;
     }
-    setView("list");
+    show(effectiveSelectedId, "list");
   };
 
   return (
     <div className="grid items-start gap-3 md:grid-cols-[minmax(240px,320px)_1fr]">
       <div
         className={cn(
-          "min-w-0 rounded-md border border-border overflow-y-auto",
+          "min-w-0 rounded-md border border-app-border overflow-y-auto",
           "max-h-[calc(100vh-160px)] md:sticky md:top-2 md:max-h-[calc(100vh-140px)]",
           view === "editor" ? "hidden md:block" : "block",
         )}
       >
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-app-border">
           {todos.map((t) => {
             const preview = stripMarkdown(t.thought ?? "");
             const isSelected = t.id === effectiveSelectedId;
@@ -227,7 +265,7 @@ export function ThoughtsView() {
                   onClick={() => pickRow(t.id)}
                   className={cn(
                     "flex w-full flex-col items-start gap-1 px-3 py-2 text-left transition-colors",
-                    isSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted",
+                    isSelected ? "bg-app-hover text-app-bright" : "hover:bg-app-sidebar",
                   )}
                 >
                   <span className="w-full truncate text-sm font-medium">
@@ -236,7 +274,7 @@ export function ThoughtsView() {
                   <span
                     className={cn(
                       "w-full truncate text-xs",
-                      preview ? "text-muted-foreground" : "italic text-muted-foreground/70",
+                      preview ? "text-app-dim" : "italic text-app-dim/70",
                     )}
                   >
                     {preview || "Empty"}
@@ -277,7 +315,7 @@ export function ThoughtsView() {
             </div>
           </div>
         ) : (
-          <div className="flex min-h-60 items-center justify-center text-sm text-muted-foreground">
+          <div className="flex min-h-60 items-center justify-center text-sm text-app-dim">
             Select a task to edit its thought.
           </div>
         )}

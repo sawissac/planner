@@ -7,8 +7,9 @@ import { useStore } from "react-redux";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { onStatus, pullOnce, pushNow, type SyncStatus } from "@/lib/cloud-sync";
-import { isSignedIn, onAuthChange, signOut } from "@/lib/cloud-sync-backend";
+import { useSignedIn } from "@/hooks/useSignedIn";
+import { onStatus, syncNow, type SyncStatus } from "@/lib/cloud-sync";
+import { signOut } from "@/lib/cloud-sync-backend";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import { setCloudAutoSync } from "@/stores/slices/settingsSlice";
 import type { AppStore } from "@/stores/store";
@@ -22,20 +23,12 @@ export function CloudSyncButton() {
   const store = useStore() as AppStore;
   const dispatch = useAppDispatch();
   const autoSync = useAppSelector((s) => s.settings.cloudAutoSync);
-  const [signed, setSigned] = useState(false);
+  const signed = useSignedIn();
   const [status, setStatus] = useState<SyncStatus>({ kind: "idle" });
   const [busy, setBusy] = useState(false);
   const [online, setOnline] = useState(true);
 
-  useEffect(() => {
-    setSigned(isSignedIn());
-    const offAuth = onAuthChange(setSigned);
-    const offStatus = onStatus(setStatus);
-    return () => {
-      offAuth();
-      offStatus();
-    };
-  }, []);
+  useEffect(() => onStatus(setStatus), []);
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -61,8 +54,7 @@ export function CloudSyncButton() {
   const handleSync = async () => {
     setBusy(true);
     try {
-      await pullOnce(store);
-      await pushNow(store);
+      await syncNow(store);
     } finally {
       setBusy(false);
     }
@@ -101,15 +93,11 @@ export function CloudSyncButton() {
 
     if (sub.kind === "unsigned") {
       return (
-        <Button
-          render={<Link href="/login" aria-label="Sign in to sync" />}
-          nativeButton={false}
-          variant="outline"
-          size="sm"
-          className="w-full"
-        >
-          {icon}
-          {label}
+        <Button asChild variant="outline" size="sm" className="w-full">
+          <Link href="/login" aria-label="Sign in to sync">
+            {icon}
+            {label}
+          </Link>
         </Button>
       );
     }
@@ -164,7 +152,7 @@ export function CloudSyncButton() {
           Sign out
         </Button>
       </div>
-      <label className="flex items-center justify-between gap-2 px-1 text-xs text-muted-foreground cursor-pointer select-none">
+      <label className="flex items-center justify-between gap-2 px-1 text-xs text-app-dim cursor-pointer select-none">
         <span>Auto-save to cloud</span>
         <Switch
           checked={autoSync}

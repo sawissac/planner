@@ -7,12 +7,13 @@ import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useIsMobile } from "@/hooks/useMediaQuery";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 import { useAppDispatch } from "@/stores/hooks";
 import { updateTodo } from "@/stores/slices/todoSlice";
 
@@ -114,19 +115,17 @@ function NumberDropdown({
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label={ariaLabel}
-            className="h-8 w-16 justify-between gap-1 px-2 text-base font-medium tabular-nums"
-          >
-            {pad(value)}
-            <ChevronDown className="size-3 text-muted-foreground" />
-          </Button>
-        }
-      />
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label={ariaLabel}
+          className="h-8 w-16 justify-between gap-1 px-2 text-base font-medium tabular-nums"
+        >
+          {pad(value)}
+          <ChevronDown className="size-3 text-app-dim" />
+        </Button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="center" className="max-h-56 w-16 min-w-0 overflow-y-auto p-1">
         {options.map((n) => (
           <DropdownMenuItem
@@ -141,7 +140,7 @@ function NumberDropdown({
             onClick={() => onChange(n)}
             className={cn(
               "justify-center tabular-nums",
-              n === value && "bg-accent text-accent-foreground",
+              n === value && "bg-app-hover text-app-bright",
             )}
           >
             {pad(n)}
@@ -163,7 +162,7 @@ function AmPmToggle({
   onChange: (v: "AM" | "PM") => void;
 }) {
   return (
-    <div className="inline-flex h-8 overflow-hidden rounded-md border border-border text-xs font-medium">
+    <div className="inline-flex h-8 overflow-hidden rounded-md border border-app-border text-xs font-medium">
       {(["AM", "PM"] as const).map((v) => (
         <button
           key={v}
@@ -172,8 +171,8 @@ function AmPmToggle({
           className={cn(
             "w-8 transition-colors",
             value === v
-              ? "bg-primary text-primary-foreground"
-              : "bg-background text-muted-foreground hover:bg-muted",
+              ? "bg-app-accent text-app-on-solid"
+              : "bg-app-bg text-app-dim hover:bg-app-sidebar",
           )}
         >
           {v}
@@ -197,7 +196,7 @@ function TimeRow({
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5 text-xs text-app-dim">
         <Clock className="size-3.5" />
         {label}
       </span>
@@ -208,7 +207,7 @@ function TimeRow({
           options={HOURS}
           onChange={(v) => onChange(to24(v, ampm), min)}
         />
-        <span className="text-base font-medium text-muted-foreground">:</span>
+        <span className="text-base font-medium text-app-dim">:</span>
         <NumberDropdown
           ariaLabel={`${label} minute`}
           value={min}
@@ -260,7 +259,7 @@ export function DateRangeCell({ id, from, to }: { id: string; from: number; to: 
       variant="ghost"
       size="sm"
       onClick={(e) => e.stopPropagation()}
-      className="h-7 w-full justify-start px-2 text-xs font-normal text-muted-foreground"
+      className="h-7 w-full justify-start px-2 text-xs font-normal text-app-dim"
     >
       <CalendarDays className="size-3" />
       <span className="truncate">{label}</span>
@@ -277,7 +276,7 @@ export function DateRangeCell({ id, from, to }: { id: string; from: number; to: 
         defaultMonth={range.from}
         className="mx-auto"
       />
-      <div className="flex flex-col gap-2 border-t border-border px-3 py-3">
+      <div className="flex flex-col gap-2 border-t border-app-border px-3 py-3">
         <TimeRow
           label="Start"
           value={fromDate}
@@ -294,21 +293,21 @@ export function DateRangeCell({ id, from, to }: { id: string; from: number; to: 
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerTrigger asChild>{triggerBtn}</DrawerTrigger>
-        <DrawerContent onClick={(e) => e.stopPropagation()}>
-          <DrawerHeader className="border-b border-border">
-            <DrawerTitle>Date & time</DrawerTitle>
-          </DrawerHeader>
-          <div className="overflow-y-auto pb-4">{body(true)}</div>
-        </DrawerContent>
-      </Drawer>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>{triggerBtn}</DialogTrigger>
+        <DialogContent onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Date & time</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="px-0 pb-4">{body(true)}</DialogBody>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger render={triggerBtn} />
+      <PopoverTrigger asChild>{triggerBtn}</PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
         {body(false)}
       </PopoverContent>

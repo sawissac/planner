@@ -1,1 +1,0 @@
-export { LegalShell } from "./LegalShell";

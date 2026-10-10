@@ -3,7 +3,8 @@
 import { AlertTriangle, Database } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/cn";
 import { useAppSelector } from "@/stores/hooks";
 
 const SOFT_MAX_TODOS = 10000;
@@ -59,13 +60,13 @@ export function StorageMeter() {
 
   return (
     <div className="flex flex-col gap-1 text-[11px]">
-      <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+      <div className="flex items-center gap-1.5 text-app-dim min-w-0">
         {crit ? (
-          <AlertTriangle className="size-3 text-destructive shrink-0" />
+          <AlertTriangle className="size-3 text-app-error shrink-0" />
         ) : (
           <Database className="size-3 shrink-0" />
         )}
-        <span className={cn("tabular-nums shrink-0", crit && "text-destructive font-medium")}>
+        <span className={cn("tabular-nums shrink-0", crit && "text-app-error font-medium")}>
           {totalTodos.toLocaleString()}/{SOFT_MAX_TODOS.toLocaleString()}
         </span>
         {estimate && estimate.quota > 0 && (
@@ -74,17 +75,17 @@ export function StorageMeter() {
           </span>
         )}
       </div>
-      <div className="h-1 rounded-full bg-muted overflow-hidden">
-        <div
-          className={cn(
-            "h-full rounded-full transition-all",
-            crit ? "bg-destructive" : warn ? "bg-amber-500" : "bg-primary",
-          )}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <Progress
+        size="sm"
+        value={pct}
+        aria-label="Storage used"
+        className={cn(
+          crit && "[&_[data-slot=progress-indicator]]:bg-app-error",
+          warn && !crit && "[&_[data-slot=progress-indicator]]:bg-app-warn",
+        )}
+      />
       {crit && (
-        <span className="text-destructive text-[10px] leading-tight">
+        <span className="text-app-error text-[10px] leading-tight">
           Near storage limit. Export or delete files.
         </span>
       )}

@@ -17,7 +17,7 @@ import {
   AssigneeBreakdown,
   GroupBreakdown,
 } from "@/features/AnalyticsBreakdowns/AnalyticsBreakdowns";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 import { useAppSelector } from "@/stores/hooks";
 
 export const RANGES = [
@@ -77,7 +77,6 @@ type DayDatum = {
 
 export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
   const [containerWidth, setContainerWidth] = useState(0);
-  const isDark = useAppSelector((s) => s.settings.darkMode);
   const activeFileId = useAppSelector((s) => s.todos.activeFileId);
   const files = useAppSelector((s) => {
     const f = s.todos.files.find((x) => x.id === activeFileId);
@@ -86,7 +85,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
 
   if (!activeFileId) {
     return (
-      <div className="rounded-xl border bg-card p-12 text-center text-muted-foreground">
+      <div className="rounded-xl border bg-app-panel p-12 text-center text-app-dim">
         No file selected. Create or import one from the sidebar.
       </div>
     );
@@ -140,12 +139,12 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       return;
     }
 
-    const c1 = isDark ? "#34d399" : "#10b981";
-    const c2 = isDark ? "#fbbf24" : "#d97706";
-    const gridColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)";
-    const axisColor = isDark ? "#9ca3af" : "#6b7280";
-    const domainColor = isDark ? "rgba(255,255,255,0.12)" : "#e5e7eb";
-    const tipBg = isDark ? "#1f2937" : "#111827";
+    // Palette tokens via .style() so var() resolves per compacto palette.
+    const c1 = "var(--app-accent)";
+    const c2 = "var(--app-warn)";
+    const gridColor = "var(--app-border)";
+    const axisColor = "var(--app-dim)";
+    const domainColor = "var(--app-border-mid)";
 
     const svg = d3.select(svgEl);
     svg.selectAll("*").remove();
@@ -190,7 +189,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       )
       .call((g) => g.select(".domain").remove())
       .call((g) =>
-        g.selectAll(".tick line").attr("stroke", gridColor).attr("stroke-dasharray", "4,4"),
+        g.selectAll(".tick line").style("stroke", gridColor).attr("stroke-dasharray", "4,4"),
       );
 
     // x axis
@@ -208,16 +207,16 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
           .ticks(tickCount)
           .tickFormat((d) => xFmt(d as Date)),
       )
-      .call((g) => g.select(".domain").attr("stroke", domainColor))
+      .call((g) => g.select(".domain").style("stroke", domainColor))
       .call((g) => g.selectAll(".tick line").remove())
-      .call((g) => g.selectAll("text").attr("fill", axisColor).attr("font-size", "12"));
+      .call((g) => g.selectAll("text").style("fill", axisColor).attr("font-size", "12"));
 
     // y left
     g.append("g")
       .call(d3.axisLeft(yL).ticks(Math.min(sharedMax, 5)).tickFormat(d3.format("d")))
       .call((g) => g.select(".domain").remove())
       .call((g) => g.selectAll(".tick line").remove())
-      .call((g) => g.selectAll("text").attr("fill", c1).attr("font-size", "12"));
+      .call((g) => g.selectAll("text").style("fill", c1).attr("font-size", "12"));
 
     // y right
     g.append("g")
@@ -225,14 +224,14 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       .call(d3.axisRight(yR).ticks(5))
       .call((g) => g.select(".domain").remove())
       .call((g) => g.selectAll(".tick line").remove())
-      .call((g) => g.selectAll("text").attr("fill", c2).attr("font-size", "12"));
+      .call((g) => g.selectAll("text").style("fill", c2).attr("font-size", "12"));
 
     const curve = d3.curveMonotoneX;
 
     // area + line done
     g.append("path")
       .datum(data)
-      .attr("fill", c1)
+      .style("fill", c1)
       .attr("fill-opacity", 0)
       .attr(
         "d",
@@ -252,7 +251,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       .append("path")
       .datum(data)
       .attr("fill", "none")
-      .attr("stroke", c1)
+      .style("stroke", c1)
       .attr("stroke-width", 2.5)
       .attr(
         "d",
@@ -274,7 +273,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
     // area + line tickets
     g.append("path")
       .datum(data)
-      .attr("fill", c2)
+      .style("fill", c2)
       .attr("fill-opacity", 0)
       .attr(
         "d",
@@ -294,7 +293,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       .append("path")
       .datum(data)
       .attr("fill", "none")
-      .attr("stroke", c2)
+      .style("stroke", c2)
       .attr("stroke-width", 2.5)
       .attr(
         "d",
@@ -318,8 +317,9 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
       .select("body")
       .append("div")
       .style("position", "fixed")
-      .style("background", tipBg)
-      .style("color", "#f9fafb")
+      .style("background", "var(--app-panel)")
+      .style("color", "var(--app-text)")
+      .style("border", "1px solid var(--app-border-mid)")
       .style("padding", "10px 14px")
       .style("border-radius", "10px")
       .style("font-size", "13px")
@@ -333,7 +333,7 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
 
     const vline = g
       .append("line")
-      .attr("stroke", axisColor)
+      .style("stroke", axisColor)
       .attr("stroke-width", 1)
       .attr("stroke-dasharray", "4,2")
       .attr("y1", 0)
@@ -372,45 +372,29 @@ export function AnalyticsChart({ rangeDays }: { rangeDays: number }) {
     return () => {
       tip.remove();
     };
-  }, [data, containerWidth, isDark]);
+  }, [data, containerWidth]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:auto-rows-fr">
-      <div className="rounded-xl border bg-card p-6 min-w-0 flex flex-col md:h-full">
+      <div className="rounded-xl border bg-app-panel p-6 min-w-0 flex flex-col md:h-full">
         <div className="text-base font-bold flex items-center gap-2">
           <Activity className="size-4" />
           Activity Contributions By Day
         </div>
-        <div className="mt-0.5 mb-5 text-sm text-muted-foreground">
-          Daily done todos and ticket count
-        </div>
+        <div className="mt-0.5 mb-5 text-sm text-app-dim">Daily done todos and ticket count</div>
         <div ref={containerRef}>
           <svg ref={svgRef} className="w-full overflow-visible" />
         </div>
-        <div className="mt-auto pt-4 flex items-center justify-end gap-6 text-sm text-muted-foreground flex-wrap">
+        <div className="mt-auto pt-4 flex items-center justify-end gap-6 text-sm text-app-dim flex-wrap">
           <div className="flex items-center gap-2">
             <svg width="24" height="8">
-              <line
-                x1="0"
-                y1="4"
-                x2="24"
-                y2="4"
-                stroke={isDark ? "#34d399" : "#10b981"}
-                strokeWidth="2.5"
-              />
+              <line x1="0" y1="4" x2="24" y2="4" stroke="var(--app-accent)" strokeWidth="2.5" />
             </svg>
             Done Count (left)
           </div>
           <div className="flex items-center gap-2">
             <svg width="24" height="8">
-              <line
-                x1="0"
-                y1="4"
-                x2="24"
-                y2="4"
-                stroke={isDark ? "#fbbf24" : "#d97706"}
-                strokeWidth="2.5"
-              />
+              <line x1="0" y1="4" x2="24" y2="4" stroke="var(--app-warn)" strokeWidth="2.5" />
             </svg>
             Ticket Count (right)
           </div>

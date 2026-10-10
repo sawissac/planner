@@ -3,6 +3,7 @@
 import { Folder, UsersRound } from "lucide-react";
 import { useMemo } from "react";
 
+import { Progress } from "@/components/ui/progress";
 import { useAppSelector } from "@/stores/hooks";
 import type { TodoFile } from "@/stores/slices/todoSlice";
 
@@ -19,12 +20,12 @@ function startEndForRange(rangeDays: number) {
 }
 
 const BAR_PALETTE = [
-  { from: "var(--chart-3)", to: "var(--primary)" },
+  { from: "var(--chart-3)", to: "var(--app-accent)" },
   { from: "var(--chart-4)", to: "var(--chart-3)" },
-  { from: "var(--primary)", to: "var(--chart-4)" },
+  { from: "var(--app-accent)", to: "var(--chart-4)" },
   { from: "var(--chart-2)", to: "var(--chart-4)" },
   { from: "var(--chart-1)", to: "var(--chart-2)" },
-  { from: "var(--chart-5)", to: "var(--primary)" },
+  { from: "var(--chart-5)", to: "var(--app-accent)" },
 ];
 
 function hashIndex(str: string, mod: number) {
@@ -50,7 +51,7 @@ function BarList({ rows, emptyLabel }: { rows: Row[]; emptyLabel: string }) {
   const max = Math.max(1, ...rows.map((r) => r.count));
   const total = rows.reduce((sum, r) => sum + r.count, 0);
   if (rows.length === 0) {
-    return <div className="py-10 text-center text-sm text-muted-foreground">{emptyLabel}</div>;
+    return <div className="py-10 text-center text-sm text-app-dim">{emptyLabel}</div>;
   }
   return (
     <ul className="flex flex-col gap-3.5">
@@ -62,16 +63,16 @@ function BarList({ rows, emptyLabel }: { rows: Row[]; emptyLabel: string }) {
         return (
           <li key={r.id} className="group/row flex items-center gap-3 min-w-0">
             <div
-              className="relative shrink-0 grid place-items-center size-9 rounded-full text-[11px] font-semibold text-white shadow-sm"
+              className="relative shrink-0 grid place-items-center size-9 rounded-full text-[11px] font-semibold text-white"
               style={{
-                background: `linear-gradient(135deg, ${palette.from}, ${palette.to})`,
+                background: palette.from,
               }}
               aria-hidden
             >
               {initials(r.label)}
               {isTop && (
                 <span
-                  className="absolute -top-1 -right-1 grid place-items-center size-4 rounded-full bg-amber-400 text-[9px] text-amber-950 ring-2 ring-card"
+                  className="absolute -top-1 -right-1 grid place-items-center size-4 rounded-full bg-app-warn text-[9px] text-app-on-solid ring-2 ring-app-panel"
                   title="Top"
                 >
                   ★
@@ -86,26 +87,17 @@ function BarList({ rows, emptyLabel }: { rows: Row[]; emptyLabel: string }) {
                 </span>
                 <span className="shrink-0 inline-flex items-baseline gap-1.5 tabular-nums">
                   <span className="font-semibold">{r.count}</span>
-                  <span className="text-[11px] text-muted-foreground">{share.toFixed(0)}%</span>
+                  <span className="text-[11px] text-app-dim">{share.toFixed(0)}%</span>
                 </span>
               </div>
-              <div className="mt-1.5 relative h-2.5 rounded-full bg-muted/70 overflow-hidden">
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full shadow-[0_0_8px_var(--ring)] transition-[width] duration-700 ease-[cubic-bezier(0.2,0.7,0.2,1)]"
-                  style={{
-                    width: `${pct}%`,
-                    background: `linear-gradient(90deg, ${palette.from}, ${palette.to})`,
-                  }}
-                />
-                <div
-                  className="pointer-events-none absolute inset-y-0 left-0 rounded-full opacity-0 group-hover/row:opacity-100 transition-opacity"
-                  style={{
-                    width: `${pct}%`,
-                    background:
-                      "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%)",
-                  }}
-                />
-              </div>
+              <Progress
+                size="sm"
+                value={pct}
+                aria-label={`${r.label}: ${share.toFixed(0)}%`}
+                className="mt-1.5"
+                // Each row keeps its own hue: the bar reads --app-accent.
+                style={{ "--app-accent": palette.from } as React.CSSProperties}
+              />
             </div>
           </li>
         );
@@ -140,15 +132,13 @@ export function AssigneeBreakdown({ files, rangeDays }: { files: TodoFile[]; ran
   }, [files, rangeDays, users]);
 
   return (
-    <div className="rounded-xl border bg-card p-6 flex flex-col gap-4 min-w-0 h-full">
+    <div className="rounded-xl border bg-app-panel p-6 flex flex-col gap-4 min-w-0 h-full">
       <div>
         <div className="text-base font-bold flex items-center gap-2">
           <UsersRound className="size-4" />
           Top Assignees
         </div>
-        <div className="mt-0.5 text-sm text-muted-foreground">
-          Tasks per assignee in the selected range
-        </div>
+        <div className="mt-0.5 text-sm text-app-dim">Tasks per assignee in the selected range</div>
       </div>
       <BarList rows={rows} emptyLabel="No assigned tasks in this range." />
     </div>
@@ -188,15 +178,13 @@ export function GroupBreakdown({ files, rangeDays }: { files: TodoFile[]; rangeD
   }, [files, rangeDays]);
 
   return (
-    <div className="rounded-xl border bg-card p-6 flex flex-col gap-4 min-w-0 h-full">
+    <div className="rounded-xl border bg-app-panel p-6 flex flex-col gap-4 min-w-0 h-full">
       <div>
         <div className="text-base font-bold flex items-center gap-2">
           <Folder className="size-4" />
           Top Groups
         </div>
-        <div className="mt-0.5 text-sm text-muted-foreground">
-          Tasks per group in the selected range
-        </div>
+        <div className="mt-0.5 text-sm text-app-dim">Tasks per group in the selected range</div>
       </div>
       <BarList rows={rows} emptyLabel="No grouped tasks in this range." />
     </div>

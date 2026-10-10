@@ -1644,7 +1644,7 @@ export function runTool(store: AppStore, name: string, argsJson: string): ToolRe
         {
           name: "AI planning assistant",
           summary:
-            "Chat panel that can create/edit/delete files, groups, users, tasks. Multiple providers (Gemini, HuggingFace, local Ollama).",
+            "Chat panel that can create/edit/delete files, groups, users, tasks. Multiple providers (Gemini, OpenRouter), several API keys per provider.",
         },
       ],
     };

@@ -1,0 +1,131 @@
+/* compacto-ui — panel textures.
+ *
+ * A subtle decorative wash for a side panel, so its surface reads as a
+ * distinct layer from the work area rather than flat filler. Sidebar and
+ * SidebarRail apply one through their `texture` prop.
+ *
+ * Plain classes rather than Tailwind utilities, on purpose. The pattern lives
+ * on a ::before pseudo-element — generated first, so real children paint over
+ * it — and a pseudo-element needs a real selector to hang off. Each pattern is
+ * also several offset gradient layers, more than an arbitrary-value string can
+ * hold cleanly.
+ *
+ * Every color is color-mix()ed from --app-accent, never a literal hex, so the
+ * wash follows whichever palette is active. Strength comes from
+ * --app-texture-alpha (see tokens.css); set it on any ancestor to tune one
+ * panel, or on :root to tune all of them. */
+
+.compacto-texture--checker,
+.compacto-texture--dots,
+.compacto-texture--graph {
+  position: relative;
+}
+
+.compacto-texture--checker::before,
+.compacto-texture--dots::before,
+.compacto-texture--graph::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--app-texture-alpha, 0.05);
+}
+
+.compacto-texture--checker::before {
+  background-image:
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--app-accent) 45%, transparent) 25%,
+      transparent 25%
+    ),
+    linear-gradient(225deg, var(--app-accent) 25%, transparent 25%),
+    linear-gradient(
+      315deg,
+      color-mix(in oklab, var(--app-accent) 45%, transparent) 25%,
+      transparent 25%
+    ),
+    linear-gradient(45deg, var(--app-accent) 25%, transparent 25%);
+  background-position:
+    -10px 0,
+    -10px 0,
+    0 0,
+    0 0;
+  background-size: 20px 20px;
+}
+
+.compacto-texture--dots::before {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 19px,
+      var(--app-accent) 19px,
+      var(--app-accent) 20px,
+      transparent 20px,
+      transparent 39px,
+      var(--app-accent) 39px,
+      var(--app-accent) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 19px,
+      var(--app-accent) 19px,
+      var(--app-accent) 20px,
+      transparent 20px,
+      transparent 39px,
+      var(--app-accent) 39px,
+      var(--app-accent) 40px
+    ),
+    radial-gradient(
+      circle at 20px 20px,
+      var(--app-accent) 1.6px,
+      transparent 2.1px
+    ),
+    radial-gradient(
+      circle at 0px 0px,
+      var(--app-accent) 1.2px,
+      transparent 1.7px
+    ),
+    radial-gradient(
+      circle at 40px 0px,
+      var(--app-accent) 1.2px,
+      transparent 1.7px
+    ),
+    radial-gradient(
+      circle at 0px 40px,
+      var(--app-accent) 1.2px,
+      transparent 1.7px
+    ),
+    radial-gradient(
+      circle at 40px 40px,
+      var(--app-accent) 1.2px,
+      transparent 1.7px
+    );
+  background-size: 40px 40px;
+}
+
+.compacto-texture--graph::before {
+  background-image:
+    linear-gradient(var(--app-accent) 2px, transparent 2px),
+    linear-gradient(90deg, var(--app-accent) 2px, transparent 2px),
+    linear-gradient(
+      color-mix(in oklab, var(--app-accent) 55%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--app-accent) 55%, transparent) 1px,
+      transparent 1px
+    );
+  background-size:
+    50px 50px,
+    50px 50px,
+    10px 10px,
+    10px 10px;
+  background-position:
+    -2px -2px,
+    -2px -2px,
+    -1px -1px,
+    -1px -1px;
+}

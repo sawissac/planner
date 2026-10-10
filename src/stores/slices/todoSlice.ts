@@ -5,6 +5,14 @@ export type Group = {
   name: string;
 };
 
+/** A reply on a task's thought. `body` is Markdown, written in the same editor. */
+export type ThoughtComment = {
+  id: string;
+  body: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type Todo = {
   id: string;
   title: string;
@@ -18,6 +26,7 @@ export type Todo = {
   assignees: string[];
   groupId: string | null;
   thought: string;
+  comments: ThoughtComment[];
 };
 
 export const PROGRESS_DONE = "Done";
@@ -158,6 +167,7 @@ const todoSlice = createSlice({
             assignees: [],
             groupId,
             thought: "",
+            comments: [],
           } satisfies Todo,
         };
       },
@@ -253,6 +263,41 @@ const todoSlice = createSlice({
       }
       if (action.payload.thought !== undefined) {
         t.thought = action.payload.thought;
+      }
+    },
+    addThoughtComment: {
+      prepare(todoId: string, body: string) {
+        const now = Date.now();
+        return {
+          payload: {
+            todoId,
+            comment: { id: nanoid(), body, createdAt: now, updatedAt: now },
+          },
+        };
+      },
+      reducer(state, action: PayloadAction<{ todoId: string; comment: ThoughtComment }>) {
+        const t = getActive(state)?.todos.find((i) => i.id === action.payload.todoId);
+        if (t) {
+          // Cloud pulls from before comments existed carry no array.
+          t.comments = [...(t.comments ?? []), action.payload.comment];
+        }
+      },
+    },
+    updateThoughtComment(
+      state,
+      action: PayloadAction<{ todoId: string; id: string; body: string }>,
+    ) {
+      const t = getActive(state)?.todos.find((i) => i.id === action.payload.todoId);
+      const c = t?.comments?.find((i) => i.id === action.payload.id);
+      if (c) {
+        c.body = action.payload.body;
+        c.updatedAt = Date.now();
+      }
+    },
+    deleteThoughtComment(state, action: PayloadAction<{ todoId: string; id: string }>) {
+      const t = getActive(state)?.todos.find((i) => i.id === action.payload.todoId);
+      if (t) {
+        t.comments = (t.comments ?? []).filter((c) => c.id !== action.payload.id);
       }
     },
     toggleTodo(state, action: PayloadAction<string>) {
@@ -373,6 +418,9 @@ export const {
   updateTodo,
   toggleTodo,
   deleteTodo,
+  addThoughtComment,
+  updateThoughtComment,
+  deleteThoughtComment,
   reorder,
   reorderGroup,
   reorderFile,

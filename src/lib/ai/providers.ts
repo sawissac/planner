@@ -1,65 +1,19 @@
 import type { ModelOption, ProviderId } from "@/stores/slices/aiSlice";
 
-export const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
-
 export const PROVIDER_LABEL: Record<ProviderId, string> = {
   gemini: "Gemini",
-  ollama: "Ollama (local)",
-  huggingface: "Hugging Face",
   openrouter: "OpenRouter (free)",
 };
 
 export const PROVIDER_KEY_URL: Record<ProviderId, string> = {
   gemini: "https://aistudio.google.com/apikey",
-  ollama: "https://ollama.com/download",
-  huggingface: "https://huggingface.co/settings/tokens",
   openrouter: "https://openrouter.ai/settings/keys",
 };
-
-const KEY_PREFIX = "ai-key:";
-
-export function getApiKey(provider: ProviderId): string {
-  if (typeof window === "undefined") {
-    return "";
-  }
-  return localStorage.getItem(KEY_PREFIX + provider) ?? "";
-}
-
-export function setApiKey(provider: ProviderId, key: string): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-  if (key) {
-    localStorage.setItem(KEY_PREFIX + provider, key);
-  } else {
-    localStorage.removeItem(KEY_PREFIX + provider);
-  }
-}
-
-export function getOllamaBaseUrl(): string {
-  const stored = getApiKey("ollama").trim();
-  return (stored || DEFAULT_OLLAMA_BASE_URL).replace(/\/+$/, "");
-}
-
-export async function listOllamaModels(signal?: AbortSignal): Promise<string[]> {
-  const res = await fetch(`${getOllamaBaseUrl()}/api/tags`, { signal });
-  if (!res.ok) {
-    throw new Error(`Ollama /api/tags HTTP ${res.status}`);
-  }
-  const data = (await res.json()) as { models?: { name?: string }[] };
-  return (data.models ?? [])
-    .map((m) => m.name)
-    .filter((n): n is string => typeof n === "string" && n.length > 0);
-}
 
 export function getEndpoint(provider: ProviderId): string {
   switch (provider) {
     case "gemini":
       return "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    case "ollama":
-      return `${getOllamaBaseUrl()}/v1/chat/completions`;
-    case "huggingface":
-      return "https://router.huggingface.co/v1/chat/completions";
     case "openrouter":
       return "https://openrouter.ai/api/v1/chat/completions";
   }
@@ -138,10 +92,8 @@ export async function chatCompletion(args: {
 }): Promise<ChatCompletionResponse> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    Authorization: `Bearer ${args.apiKey}`,
   };
-  if (args.provider !== "ollama") {
-    headers.Authorization = `Bearer ${args.apiKey}`;
-  }
   if (args.provider === "openrouter" && typeof window !== "undefined") {
     headers["HTTP-Referer"] = window.location.origin;
     headers["X-Title"] = "Planner";

@@ -9,3 +9,24 @@ graphify-out
 public
 next-env.d.ts
 tsconfig.tsbuildinfo
+
+# compacto-ui copies — kept byte-identical to the registry so /cui-diff stays clean.
+src/styles/compacto
+src/lib/cn.ts
+src/lib/ui-styles.ts
+src/lib/color-themes.ts
+src/components/ui/button.tsx
+src/components/ui/button-group.tsx
+src/components/ui/calendar.tsx
+src/components/ui/command.tsx
+src/components/ui/dialog.tsx
+src/components/ui/dropdown-menu.tsx
+src/components/ui/input.tsx
+src/components/ui/option-grid.tsx
+src/components/ui/popover.tsx
+src/components/ui/progress.tsx
+src/components/ui/select.tsx
+src/components/ui/separator.tsx
+src/components/ui/tabs.tsx
+src/components/ui/tooltip.tsx
+src/components/ui/sidebar.tsx

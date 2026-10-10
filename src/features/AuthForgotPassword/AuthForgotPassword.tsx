@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { requestPasswordReset } from "@/features/AuthLogin/actions";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 
 type ViewState = "form" | "sent";
 
@@ -41,26 +42,26 @@ export function AuthForgotPassword() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-background px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-app-bg px-4">
       <div
         className={cn(
           "w-full max-w-sm space-y-8",
-          "animate-in fade-in zoom-in-95 slide-in-from-bottom-2",
+          "animate-[compacto-fade-up_var(--motion-duration-base)_var(--motion-ease-standard)]",
           "duration-[--motion-duration-slow] ease-[--motion-ease-standard]",
         )}
       >
         {/* Wordmark */}
         <div className="space-y-1 text-center">
           <Link
-            href="/app"
+            href="/"
             aria-label="Planner — back to app"
-            className="inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent/50"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="" className="size-8" />
             <span className="font-display text-lg font-semibold">Planner</span>
           </Link>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-app-dim">
             {view === "sent" ? "Check your email" : "Reset your password"}
           </p>
         </div>
@@ -68,37 +69,35 @@ export function AuthForgotPassword() {
         {view === "sent" ? (
           <div
             className={cn(
-              "nb-surface space-y-4 rounded-md bg-card p-6 text-center",
-              "animate-in fade-in slide-in-from-bottom-1 duration-[--motion-duration-base]",
+              "nb-surface space-y-4 rounded-md bg-app-panel p-6 text-center",
+              "animate-[compacto-fade-up_var(--motion-duration-base)_var(--motion-ease-standard)]",
             )}
           >
-            <div className="mx-auto grid size-12 place-items-center rounded-md border-2 border-foreground bg-primary">
-              <MailCheck className="size-5 text-primary-foreground" />
+            <div className="mx-auto grid size-12 place-items-center rounded-md border-2 border-app-border bg-app-accent">
+              <MailCheck className="size-5 text-app-on-solid" />
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-foreground">Reset link sent</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="font-medium text-app-bright">Reset link sent</p>
+              <p className="text-sm text-app-dim">
                 If an account exists for that email, we sent a link to reset your password. Check
                 your inbox.
               </p>
             </div>
-            <Button
-              render={<Link href="/login" />}
-              nativeButton={false}
-              variant="outline"
-              className="w-full"
-            >
-              Back to sign in
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/login">Back to sign in</Link>
             </Button>
           </div>
         ) : (
           <>
-            <form onSubmit={handleSubmit} className="nb-surface space-y-4 rounded-md bg-card p-6">
+            <form
+              onSubmit={handleSubmit}
+              className="nb-surface space-y-4 rounded-md bg-app-panel p-6"
+            >
               <div className="space-y-1.5">
-                <label htmlFor="email" className="text-sm font-medium text-foreground">
+                <label htmlFor="email" className="text-sm font-medium text-app-bright">
                   Email
                 </label>
-                <input
+                <Input
                   id="email"
                   name="email"
                   type="email"
@@ -106,14 +105,8 @@ export function AuthForgotPassword() {
                   autoComplete="email"
                   autoFocus
                   placeholder="you@example.com"
-                  className={cn(
-                    "h-10 w-full rounded-md border-2 border-foreground bg-background px-3 text-sm text-foreground",
-                    "placeholder:text-muted-foreground",
-                    "transition-shadow duration-[--motion-duration-fast]",
-                    "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                    "disabled:opacity-50",
-                  )}
                   disabled={loading}
+                  className="h-9"
                 />
               </div>
 
@@ -122,8 +115,8 @@ export function AuthForgotPassword() {
                   role="alert"
                   aria-live="polite"
                   className={cn(
-                    "rounded-md border-2 border-destructive bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive",
-                    "animate-in fade-in slide-in-from-top-1 duration-[--motion-duration-base]",
+                    "rounded-md border-2 border-app-error bg-app-error/10 px-3 py-2 text-sm font-medium text-app-error",
+                    "animate-[compacto-fade-up_var(--motion-duration-base)_var(--motion-ease-standard)]",
                   )}
                 >
                   {error}
@@ -142,15 +135,15 @@ export function AuthForgotPassword() {
               </Button>
             </form>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-app-dim">
               Remember it?{" "}
               <Link
                 href="/login"
                 className={cn(
-                  "font-medium text-foreground underline-offset-4",
+                  "font-medium text-app-bright underline-offset-4",
                   "hover:underline",
                   "transition-colors duration-[--motion-duration-fast]",
-                  "rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                  "rounded-md outline-none focus-visible:ring-2 focus-visible:ring-app-accent/50",
                 )}
               >
                 Sign in

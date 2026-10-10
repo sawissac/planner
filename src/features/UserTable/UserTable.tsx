@@ -29,16 +29,18 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useConfirm } from "@/components/customs/ConfirmDialog";
 import { UserRowActions } from "@/components/customs/UserRowActions";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu-extras";
+import { Input } from "@/components/ui/input";
 import { useTouchRowDrag } from "@/hooks/useTouchRowDrag";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import { setUserColumnSizing } from "@/stores/slices/settingsSlice";
 import { addUser, deleteUser, reorderUser, updateUser, type User } from "@/stores/slices/userSlice";
@@ -72,25 +74,23 @@ function SortDropdown({
   const active = sorting.find((s) => s.id === colId) ?? null;
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            className="flex items-center gap-1 hover:text-foreground transition-colors"
-          >
-            {label}
-            {active ? (
-              active.desc ? (
-                <ArrowDown className="size-3" />
-              ) : (
-                <ArrowUp className="size-3" />
-              )
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-1 hover:text-app-bright transition-colors"
+        >
+          {label}
+          {active ? (
+            active.desc ? (
+              <ArrowDown className="size-3" />
             ) : (
-              <ArrowUpDown className="size-3 opacity-40" />
-            )}
-          </button>
-        }
-      />
+              <ArrowUp className="size-3" />
+            )
+          ) : (
+            <ArrowUpDown className="size-3 opacity-40" />
+          )}
+        </button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
         {options.map((opt) => (
           <DropdownMenuItem
@@ -98,7 +98,7 @@ function SortDropdown({
             onClick={() => setSort(colId, opt.desc)}
             className="flex items-center gap-2"
           >
-            <span className="text-muted-foreground [&_svg]:size-3.5">{opt.icon}</span>
+            <span className="text-app-dim [&_svg]:size-3.5">{opt.icon}</span>
             <span className="flex-1">{opt.label}</span>
             {active?.desc === opt.desc && <Check className="size-3 ml-auto" />}
           </DropdownMenuItem>
@@ -106,10 +106,7 @@ function SortDropdown({
         {active && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => setSort(colId, null)}
-              className="text-muted-foreground"
-            >
+            <DropdownMenuItem onClick={() => setSort(colId, null)} className="text-app-dim">
               Clear sort
             </DropdownMenuItem>
           </>
@@ -156,7 +153,7 @@ function NameCell({ user, meta }: { user: User; meta: RowMeta }) {
         meta.setEditing(user.id, "name");
       }}
     >
-      {user.name || <span className="text-muted-foreground">Unnamed</span>}
+      {user.name || <span className="text-app-dim">Unnamed</span>}
     </span>
   );
 }
@@ -194,7 +191,7 @@ function AgendaCell({ user, meta }: { user: User; meta: RowMeta }) {
         meta.setDraft(user.agenda);
       }}
     >
-      {user.agenda || <span className="text-muted-foreground">—</span>}
+      {user.agenda || <span className="text-app-dim">—</span>}
     </span>
   );
 }
@@ -203,6 +200,7 @@ export function UserTable() {
   const users = useAppSelector((s) => s.users.users);
   const persistedSizing = useAppSelector((s) => s.settings.userColumnSizing);
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
 
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -298,7 +296,7 @@ export function UserTable() {
         size: 32,
         enableResizing: false,
         cell: () => (
-          <GripVertical className="size-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+          <GripVertical className="size-4 text-app-dim cursor-grab active:cursor-grabbing" />
         ),
       },
       {
@@ -415,11 +413,19 @@ export function UserTable() {
     }
     if (e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
-      dispatch(deleteUser(user.id));
-      const next = users[index + 1] ?? users[index - 1];
-      if (next) {
-        setFocusedId(next.id);
-      }
+      confirm({
+        title: "Delete user?",
+        description: `"${user.name || "(unnamed)"}" will be permanently removed.`,
+        confirmLabel: "Delete",
+        destructive: true,
+        onConfirm: () => {
+          dispatch(deleteUser(user.id));
+          const next = users[index + 1] ?? users[index - 1];
+          if (next) {
+            setFocusedId(next.id);
+          }
+        },
+      });
       return;
     }
     if (e.key === "ArrowDown") {
@@ -459,41 +465,34 @@ export function UserTable() {
   const canNext = pageEnd < filteredRows.length;
 
   return (
-    <div className="rounded-lg border border-border flex flex-col max-h-[calc(100vh-10rem)] w-full">
+    <div className="rounded-lg border border-app-border flex flex-col max-h-[calc(100vh-10rem)] w-full">
       {/* Search bar — outside scroll, never clips */}
-      <div className="bg-muted border-b border-border px-3 py-1.5 shrink-0 flex items-center gap-2 text-muted-foreground">
-        <Search className="size-3.5 shrink-0" />
-        <input
+      <div className="bg-app-sidebar border-b border-app-border px-3 py-1.5 shrink-0 flex items-center gap-2 text-app-dim">
+        <Input
           value={globalFilter}
           onChange={(e) => {
             setGlobalFilter(e.target.value);
             setPagination((p) => ({ ...p, pageIndex: 0 }));
           }}
           placeholder="Search users…"
-          className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          icon={Search}
+          onClear={() => setGlobalFilter("")}
+          clearLabel="Clear search"
+          className="h-7 border-transparent bg-transparent hover:border-transparent focus:ring-0 focus:border-transparent"
         />
-        {globalFilter && (
-          <button
-            type="button"
-            onClick={() => setGlobalFilter("")}
-            className="text-xs hover:text-foreground"
-          >
-            ✕
-          </button>
-        )}
       </div>
 
       {/* Scroll area — only the table */}
       <div ref={scrollContainerRef} className="overflow-auto flex-1 min-h-0">
         <table
-          className="text-sm border-separate border-spacing-0 [&_th]:border-r [&_th]:border-b [&_th]:border-border [&_td]:border-r [&_td]:border-b [&_td]:border-border [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_tbody_tr:last-child_td]:border-b-0"
+          className="text-sm border-separate border-spacing-0 [&_th]:border-r [&_th]:border-b [&_th]:border-app-border [&_td]:border-r [&_td]:border-b [&_td]:border-app-border [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_tbody_tr:last-child_td]:border-b-0"
           style={{
             width: table.getTotalSize(),
             minWidth: "100%",
             tableLayout: "fixed",
           }}
         >
-          <thead className="bg-muted sticky top-0 z-10">
+          <thead className="bg-app-sidebar sticky top-0 z-10">
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
                 {hg.headers.map((h) => (
@@ -501,11 +500,11 @@ export function UserTable() {
                     key={h.id}
                     style={{ width: h.getSize() }}
                     className={cn(
-                      "relative text-left font-medium px-3 py-2 text-muted-foreground select-none overflow-hidden",
-                      h.id === "drag" && "sticky left-0 bg-muted z-20",
-                      h.id === "avatar" && "sticky left-[32px] bg-muted z-20",
+                      "relative text-left font-medium px-3 py-2 text-app-dim select-none overflow-hidden",
+                      h.id === "drag" && "sticky left-0 bg-app-sidebar z-20",
+                      h.id === "avatar" && "sticky left-[32px] bg-app-sidebar z-20",
                       h.id === "actions" &&
-                        "sticky right-0 bg-muted z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
+                        "sticky right-0 bg-app-sidebar z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
                     )}
                   >
                     {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
@@ -515,7 +514,7 @@ export function UserTable() {
                         onTouchStart={h.getResizeHandler()}
                         className={cn(
                           "absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none touch-none",
-                          h.column.getIsResizing() ? "bg-primary" : "hover:bg-primary/30",
+                          h.column.getIsResizing() ? "bg-app-accent" : "hover:bg-app-accent/30",
                         )}
                       />
                     )}
@@ -526,12 +525,12 @@ export function UserTable() {
           </thead>
           <tbody>
             <tr>
-              <td className="px-3 py-2 align-middle sticky left-0 top-0 bg-background border-b border-border z-30">
-                <Plus className="size-4 text-muted-foreground" />
+              <td className="px-3 py-2 align-middle sticky left-0 top-0 bg-app-bg border-b border-app-border z-30">
+                <Plus className="size-4 text-app-dim" />
               </td>
-              <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-background border-b border-border z-30" />
+              <td className="px-3 py-2 align-middle sticky left-[32px] top-0 bg-app-bg border-b border-app-border z-30" />
               <td
-                className="px-3 py-2 align-middle sticky top-0 bg-background text-muted-foreground border-b border-border z-20"
+                className="px-3 py-2 align-middle sticky top-0 bg-app-bg text-app-dim border-b border-app-border z-20"
                 colSpan={columns.length - 2}
               >
                 <input
@@ -544,17 +543,14 @@ export function UserTable() {
                     }
                   }}
                   placeholder="Add a user… (Press Enter)"
-                  className="w-full bg-transparent p-0 outline-none placeholder:text-muted-foreground"
+                  className="w-full bg-transparent p-0 outline-none placeholder:text-app-dim"
                 />
               </td>
             </tr>
 
             {rows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-3 py-8 text-center text-muted-foreground"
-                >
+                <td colSpan={columns.length} className="px-3 py-8 text-center text-app-dim">
                   No users yet. Type a name and press Enter.
                 </td>
               </tr>
@@ -624,12 +620,12 @@ export function UserTable() {
                         setOverId(null);
                       }}
                       className={cn(
-                        "transition-colors outline-none hover:bg-muted/50",
+                        "transition-colors outline-none hover:bg-app-sidebar/50",
                         (dragId === id || touchDragId === id) && "opacity-40",
                         ((overId === id && dragId !== id) ||
                           (touchOverId === id && touchDragId !== id)) &&
-                          "bg-primary/10",
-                        isFocused && "bg-primary/5 shadow-[inset_2px_0_0_var(--color-primary)]",
+                          "bg-app-accent/10",
+                        isFocused && "bg-app-accent/5 shadow-[inset_2px_0_0_var(--color-primary)]",
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
@@ -651,12 +647,12 @@ export function UserTable() {
                               cn(
                                 "sticky left-0 z-1",
                                 isFocused
-                                  ? "shadow-[inset_2px_0_0_var(--color-primary)] bg-background"
-                                  : "bg-background",
+                                  ? "shadow-[inset_2px_0_0_var(--color-primary)] bg-app-bg"
+                                  : "bg-app-bg",
                               ),
-                            cell.column.id === "avatar" && "sticky left-[32px] z-1 bg-background",
+                            cell.column.id === "avatar" && "sticky left-[32px] z-1 bg-app-bg",
                             cell.column.id === "actions" &&
-                              "sticky right-0 bg-background z-1 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
+                              "sticky right-0 bg-app-bg z-1 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]",
                           )}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -675,49 +671,47 @@ export function UserTable() {
           </tbody>
         </table>
       </div>
-      <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground bg-muted flex gap-3 flex-wrap items-center shrink-0">
+      <div className="border-t border-app-border px-3 py-1.5 text-xs text-app-dim bg-app-sidebar flex gap-3 flex-wrap items-center shrink-0">
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-app-border rounded text-[10px] leading-none font-mono">
             ↑↓
           </kbd>
           <span>move</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none font-mono">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-app-border rounded text-[10px] leading-none font-mono">
             ↵
           </kbd>
           <span>edit name</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-app-border rounded text-[10px] leading-none">
             Tab
           </kbd>
           <span>→ agenda</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-app-border rounded text-[10px] leading-none">
             Del
           </kbd>
           <span>delete</span>
         </span>
         <span className="inline-flex items-center gap-1">
-          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-border rounded text-[10px] leading-none">
+          <kbd className="inline-flex items-center px-1.5 py-0.5 border border-app-border rounded text-[10px] leading-none">
             Esc
           </kbd>
           <span>cancel</span>
         </span>
         <div className="ml-auto flex items-center gap-2">
           <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <button
-                  type="button"
-                  className="flex items-center gap-1 border border-border rounded px-1.5 py-0.5 hover:bg-muted transition-colors"
-                >
-                  {pagination.pageSize} / page <ChevronDown className="size-3 opacity-60" />
-                </button>
-              }
-            />
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1 border border-app-border rounded px-1.5 py-0.5 hover:bg-app-sidebar transition-colors"
+              >
+                {pagination.pageSize} / page <ChevronDown className="size-3 opacity-60" />
+              </button>
+            </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-32">
               {[30, 100, 200, 300].map((s) => (
                 <DropdownMenuItem
@@ -736,7 +730,7 @@ export function UserTable() {
             type="button"
             onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))}
             disabled={!canPrev}
-            className="p-0.5 rounded disabled:opacity-30 hover:text-foreground"
+            className="p-0.5 rounded disabled:opacity-30 hover:text-app-bright"
           >
             <ChevronLeft className="size-3.5" />
           </button>
@@ -744,7 +738,7 @@ export function UserTable() {
             type="button"
             onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))}
             disabled={!canNext}
-            className="p-0.5 rounded disabled:opacity-30 hover:text-foreground"
+            className="p-0.5 rounded disabled:opacity-30 hover:text-app-bright"
           >
             <ChevronRight className="size-3.5" />
           </button>

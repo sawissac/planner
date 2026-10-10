@@ -37,6 +37,9 @@ export const DEFAULT_PRIORITY_OPTIONS = [
   "deferred",
 ] as const;
 
+/** Task table page sizes — shared by the table pager and Settings. */
+export const PAGE_SIZE_OPTIONS = [30, 100, 200, 300] as const;
+
 export const DEFAULT_PROGRESS_OPTIONS = ["Not Started", "InProgress", "Done"] as const;
 
 export type TableSort = { id: string; desc: boolean };
@@ -53,13 +56,13 @@ export type SettingsState = {
   priorityOptions: string[];
   progressOptions: string[];
   focusMode: boolean;
-  darkMode: boolean;
   pageSize: number;
   sorting: TableSort[];
   globalFilter: string;
   groupFilter: string | null;
   priorityFilter: string | null;
   progressFilter: string | null;
+  /** compacto-ui light palette key (see `@/lib/palette`); null = default. */
   accentColor: string | null;
   activeTab: string;
   boardCompact: boolean;
@@ -76,8 +79,7 @@ const initialState: SettingsState = {
   userColumnSizing: {},
   priorityOptions: [...DEFAULT_PRIORITY_OPTIONS],
   progressOptions: [...DEFAULT_PROGRESS_OPTIONS],
-  focusMode: false,
-  darkMode: false,
+  focusMode: true,
   pageSize: 30,
   sorting: [],
   globalFilter: "",
@@ -197,9 +199,6 @@ const settingsSlice = createSlice({
     setFocusMode(state, action: PayloadAction<boolean>) {
       state.focusMode = action.payload;
     },
-    setDarkMode(state, action: PayloadAction<boolean>) {
-      state.darkMode = action.payload;
-    },
     setPageSize(state, action: PayloadAction<number>) {
       state.pageSize = action.payload;
     },
@@ -218,7 +217,7 @@ const settingsSlice = createSlice({
     setProgressFilter(state, action: PayloadAction<string | null>) {
       state.progressFilter = action.payload;
     },
-    setAccentColor(state, action: PayloadAction<string | null>) {
+    setPalette(state, action: PayloadAction<string | null>) {
       state.accentColor = action.payload;
     },
     setActiveTab(state, action: PayloadAction<string>) {
@@ -238,8 +237,7 @@ const settingsSlice = createSlice({
       state.userColumnSizing = action.payload.userColumnSizing ?? {};
       state.priorityOptions = action.payload.priorityOptions;
       state.progressOptions = action.payload.progressOptions ?? [...DEFAULT_PROGRESS_OPTIONS];
-      state.focusMode = action.payload.focusMode ?? false;
-      state.darkMode = action.payload.darkMode ?? false;
+      state.focusMode = action.payload.focusMode ?? true;
       state.pageSize = action.payload.pageSize ?? 30;
       state.sorting = action.payload.sorting ?? [];
       state.globalFilter = action.payload.globalFilter ?? "";
@@ -270,14 +268,13 @@ export const {
   renameProgressOption,
   reorderProgressOption,
   setFocusMode,
-  setDarkMode,
   setPageSize,
   setSorting,
   setGlobalFilter,
   setGroupFilter,
   setPriorityFilter,
   setProgressFilter,
-  setAccentColor,
+  setPalette,
   setActiveTab,
   setBoardCompact,
   replaceSettings,

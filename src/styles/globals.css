@@ -1,7 +1,11 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 @import "@mdxeditor/editor/style.css";
+@import "./compacto/index.css";
+/* Third-party only: Streamdown (chat markdown) ships shadcn utilities like
+   `bg-muted` / `border-border`. The bridge points them at --app-*. App code
+   must use the app-* vocabulary — `pnpm conventions` enforces it. */
+@import "./compacto/compat-shadcn.css";
+@source "../../node_modules/streamdown/dist";
 
 .mdxeditor-popup-container {
   z-index: 100;
@@ -15,32 +19,38 @@
 
 .mdxeditor,
 .mdxeditor-popup-container {
-  --basePageBg: var(--popover);
-  --baseBase: var(--background);
-  --baseBgSubtle: var(--muted);
-  --baseBg: var(--muted);
-  --baseBgHover: var(--accent);
-  --baseBgActive: var(--accent);
-  --baseLine: var(--border);
-  --baseBorder: var(--border);
-  --baseBorderHover: var(--ring);
-  --baseSolid: var(--muted-foreground);
-  --baseSolidHover: var(--foreground);
-  --baseText: var(--foreground);
-  --baseTextContrast: var(--foreground);
+  /* MDXEditor redefines these on its root with system stacks; point them back
+     at the app faces (Open Sans body, Fira Code for inline code and code
+     blocks). Headings and bold pick up Poppins from the base layer. */
+  --font-body: var(--app-font-description);
+  --font-mono: var(--app-font-mono);
 
-  --accentBase: var(--background);
-  --accentBgSubtle: color-mix(in oklab, var(--primary) 8%, var(--background));
-  --accentBg: color-mix(in oklab, var(--primary) 14%, var(--background));
-  --accentBgHover: color-mix(in oklab, var(--primary) 20%, var(--background));
-  --accentBgActive: color-mix(in oklab, var(--primary) 28%, var(--background));
-  --accentLine: var(--ring);
-  --accentBorder: var(--ring);
-  --accentBorderHover: var(--ring);
-  --accentSolid: var(--primary);
-  --accentSolidHover: color-mix(in oklab, var(--primary) 90%, black);
-  --accentText: var(--primary);
-  --accentTextContrast: var(--primary-foreground);
+  --basePageBg: var(--app-panel);
+  --baseBase: var(--app-bg);
+  --baseBgSubtle: var(--app-sidebar);
+  --baseBg: var(--app-sidebar);
+  --baseBgHover: var(--app-hover);
+  --baseBgActive: var(--app-hover);
+  --baseLine: var(--app-border);
+  --baseBorder: var(--app-border);
+  --baseBorderHover: var(--app-accent);
+  --baseSolid: var(--app-dim);
+  --baseSolidHover: var(--app-bright);
+  --baseText: var(--app-bright);
+  --baseTextContrast: var(--app-bright);
+
+  --accentBase: var(--app-bg);
+  --accentBgSubtle: color-mix(in oklab, var(--app-accent) 8%, var(--app-bg));
+  --accentBg: color-mix(in oklab, var(--app-accent) 14%, var(--app-bg));
+  --accentBgHover: color-mix(in oklab, var(--app-accent) 20%, var(--app-bg));
+  --accentBgActive: color-mix(in oklab, var(--app-accent) 28%, var(--app-bg));
+  --accentLine: var(--app-accent);
+  --accentBorder: var(--app-accent);
+  --accentBorderHover: var(--app-accent);
+  --accentSolid: var(--app-accent);
+  --accentSolidHover: color-mix(in oklab, var(--app-accent) 90%, black);
+  --accentText: var(--app-accent);
+  --accentTextContrast: var(--app-on-solid);
 }
 
 .mdxeditor-popup-container [class*="_linkDialogPopoverContent"],
@@ -48,9 +58,7 @@
 .mdxeditor-popup-container [class*="_largeDialogContent"] {
   padding: 0.5rem 0.625rem;
   border-radius: 0.5rem;
-  box-shadow:
-    0 10px 25px -5px rgb(0 0 0 / 0.15),
-    0 4px 10px -4px rgb(0 0 0 / 0.1);
+  border: 1px solid var(--app-border);
 }
 
 .mdxeditor-popup-container [class*="_dialogContent"],
@@ -69,9 +77,9 @@
 
 .mdxeditor-popup-container [class*="_linkDialogInput"],
 .mdxeditor-popup-container [class*="_dialogInput"] {
-  background: var(--background);
-  color: var(--foreground);
-  border: 1px solid var(--border);
+  background: var(--app-bg);
+  color: var(--app-bright);
+  border: 1px solid var(--app-border);
   border-radius: 0.375rem;
   padding: 0.375rem 0.5rem;
   outline: none;
@@ -79,43 +87,43 @@
 }
 .mdxeditor-popup-container [class*="_linkDialogInput"]:focus-visible,
 .mdxeditor-popup-container [class*="_dialogInput"]:focus-visible {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent);
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--app-accent) 30%, transparent);
 }
 
 .mdxeditor-popup-container button[class*="_primaryButton"] {
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: var(--app-accent);
+  color: var(--app-on-solid);
   border-radius: 0.375rem;
   padding: 0.25rem 0.625rem;
   font-size: 0.8125rem;
   font-weight: 500;
 }
 .mdxeditor-popup-container button[class*="_primaryButton"]:hover {
-  background: color-mix(in oklab, var(--primary) 90%, black);
+  background: color-mix(in oklab, var(--app-accent) 90%, black);
 }
 
 .mdxeditor-popup-container button[class*="_secondaryButton"] {
-  background: var(--background);
-  color: var(--foreground);
-  border: 1px solid var(--border);
+  background: var(--app-bg);
+  color: var(--app-bright);
+  border: 1px solid var(--app-border);
   border-radius: 0.375rem;
   padding: 0.25rem 0.625rem;
   font-size: 0.8125rem;
 }
 .mdxeditor-popup-container button[class*="_secondaryButton"]:hover {
-  background: var(--muted);
+  background: var(--app-sidebar);
 }
 
 .mdxeditor-popup-container button[class*="_actionButton"],
 .mdxeditor-popup-container button[class*="_iconButton"] {
-  color: var(--muted-foreground);
+  color: var(--app-dim);
   border-radius: 0.375rem;
 }
 .mdxeditor-popup-container button[class*="_actionButton"]:hover,
 .mdxeditor-popup-container button[class*="_iconButton"]:hover {
-  background: var(--muted);
-  color: var(--foreground);
+  background: var(--app-sidebar);
+  color: var(--app-bright);
 }
 
 .mdxeditor ul,
@@ -163,13 +171,14 @@
   margin: 0.5em 0;
 }
 .mdxeditor blockquote {
-  border-left: 3px solid var(--border);
+  border-left: 3px solid var(--app-border);
   padding-left: 1rem;
-  color: var(--muted-foreground);
+  color: var(--app-dim);
   margin: 0.5em 0;
 }
 .mdxeditor code {
-  background: var(--muted);
+  font-family: var(--font-mono);
+  background: var(--app-sidebar);
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   font-size: 0.875em;
@@ -178,183 +187,64 @@
   margin: 0.25em 0;
 }
 
-@custom-variant dark (&:is(.dark *));
-
 /* =========================================================================
-   FLAT MINIMAL MODERN DESIGN SYSTEM — ported from Toolkits (wauxaistudio)
+   DESIGN SYSTEM — compacto-ui (github.com/sawissac/compacto-ui)
    -------------------------------------------------------------------------
-   Principles: neutral surfaces with one near-black accent, soft hairline
-   borders, gentle blurred elevation (no hard offsets), rounded corners,
-   quiet "lift" interactions. The `--nb-*` token names are kept so
-   `shadow-nb` / `.nb-surface` consumers retheme automatically.
+   Colours come from the twenty `--app-*` tokens in ./compacto/tokens.css,
+   repainted at runtime from a palette in "@/lib/color-themes" (see
+   ThemeApplier in StoreProvider). Light palettes only — there is no dark
+   mode, so nothing here or in components may use `dark:` or `.dark`.
+
+   Every primitive in components/ui is a compacto-ui registry copy (or a
+   planner-only part written to the same contract), and app code speaks only
+   the `app-*` utilities (`bg-app-panel`, `text-app-dim`, …).
    ========================================================================= */
 
+/* The app's faces for the design system's font namespaces (next/font vars
+   set in app/layout.tsx). */
 :root {
-  /* Rounded blocks — modern minimal corners. */
-  --radius: 0.625rem;
+  color-scheme: light;
 
-  /* --- Surfaces (clean neutral, subtle elevation) ----------------------- */
-  --background: #f8fafc; /* slate-50 ground */
-  --foreground: #0f172a; /* slate-900 text */
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --app-font-sans: var(--font-open-sans);
+  --app-font-title: var(--font-poppins);
+  --app-font-display: var(--font-poppins);
+  --app-font-description: var(--font-open-sans);
+  --app-font-mono: var(--font-fira-code);
 
-  /* --- Accent (single black voice) -------------------------------------- */
-  --primary: #141414; /* near-black */
-  --primary-foreground: #ffffff;
-  --secondary: #f1f5f9; /* slate-100 */
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b; /* slate-500 */
-  --accent: #f1f5f9; /* neutral slate hover wash */
-  --accent-foreground: #141414;
-  --destructive: #ef4444;
-
-  /* --- Lines & focus ------------------------------------------------------ */
-  --border: #e2e8f0; /* slate-200 */
-  --input: #e2e8f0;
-  --ring: #141414;
-
-  /* --- Data viz (modern, harmonious) -------------------------------------- */
+  /* --- Data viz — not part of compacto's vocabulary; tuned for light. ----- */
   --chart-1: #6366f1; /* indigo */
   --chart-2: #06b6d4; /* cyan */
   --chart-3: #f59e0b; /* amber */
   --chart-4: #10b981; /* emerald */
   --chart-5: #ec4899; /* pink */
-
-  /* --- Sidebar ------------------------------------------------------------ */
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #141414;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #141414;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #141414;
-
-  /* --- Elevation primitives (soft, blurred — no hard offset) -------------- */
-  --nb-border-width: 1px;
-  --nb-border-width-lg: 1px;
-  --nb-shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06), 0 1px 1px 0 rgb(15 23 42 / 0.04);
-  --nb-shadow: 0 4px 12px -2px rgb(15 23 42 / 0.1), 0 2px 6px -2px rgb(15 23 42 / 0.06);
-  --nb-shadow-lg: 0 12px 28px -6px rgb(15 23 42 / 0.16), 0 6px 12px -4px rgb(15 23 42 / 0.08);
-}
-
-.dark {
-  /* NEUTRAL MODERN DARK — calm zinc/slate surfaces in 3 elevation steps
-     (bg < card < muted), soft hairline borders, soft blurred elevation. */
-
-  --background: #0b0d12; /* near-black ground */
-  --foreground: #e5e7eb; /* zinc-200 text */
-  --card: #14171f;
-  --card-foreground: #e5e7eb;
-  --popover: #14171f;
-  --popover-foreground: #e5e7eb;
-
-  --primary: #f4f4f5; /* zinc-100 — bright on dark */
-  --primary-foreground: #0b0d12;
-  --secondary: #14171f;
-  --secondary-foreground: #e5e7eb;
-  --muted: #1c2030; /* top elevation step */
-  --muted-foreground: #9aa3b5;
-  --accent: #1c2030;
-  --accent-foreground: #e5e7eb;
-  --destructive: #f87171;
-
-  --border: #262b38;
-  --input: #262b38;
-  --ring: #e5e7eb;
-
-  --chart-1: #818cf8;
-  --chart-2: #22d3ee;
-  --chart-3: #fbbf24;
-  --chart-4: #34d399;
-  --chart-5: #f472b6;
-
-  --sidebar: #0b0d12;
-  --sidebar-foreground: #e5e7eb;
-  --sidebar-primary: #f4f4f5;
-  --sidebar-primary-foreground: #0b0d12;
-  --sidebar-accent: #1c2030;
-  --sidebar-accent-foreground: #e5e7eb;
-  --sidebar-border: #262b38;
-  --sidebar-ring: #e5e7eb;
-
-  --nb-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
-  --nb-shadow: 0 4px 14px -2px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.4);
-  --nb-shadow-lg: 0 14px 32px -6px rgb(0 0 0 / 0.6), 0 6px 14px -4px rgb(0 0 0 / 0.45);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-roboto);
-  --font-display: var(--font-poppins);
-  --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-display);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
   --radius-2xl: calc(var(--radius) + 12px);
   --radius-3xl: calc(var(--radius) + 20px);
   --radius-4xl: calc(var(--radius) + 28px);
 
-  /* Hard offset shadows as Tailwind utilities: shadow-nb / -sm / -lg. */
-  --shadow-nb-sm: var(--nb-shadow-sm);
-  --shadow-nb: var(--nb-shadow);
-  --shadow-nb-lg: var(--nb-shadow-lg);
-}
-
-:root {
-  /* Motion tokens — every animation references these, no magic numbers.
-     Enter = standard ease; exit = accelerate ease + ~30% shorter. */
-  --motion-duration-instant: 80ms;
-  --motion-duration-fast: 150ms;
-  --motion-duration-base: 220ms;
-  --motion-duration-slow: 320ms;
-  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --motion-ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
-  --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Flat — compacto has no elevation. Kept as utilities so existing
+     `shadow-nb*` classes resolve to nothing instead of breaking. */
+  --shadow-nb-sm: none;
+  --shadow-nb: none;
+  --shadow-nb-lg: none;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-app-border outline-app-accent/50;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    background-color: var(--app-bg);
+    color: var(--app-text);
+    font-family: var(--font-sans);
     /* Custom brand cursor — hotspot at arrow tip (3,3). */
     cursor:
       url("/cursor-default.svg") 3 3,
@@ -387,90 +277,60 @@
   [data-disabled] {
     cursor: not-allowed;
   }
-  /* Dark mode — the default cursor is dark-filled and vanishes on the dark
-     background, so swap to light-filled variants. */
-  .dark body {
-    cursor:
-      url("/cursor-default-dark.svg") 3 3,
-      auto;
-  }
-  .dark a,
-  .dark button,
-  .dark [role="button"],
-  .dark summary,
-  .dark label[for],
-  .dark select,
-  .dark [data-slot="trigger"],
-  .dark .cursor-pointer {
-    cursor:
-      url("/cursor-pointer-dark.svg") 3 3,
-      pointer;
-  }
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    @apply font-display font-bold;
+    @apply font-display font-bold text-app-bright;
+  }
+  /* Bold runs are titles too — Poppins, in prose and the markdown editor. */
+  strong,
+  b {
+    font-family: var(--font-title);
+  }
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
   }
   /* Rounded by default — any full-box bordered element (the `border` or
-     `border-2` width token applies to all sides) gets the theme radius, so
-     blocks built with raw `border-2 border-foreground` round without per-file
-     edits. Explicit `rounded-*` utilities sit in the utilities layer and
-     still win. Table parts are excluded — rounding cells looks wrong. */
+     `border-2` width token applies to all sides) gets the theme radius.
+     Explicit `rounded-*` utilities sit in the utilities layer and still win.
+     Table parts are excluded — rounding cells looks wrong. */
   :where([class~="border"], [class~="border-2"]):not(table, thead, tbody, tr, th, td) {
     border-radius: var(--radius);
   }
 }
 
 @layer components {
-  /* nb-surface — the canonical block: hairline border + soft elevation +
-     rounded corners. Border uses the soft `border` token in both modes. */
-  .nb-surface {
-    border: var(--nb-border-width) solid var(--color-border);
-    box-shadow: var(--nb-shadow);
-    background-color: var(--color-card);
-    border-radius: var(--radius);
-  }
+  /* nb-surface — the canonical block, compacto-flat: panel tone + hairline
+     border, no shadow. */
+  .nb-surface,
   .nb-surface-lg {
-    border: var(--nb-border-width-lg) solid var(--color-border);
-    box-shadow: var(--nb-shadow-lg);
-    background-color: var(--color-card);
+    border: 1px solid var(--app-border);
+    background-color: var(--app-panel);
     border-radius: var(--radius);
   }
 
-  /* nb-press — quiet interaction: hover lifts 1px (soft shadow), active
-     settles back. No hard offset jumps. */
+  /* nb-press — feedback by colour, not motion: hover washes, press settles
+     1px. */
   .nb-press {
     transition:
-      transform var(--motion-duration-fast) var(--motion-ease-standard),
-      box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+      background-color var(--motion-duration-fast) var(--motion-ease-standard),
+      transform var(--motion-duration-instant) var(--motion-ease-standard);
   }
   .nb-press:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: var(--nb-shadow-lg);
+    background-color: var(--app-hover);
   }
   .nb-press:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: var(--nb-shadow-sm);
+    transform: translateY(1px);
   }
 }
 
-/* Accessibility — honour reduced-motion: drop transforms/slides, keep only
-   short opacity changes. Motion is feedback, never a gate. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: var(--motion-duration-fast) !important;
-    transition-property: opacity !important;
-    scroll-behavior: auto !important;
-  }
-  /* No translate jumps on press when motion is reduced. */
-  .nb-press:hover:not(:disabled),
   .nb-press:active:not(:disabled) {
     transform: none;
   }
@@ -517,7 +377,7 @@
    ========================================================================= */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--muted-foreground) transparent;
+  scrollbar-color: var(--app-dim) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -530,19 +390,19 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  background: color-mix(in oklab, var(--app-dim) 45%, transparent);
   border: 2px solid transparent;
   background-clip: padding-box;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+  background: color-mix(in oklab, var(--app-dim) 70%, transparent);
   background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: var(--primary);
+  background: var(--app-accent);
   background-clip: padding-box;
 }
 
@@ -552,18 +412,18 @@
 
 /* =========================================================================
    SOFT BORDER INK — retarget every `border-foreground` utility to the soft
-   hairline `border` tone in BOTH light and dark, so lines read as quiet
+   hairline `border` tone, so lines read as quiet
    definition rather than heavy outlines. Text `foreground` is untouched.
    Placed outside any @layer so it overrides the Tailwind utilities
    regardless of source order.
    ========================================================================= */
 .border-foreground {
-  border-color: var(--color-border);
+  border-color: var(--app-border);
 }
 .border-foreground\/15,
 .border-foreground\/30,
 .border-foreground\/40 {
-  border-color: color-mix(in oklab, var(--color-border) 55%, transparent);
+  border-color: color-mix(in oklab, var(--app-border) 55%, transparent);
 }
 
 /* =========================================================================

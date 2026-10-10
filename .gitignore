@@ -45,3 +45,5 @@ next-env.d.ts
 graphify-out/
 docs
 .codegraph
+# Plan API key saved by planner.sh login
+.claude/planner-token

@@ -5,12 +5,14 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export type PromptState = {
   open: boolean;
@@ -39,23 +41,27 @@ function PromptForm({ state, onClose }: { state: PromptState; onClose: () => voi
     <>
       <DialogHeader>
         <DialogTitle>{state.title}</DialogTitle>
-        {state.description && <DialogDescription>{state.description}</DialogDescription>}
+        <DialogDescription className={state.description ? undefined : "sr-only"}>
+          {state.description ?? state.title}
+        </DialogDescription>
       </DialogHeader>
-      <input
-        ref={inputRef}
-        autoFocus
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onFocus={(e) => e.currentTarget.select()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            submit();
-          }
-        }}
-        placeholder={state.placeholder}
-        className="h-9 rounded-lg border border-border bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-      />
+      <DialogBody>
+        <Input
+          ref={inputRef}
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onFocus={(e) => e.currentTarget.select()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          placeholder={state.placeholder}
+          data-testid="prompt-dialog-input"
+        />
+      </DialogBody>
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>
           Cancel

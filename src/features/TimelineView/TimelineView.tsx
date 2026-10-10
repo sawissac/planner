@@ -31,7 +31,6 @@ export function TimelineView() {
     const id = s.todos.activeFileId;
     return s.todos.files.find((f) => f.id === id) ?? null;
   });
-  const isDark = useAppSelector((s) => s.settings.darkMode);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -139,14 +138,16 @@ export function TimelineView() {
       return;
     }
 
-    const axisText = isDark ? "#9ca3af" : "#374151";
-    const trackBg = isDark ? "#374151" : "#e5e7eb";
-    const labelPrimary = isDark ? "#f3f4f6" : "#111827";
-    const labelSecondary = isDark ? "#9ca3af" : "#6b7280";
-    const barFill = isDark ? "#34d399" : "#0f766e";
-    const barText = isDark ? "#111827" : "#ffffff";
-    const tipBg = isDark ? "#1f2937" : "#111827";
-    const c1 = isDark ? "#34d399" : "#10b981";
+    // Palette tokens — applied with .style() so var() resolves and every
+    // compacto palette repaints the chart without a re-render.
+    const axisText = "var(--app-dim)";
+    const trackBg = "var(--app-hover)";
+    const labelPrimary = "var(--app-bright)";
+    const labelSecondary = "var(--app-dim)";
+    const barFill = "var(--app-accent)";
+    const barText = "var(--app-on-solid)";
+    const c1 = "var(--app-success)";
+    const BAR_RADIUS = BAR_HEIGHT / 2;
 
     const svg = d3.select(svgEl);
     svg.selectAll("*").remove();
@@ -185,9 +186,9 @@ export function TimelineView() {
       .call((g) =>
         g
           .selectAll("text")
-          .attr("fill", axisText)
-          .attr("font-size", "13")
-          .attr("font-weight", "500"),
+          .style("fill", axisText)
+          .style("font-family", "var(--font-mono)")
+          .attr("font-size", "11"),
       );
 
     rows.forEach((row, i) => {
@@ -199,16 +200,17 @@ export function TimelineView() {
         .attr("y", y + (ROW_HEIGHT - BAR_HEIGHT) / 2)
         .attr("width", innerWidth)
         .attr("height", BAR_HEIGHT)
-        .attr("rx", 6)
-        .attr("fill", trackBg);
+        .attr("rx", BAR_RADIUS)
+        .style("fill", trackBg);
 
       const nameText = svg
         .append("text")
         .attr("x", 16)
         .attr("y", y + ROW_HEIGHT / 2 - 2)
-        .attr("font-size", "14")
+        .attr("font-size", "12")
         .attr("font-weight", "600")
-        .attr("fill", labelPrimary)
+        .style("font-family", "var(--font-title)")
+        .style("fill", labelPrimary)
         .text(row.name);
       const maxLabelW = LEFT_LABEL - 16 - 8;
       const node = nameText.node();
@@ -227,8 +229,9 @@ export function TimelineView() {
         .append("text")
         .attr("x", 16)
         .attr("y", y + ROW_HEIGHT / 2 + 14)
-        .attr("font-size", "12")
-        .attr("fill", labelSecondary)
+        .attr("font-size", "11")
+        .style("font-family", "var(--font-description)")
+        .style("fill", labelSecondary)
         .text(`${row.count} ${row.count === 1 ? "task" : "tasks"}`);
 
       const barX = LEFT_LABEL + x(new Date(row.from));
@@ -239,22 +242,25 @@ export function TimelineView() {
         .attr("y", y + (ROW_HEIGHT - BAR_HEIGHT) / 2)
         .attr("width", barW)
         .attr("height", BAR_HEIGHT)
-        .attr("rx", 6)
-        .attr("fill", barFill);
+        .attr("rx", Math.min(BAR_RADIUS, barW / 2))
+        .style("fill", barFill);
 
       svg
         .append("text")
-        .attr("x", barX + 12)
-        .attr("y", y + ROW_HEIGHT / 2 + 5)
-        .attr("font-size", "13")
-        .attr("font-weight", "600")
-        .attr("fill", barText)
+        .attr("x", barX + BAR_RADIUS)
+        .attr("y", y + ROW_HEIGHT / 2 + 4)
+        .attr("font-size", "11")
+        .attr("font-weight", "700")
+        .attr("letter-spacing", "0.08em")
+        .style("font-family", "var(--font-title)")
+        .style("text-transform", "uppercase")
+        .style("fill", barText)
         .text(`${row.count} ${row.count === 1 ? "Task" : "Tasks"}`);
     });
 
     const vline = svg
       .append("line")
-      .attr("stroke", barFill)
+      .style("stroke", barFill)
       .attr("stroke-width", 1.5)
       .attr("y1", TOP_AXIS - 16)
       .attr("y2", height)
@@ -264,7 +270,7 @@ export function TimelineView() {
     const vdot = svg
       .append("circle")
       .attr("r", 4)
-      .attr("fill", barFill)
+      .style("fill", barFill)
       .attr("cy", TOP_AXIS - 16)
       .style("opacity", 0)
       .style("pointer-events", "none");
@@ -273,11 +279,12 @@ export function TimelineView() {
       .select("body")
       .append("div")
       .style("position", "fixed")
-      .style("background", tipBg)
-      .style("color", "#f9fafb")
-      .style("padding", "10px 14px")
-      .style("border-radius", "10px")
-      .style("font-size", "13px")
+      .style("background", "var(--app-panel)")
+      .style("color", "var(--app-text)")
+      .style("border", "1px solid var(--app-border-mid)")
+      .style("padding", "8px 12px")
+      .style("border-radius", "var(--radius)")
+      .style("font-size", "11px")
       .style("line-height", "1.7")
       .style("pointer-events", "none")
       .style("opacity", "0")
@@ -330,27 +337,30 @@ export function TimelineView() {
     return () => {
       tip.remove();
     };
-  }, [containerWidth, rows, dailyData, domain, height, isDark]);
+  }, [containerWidth, rows, dailyData, domain, height]);
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border bg-card p-12 text-center text-muted-foreground">
+      <div className="rounded-xl border border-app-border bg-app-panel p-12 text-center font-description text-[12px] text-app-dim">
         No tasks to show on timeline.
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border bg-card p-6">
+    <div
+      data-testid="timeline-view"
+      className="rounded-xl border border-app-border bg-app-panel p-5"
+    >
       <div className="mb-1 flex items-baseline gap-2">
-        <div className="text-base font-bold">Timeline by Group</div>
-        <div className="text-xs text-muted-foreground">
+        <h2 className="font-title text-[13px] font-semibold text-app-bright">Timeline by group</h2>
+        <span className="rounded-full border border-app-border px-2 py-0.5 font-mono text-[10px] text-app-dim">
           {rows.length} {rows.length === 1 ? "group" : "groups"}
-        </div>
+        </span>
       </div>
-      <div className="mb-5 text-sm text-muted-foreground">
+      <p className="mb-4 font-description text-[12px] text-app-dim">
         Each bar spans a group&apos;s earliest task start to latest task end
-      </div>
+      </p>
       <div ref={containerRef} className="overflow-x-auto">
         <svg ref={svgRef} className="block" />
       </div>

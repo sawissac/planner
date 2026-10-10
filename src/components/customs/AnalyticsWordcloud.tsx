@@ -5,7 +5,6 @@ import cloud from "d3-cloud";
 import { Cloud } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { useAppSelector } from "@/stores/hooks";
 import type { TodoFile } from "@/stores/slices/todoSlice";
 
 type Props = { files: TodoFile[]; rangeDays: number };
@@ -123,6 +122,16 @@ function tokenize(text: string): string[] {
     .filter((w) => w.length >= 3 && !STOPWORDS.has(w) && !/^\d+$/.test(w));
 }
 
+/** Drop Markdown syntax that is not prose: code blocks, URLs, link targets, HTML tags. */
+function stripMarkdown(md: string): string {
+  return md
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/https?:\/\/\S+/g, " ");
+}
+
 function startEndForRange(rangeDays: number) {
   const now = new Date();
   const end = new Date(now);
@@ -134,7 +143,6 @@ function startEndForRange(rangeDays: number) {
 }
 
 export function AnalyticsWordCloud({ files, rangeDays }: Props) {
-  const isDark = useAppSelector((s) => s.settings.darkMode);
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -161,7 +169,8 @@ export function AnalyticsWordCloud({ files, rangeDays }: Props) {
         if (!inRange) {
           continue;
         }
-        for (const tok of tokenize(t.title)) {
+        const text = `${t.title} ${stripMarkdown(t.thought ?? "")}`;
+        for (const tok of tokenize(text)) {
           counts.set(tok, (counts.get(tok) ?? 0) + 1);
         }
       }
@@ -203,31 +212,42 @@ export function AnalyticsWordCloud({ files, rangeDays }: Props) {
       return;
     }
 
-    const palette = isDark
-      ? ["#34d399", "#fbbf24", "#60a5fa", "#f472b6", "#a78bfa", "#fb923c"]
-      : ["#10b981", "#d97706", "#2563eb", "#db2777", "#7c3aed", "#ea580c"];
+    const palette = [
+      "var(--app-accent)",
+      "var(--app-accent-dim)",
+      "var(--app-success)",
+      "var(--app-warn)",
+      "var(--app-bright)",
+      "var(--app-dim)",
+    ];
     const color = d3
       .scaleOrdinal<string, string>()
       .domain(words.map((w) => w.text))
       .range(palette);
+
+    // d3-cloud measures on a canvas, which can't resolve var(), so pass the
+    // resolved title face (Poppins) rather than the CSS variable.
+    const fontFamily =
+      getComputedStyle(document.documentElement).getPropertyValue("--font-title").trim() ||
+      "system-ui, sans-serif";
 
     const layout = cloud<Word>()
       .size([width, height])
       .words(words.map((w) => ({ ...w })))
       .padding(3)
       .rotate(() => (Math.random() < 0.35 ? 90 : 0))
-      .font("Inter, system-ui, sans-serif")
+      .font(fontFamily)
       .fontSize((d) => d.size)
       .on("end", (placed) => {
         const g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
 
-        const tipBg = isDark ? "#1f2937" : "#111827";
         const tip = d3
           .select("body")
           .append("div")
           .style("position", "fixed")
-          .style("background", tipBg)
-          .style("color", "#f9fafb")
+          .style("background", "var(--app-panel)")
+          .style("color", "var(--app-text)")
+          .style("border", "1px solid var(--app-border-mid)")
           .style("padding", "6px 10px")
           .style("border-radius", "8px")
           .style("font-size", "12px")
@@ -240,7 +260,7 @@ export function AnalyticsWordCloud({ files, rangeDays }: Props) {
         g.selectAll<SVGTextElement, Placed>("text")
           .data(placed as Placed[])
           .join("text")
-          .style("font-family", "Inter, system-ui, sans-serif")
+          .style("font-family", fontFamily)
           .style("font-weight", "600")
           .style("cursor", "default")
           .style("fill", (d) => color(d.text))
@@ -280,20 +300,20 @@ export function AnalyticsWordCloud({ files, rangeDays }: Props) {
         node.remove();
       }
     };
-  }, [words, containerWidth, isDark]);
+  }, [words, containerWidth]);
 
   return (
-    <div className="rounded-xl border bg-card p-6 min-w-0 flex flex-col md:h-full">
+    <div className="rounded-xl border bg-app-panel p-6 min-w-0 flex flex-col md:h-full">
       <div className="text-base font-bold flex items-center gap-2">
         <Cloud className="size-4" />
         Common Words
       </div>
-      <div className="mt-0.5 mb-5 text-sm text-muted-foreground">
-        Top terms across task titles in range
+      <div className="mt-0.5 mb-5 text-sm text-app-dim">
+        Top terms across task titles and thoughts in range
       </div>
       <div ref={containerRef} className="flex-1 min-h-0">
         {words.length === 0 ? (
-          <div className="h-full grid place-items-center text-sm text-muted-foreground py-10">
+          <div className="h-full grid place-items-center text-sm text-app-dim py-10">
             No words in range.
           </div>
         ) : (

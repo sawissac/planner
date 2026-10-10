@@ -1,10 +1,22 @@
 import "@/styles/globals.css";
 
 import type { Metadata, Viewport } from "next";
-import { Caveat, Poppins, Roboto } from "next/font/google";
+import { Caveat, Fira_Code, Open_Sans, Poppins, Roboto } from "next/font/google";
 
 import { ServiceWorkerRegister } from "@/components/customs/ServiceWorkerRegister";
 import { Providers } from "@/providers/StoreProvider";
+
+// compacto-ui faces: Poppins for titles/display, Open Sans for body,
+// Fira Code for code. Roboto and Caveat stay for the table font picker.
+const openSans = Open_Sans({
+  variable: "--font-open-sans",
+  subsets: ["latin"],
+});
+
+const firaCode = Fira_Code({
+  variable: "--font-fira-code",
+  subsets: ["latin"],
+});
 
 const roboto = Roboto({
   variable: "--font-roboto",
@@ -27,28 +39,23 @@ const caveat = Caveat({
 export const metadata: Metadata = {
   title: "Planner",
   description:
-    "Local-first task and todo planner with optional cloud sync. Multiple files, timelines, analytics, dark mode.",
+    "Local-first task and todo planner with optional cloud sync. Multiple files, timelines, analytics.",
   manifest: "/manifest.webmanifest",
   applicationName: "Planner",
   appleWebApp: {
     capable: true,
     title: "Planner",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
   icons: {
     icon: "/favicon.ico",
     apple: "/logo.svg",
   },
-  verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
-  },
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0d12" },
-  ],
+  themeColor: "#eaf3fb",
+  colorScheme: "light",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -62,13 +69,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${roboto.variable} ${poppins.variable} ${caveat.variable} h-dvh antialiased`}
+      className={`${openSans.variable} ${firaCode.variable} ${roboto.variable} ${poppins.variable} ${caveat.variable} h-dvh antialiased`}
     >
-      <body
-        className="h-full flex flex-col"
-        style={{ fontFamily: "var(--font-roboto)" }}
-        suppressHydrationWarning
-      >
+      <body className="h-full flex flex-col" suppressHydrationWarning>
         <Providers>{children}</Providers>
         <ServiceWorkerRegister />
       </body>

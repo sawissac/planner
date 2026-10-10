@@ -7,15 +7,16 @@ import type { DateRange } from "react-day-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useIsMobile } from "@/hooks/useMediaQuery";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 
 const MONTHS_SHORT = [
   "Jan",
@@ -83,10 +84,13 @@ export function DateRangeFilter({
   value,
   onChange,
   compact = false,
+  triggerClassName,
 }: {
   value: DateRangeValue;
   onChange: (v: DateRangeValue) => void;
   compact?: boolean;
+  /** Extra classes for the trigger — e.g. to sit inside a combined toolbar. */
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -139,6 +143,7 @@ export function DateRangeFilter({
           size: compact ? "icon-sm" : "lg",
         }),
         !compact && "gap-2",
+        triggerClassName,
       )}
       title={`Range: ${label}`}
       aria-label={`Range: ${label}`}
@@ -155,21 +160,21 @@ export function DateRangeFilter({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-        <DrawerContent>
-          <DrawerHeader className="border-b border-border">
-            <DrawerTitle>Date range</DrawerTitle>
-          </DrawerHeader>
-          <div className="overflow-y-auto pb-4">{body}</div>
-        </DrawerContent>
-      </Drawer>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Date range</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="px-0 pb-4">{body}</DialogBody>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger render={trigger} />
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="end">
         {body}
       </PopoverContent>

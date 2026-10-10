@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/cn";
 
 import { signIn, signUp } from "./actions";
 
@@ -55,7 +56,7 @@ export function AuthLogin() {
     // Supabase client re-initializes and picks up the session cookie the
     // server action just wrote — a soft nav would leave it stale. Loading
     // stays true until the navigation happens.
-    window.location.assign("/app");
+    window.location.assign("/");
   }
 
   function toggleMode() {
@@ -64,26 +65,26 @@ export function AuthLogin() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-background px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-app-bg px-4">
       <div
         className={cn(
           "w-full max-w-sm space-y-8",
-          "animate-in fade-in zoom-in-95 slide-in-from-bottom-2",
+          "animate-[compacto-fade-up_var(--motion-duration-base)_var(--motion-ease-standard)]",
           "duration-[--motion-duration-slow] ease-[--motion-ease-standard]",
         )}
       >
         {/* Wordmark */}
         <div className="space-y-1 text-center">
           <Link
-            href="/app"
+            href="/"
             aria-label="Planner — back to app"
-            className="inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent/50"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="" className="size-8" />
             <span className="font-display text-lg font-semibold">Planner</span>
           </Link>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-app-dim">
             {view === "check-email"
               ? "Check your email"
               : mode === "signin"
@@ -102,13 +103,16 @@ export function AuthLogin() {
         ) : (
           <>
             {/* Form card */}
-            <form onSubmit={handleSubmit} className="nb-surface space-y-4 rounded-md bg-card p-6">
+            <form
+              onSubmit={handleSubmit}
+              className="nb-surface space-y-4 rounded-md bg-app-panel p-6"
+            >
               {/* Email */}
               <div className="space-y-1.5">
-                <label htmlFor="email" className="text-sm font-medium text-foreground">
+                <label htmlFor="email" className="text-sm font-medium text-app-bright">
                   Email
                 </label>
-                <input
+                <Input
                   id="email"
                   name="email"
                   type="email"
@@ -116,31 +120,25 @@ export function AuthLogin() {
                   autoComplete="email"
                   placeholder="you@example.com"
                   autoFocus
-                  className={cn(
-                    "h-10 w-full rounded-md border-2 border-foreground bg-background px-3 text-sm text-foreground",
-                    "placeholder:text-muted-foreground",
-                    "transition-shadow duration-[--motion-duration-fast]",
-                    "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                    "disabled:opacity-50",
-                  )}
                   disabled={loading}
+                  className="h-9"
                 />
               </div>
 
               {/* Password */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="text-sm font-medium text-foreground">
+                  <label htmlFor="password" className="text-sm font-medium text-app-bright">
                     Password
                   </label>
                   {mode === "signin" && (
                     <Link
                       href="/forgot-password"
                       className={cn(
-                        "text-xs font-medium text-muted-foreground underline-offset-4",
-                        "hover:text-foreground hover:underline",
+                        "text-xs font-medium text-app-dim underline-offset-4",
+                        "hover:text-app-bright hover:underline",
                         "transition-colors duration-[--motion-duration-fast]",
-                        "rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                        "rounded-md outline-none focus-visible:ring-2 focus-visible:ring-app-accent/50",
                       )}
                     >
                       Forgot password?
@@ -148,7 +146,7 @@ export function AuthLogin() {
                   )}
                 </div>
                 <div className="relative">
-                  <input
+                  <Input
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
@@ -156,24 +154,18 @@ export function AuthLogin() {
                     autoComplete={mode === "signin" ? "current-password" : "new-password"}
                     placeholder="••••••••"
                     minLength={6}
-                    className={cn(
-                      "h-10 w-full rounded-md border-2 border-foreground bg-background py-2 pl-3 pr-10 text-sm text-foreground",
-                      "placeholder:text-muted-foreground",
-                      "transition-shadow duration-[--motion-duration-fast]",
-                      "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                      "disabled:opacity-50",
-                    )}
                     disabled={loading}
+                    className="h-9 pr-10"
                   />
                   <button
                     type="button"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     onClick={() => setShowPassword((v) => !v)}
                     className={cn(
-                      "absolute right-3 top-1/2 grid size-6 -translate-y-1/2 place-items-center text-muted-foreground",
-                      "hover:text-foreground",
+                      "absolute right-3 top-1/2 grid size-6 -translate-y-1/2 place-items-center text-app-dim",
+                      "hover:text-app-bright",
                       "transition-colors duration-[--motion-duration-fast]",
-                      "rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                      "rounded-md outline-none focus-visible:ring-2 focus-visible:ring-app-accent/50",
                     )}
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -187,8 +179,8 @@ export function AuthLogin() {
                   role="alert"
                   aria-live="polite"
                   className={cn(
-                    "rounded-md border-2 border-destructive bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive",
-                    "animate-in fade-in slide-in-from-top-1 duration-[--motion-duration-base]",
+                    "rounded-md border-2 border-app-error bg-app-error/10 px-3 py-2 text-sm font-medium text-app-error",
+                    "animate-[compacto-fade-up_var(--motion-duration-base)_var(--motion-ease-standard)]",
                   )}
                 >
                   {error}
@@ -218,16 +210,16 @@ export function AuthLogin() {
             </form>
 
             {/* Mode toggle */}
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-app-dim">
               {mode === "signin" ? "Don't have an account?" : "Already have an account?"}{" "}
               <button
                 type="button"
                 onClick={toggleMode}
                 className={cn(
-                  "font-medium text-foreground underline-offset-4",
+                  "font-medium text-app-bright underline-offset-4",
                   "hover:underline",
                   "transition-colors duration-[--motion-duration-fast]",
-                  "outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded",
+                  "outline-none focus-visible:ring-2 focus-visible:ring-app-accent/50 rounded",
                 )}
               >
                 {mode === "signin" ? "Sign up" : "Sign in"}
@@ -237,10 +229,10 @@ export function AuthLogin() {
             {/* Skip — auth is optional, Planner works fully offline without it. */}
             <p className="text-center text-sm">
               <Link
-                href="/app"
+                href="/"
                 className={cn(
-                  "text-muted-foreground underline-offset-4 hover:text-foreground hover:underline",
-                  "rounded outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                  "text-app-dim underline-offset-4 hover:text-app-bright hover:underline",
+                  "rounded outline-none focus-visible:ring-2 focus-visible:ring-app-accent/50",
                 )}
               >
                 Continue without an account
@@ -248,36 +240,6 @@ export function AuthLogin() {
             </p>
           </>
         )}
-
-        {/* Legal */}
-        <p className="text-center text-xs leading-relaxed text-muted-foreground">
-          By continuing, you agree to our
-          <br />
-          <Link
-            href="/terms"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "font-medium text-foreground underline-offset-4 hover:underline",
-              "rounded outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-            )}
-          >
-            Terms &amp; Conditions
-          </Link>{" "}
-          and{" "}
-          <Link
-            href="/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "font-medium text-foreground underline-offset-4 hover:underline",
-              "rounded outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-            )}
-          >
-            Privacy Policy
-          </Link>
-          .
-        </p>
       </div>
     </div>
   );
@@ -287,16 +249,16 @@ function CheckEmailState({ onBackToSignIn }: { onBackToSignIn: () => void }) {
   return (
     <div
       className={cn(
-        "nb-surface space-y-4 rounded-md bg-card p-6 text-center",
-        "animate-in fade-in slide-in-from-bottom-1 duration-[--motion-duration-base]",
+        "nb-surface space-y-4 rounded-md bg-app-panel p-6 text-center",
+        "animate-[compacto-fade-up_var(--motion-duration-base)_var(--motion-ease-standard)]",
       )}
     >
-      <div className="mx-auto grid size-12 place-items-center rounded-md border-2 border-foreground bg-primary">
-        <CloudCheck className="size-5 text-primary-foreground" />
+      <div className="mx-auto grid size-12 place-items-center rounded-md border-2 border-app-border bg-app-accent">
+        <CloudCheck className="size-5 text-app-on-solid" />
       </div>
       <div className="space-y-1">
-        <p className="font-medium text-foreground">Confirm your email</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="font-medium text-app-bright">Confirm your email</p>
+        <p className="text-sm text-app-dim">
           We sent a confirmation link to your inbox. Click it to activate your account and sign in.
         </p>
       </div>

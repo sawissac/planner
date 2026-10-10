@@ -31,10 +31,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu-extras";
+import { useThoughtDialogOpen } from "@/hooks/useThoughtDialogOpen";
+import { cn } from "@/lib/cn";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import {
   addProgressOption,
@@ -55,14 +56,14 @@ const DEFAULTS = new Set<string>(DEFAULT_PROGRESS_OPTIONS);
 const UNASSIGNED = "__unassigned__";
 
 const PROGRESS_COLOR: Record<string, string> = {
-  done: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  inprogress: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
-  "in progress": "bg-blue-500/15 text-blue-600 dark:text-blue-400",
-  "not started": "bg-muted text-muted-foreground",
+  done: "text-app-success border tint-current",
+  inprogress: "text-app-accent border tint-current",
+  "in progress": "text-app-accent border tint-current",
+  "not started": "bg-app-sidebar text-app-dim",
 };
 
 function colorFor(p: string): string {
-  return PROGRESS_COLOR[p.toLowerCase()] ?? "bg-violet-500/15 text-violet-600 dark:text-violet-400";
+  return PROGRESS_COLOR[p.toLowerCase()] ?? "text-app-dim border tint-current";
 }
 
 function Card({
@@ -80,13 +81,13 @@ function Card({
     id: todo.id,
     data: { type: "todo", progress: todo.progress },
   });
-  const [thoughtOpen, setThoughtOpen] = useState(false);
+  const [thoughtOpen, setThoughtOpen] = useThoughtDialogOpen(todo.id);
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "group rounded-md border border-border bg-card text-sm shadow-sm",
+        "group rounded-md border border-app-border bg-app-panel text-sm",
         isDragging && "opacity-30",
       )}
     >
@@ -96,7 +97,7 @@ function Card({
         className="flex items-start justify-between gap-1 px-2 pt-2 touch-none cursor-grab active:cursor-grabbing"
       >
         <span className="line-clamp-3 wrap-break-word flex-1">
-          {todo.title || <span className="text-muted-foreground">(untitled)</span>}
+          {todo.title || <span className="text-app-dim">(untitled)</span>}
         </span>
         <div
           className="flex items-center opacity-0 group-hover:opacity-100 transition"
@@ -108,7 +109,7 @@ function Card({
             type="button"
             onClick={onEdit}
             aria-label="Edit task"
-            className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="rounded p-0.5 text-app-dim hover:bg-app-hover hover:text-app-bright"
           >
             <Pencil className="size-3" />
           </button>
@@ -116,7 +117,7 @@ function Card({
             type="button"
             onClick={onDelete}
             aria-label="Delete task"
-            className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            className="rounded p-0.5 text-app-dim hover:bg-app-error/10 hover:text-app-error"
           >
             <Trash2 className="size-3" />
           </button>
@@ -143,7 +144,7 @@ function Card({
             onMouseEnter={preloadThoughtEditor}
             onFocus={preloadThoughtEditor}
             onPointerDown={preloadThoughtEditor}
-            className="h-7 w-full justify-start gap-1 px-2 text-xs font-normal text-muted-foreground"
+            className="h-7 w-full justify-start gap-1 px-2 text-xs font-normal text-app-dim"
           >
             <Lightbulb className="size-3.5" />
             {todo.thought ? "Thought" : "Add thought"}
@@ -184,7 +185,7 @@ function DragHandleButton({ setActivatorNodeRef, listeners, attributes }: DragHa
       {...attributes}
       {...listeners}
       aria-label="Drag column"
-      className="cursor-grab touch-none rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground active:cursor-grabbing"
+      className="cursor-grab touch-none rounded p-0.5 text-app-dim hover:bg-app-hover hover:text-app-bright active:cursor-grabbing"
     >
       <GripVertical className="size-3.5" />
     </button>
@@ -213,22 +214,15 @@ function ColumnBody({
         <span className={cn("rounded-md px-1.5 py-0.5 text-xs font-medium", colorFor(label))}>
           {label}
         </span>
-        <span className="text-xs text-muted-foreground">{todos.length}</span>
+        <span className="text-xs text-app-dim">{todos.length}</span>
         <div className="flex-1" />
         {!isDefault && (onRename || onDelete) && (
           <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Column actions"
-                  className="size-6"
-                >
-                  <MoreHorizontal className="size-3.5" />
-                </Button>
-              }
-            />
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Column actions" className="size-6">
+                <MoreHorizontal className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {onRename && (
                 <DropdownMenuItem onClick={onRename}>
@@ -240,7 +234,7 @@ function ColumnBody({
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={onDelete}
-                    className="text-destructive focus:text-destructive"
+                    className="text-app-error focus:text-app-error"
                   >
                     <Trash2 className="size-3.5" /> Delete
                   </DropdownMenuItem>
@@ -254,7 +248,7 @@ function ColumnBody({
         ref={setNodeRef}
         className={cn(
           "flex flex-1 flex-col gap-2 overflow-y-auto p-2 transition-colors",
-          isOver && "bg-accent/40",
+          isOver && "bg-app-hover/40",
         )}
       >
         {todos.map((t) => (
@@ -272,7 +266,7 @@ function ColumnBody({
           variant="ghost"
           size="sm"
           onClick={onAddCard}
-          className="w-full justify-start text-xs text-muted-foreground"
+          className="w-full justify-start text-xs text-app-dim"
         >
           <Plus className="size-3.5" /> Add card
         </Button>
@@ -283,7 +277,7 @@ function ColumnBody({
 
 function StaticColumn(props: ColumnProps) {
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col rounded-md border border-border bg-muted/30">
+    <div className="flex h-full w-72 shrink-0 flex-col rounded-md border border-app-border bg-app-sidebar/30">
       <ColumnBody {...props} />
     </div>
   );
@@ -308,7 +302,7 @@ function SortableColumn(props: ColumnProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex h-full w-72 shrink-0 flex-col rounded-md border border-border bg-muted/30",
+        "flex h-full w-72 shrink-0 flex-col rounded-md border border-app-border bg-app-sidebar/30",
         isDragging && "opacity-50",
       )}
     >
@@ -532,7 +526,7 @@ export function BoardView({ from, to }: { from?: number; to?: number } = {}) {
   };
 
   if (!file) {
-    return <div className="text-sm text-muted-foreground">No active file.</div>;
+    return <div className="text-sm text-app-dim">No active file.</div>;
   }
 
   return (
@@ -595,14 +589,14 @@ export function BoardView({ from, to }: { from?: number; to?: number } = {}) {
         </div>
         <DragOverlay>
           {activeTodo ? (
-            <div className="w-72 rounded-md border border-border bg-card p-2 text-sm shadow-lg">
+            <div className="w-72 rounded-md border border-app-border bg-app-panel p-2 text-sm">
               <span className="line-clamp-3 wrap-break-word">
-                {activeTodo.title || <span className="text-muted-foreground">(untitled)</span>}
+                {activeTodo.title || <span className="text-app-dim">(untitled)</span>}
               </span>
             </div>
           ) : null}
           {activeColumnLabel ? (
-            <div className="w-72 rounded-md border border-border bg-muted/60 p-2 text-xs font-medium shadow-lg">
+            <div className="w-72 rounded-md border border-app-border bg-app-sidebar/60 p-2 text-xs font-medium">
               <span className={cn("rounded-md px-1.5 py-0.5", colorFor(activeColumnLabel))}>
                 {activeColumnLabel}
               </span>

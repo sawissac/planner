@@ -1,0 +1,109 @@
+/* compacto-ui — design tokens.
+ *
+ * Plain custom properties, no Tailwind at-rules, so this file is importable by
+ * anything. These are PRE-THEME DEFAULTS: they keep the app-* utilities
+ * meaningful during SSR and before hydration, and are overwritten wholesale at
+ * runtime by appThemeCssVars() from "@/lib/color-themes". The :root values
+ * mirror the "ocean-light" theme — PaletteProvider's default — so the first
+ * painted frame already matches what hydration applies.
+ *
+ * The .dark block exists for that same pre-hydration window and for
+ * third-party CSS that keys off the class (Monaco, KaTeX, shiki). Component
+ * classes in this library carry no dark: variants — see theme.css. */
+
+:root {
+  /* Rounded blocks — modern minimal corners. */
+  --radius: 0.625rem;
+
+  /* Motion tokens — every animation references these, no magic numbers.
+     Enter = standard ease; exit = accelerate ease + ~30% shorter. */
+  --motion-duration-instant: 80ms;
+  --motion-duration-fast: 150ms;
+  --motion-duration-base: 220ms;
+  --motion-duration-slow: 320ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Strength of the decorative panel texture (texture.css) — 0 to 1. Set it
+     on an ancestor to tune one panel, here to tune all of them. */
+  --app-texture-alpha: 0.05;
+
+  /* --- Surfaces --- */
+  --app-bg: #eaf3fb;
+  --app-panel: #ffffff;
+  --app-sidebar: #dceaf7;
+  --app-hover: rgba(12, 40, 70, 0.05);
+  --app-selected: rgba(2, 132, 199, 0.12);
+
+  /* --- Lines --- */
+  --app-border: rgba(12, 40, 70, 0.12);
+  --app-border-mid: rgba(12, 40, 70, 0.22);
+  --app-border-accent: rgba(2, 132, 199, 0.45);
+
+  /* --- Accent (single voice) --- */
+  --app-accent: #0369a1;
+  --app-accent-dim: #2f8fc0;
+  --app-accent-faint: rgba(3, 105, 161, 0.1);
+
+  /* --- Type --- */
+  --app-text: #14425e;
+  --app-bright: #08283a;
+  --app-dim: #4c7690;
+
+  /* --- Code surfaces --- */
+  --app-editor: #ffffff;
+  --app-gutter: #e2eef9;
+
+  /* --- Status --- */
+  --app-success: #15803d;
+  --app-warn: #b45309;
+  --app-error: #b91c1c;
+
+  /* Foreground for solid accent blocks. Stays legible on bright dark-theme
+     accents and dark light-theme accents alike. */
+  --app-on-solid: #ffffff;
+}
+
+.dark {
+  --app-bg: #0b0d12;
+  --app-panel: #14171f;
+  --app-sidebar: #0b0d12;
+  --app-hover: rgba(255, 255, 255, 0.04);
+  --app-selected: rgba(244, 244, 245, 0.08);
+
+  --app-border: #262b38;
+  --app-border-mid: #333a4a;
+  --app-border-accent: rgba(244, 244, 245, 0.25);
+
+  --app-accent: #f4f4f5;
+  --app-accent-dim: rgba(244, 244, 245, 0.55);
+  --app-accent-faint: rgba(244, 244, 245, 0.08);
+
+  --app-text: #9aa3b5;
+  --app-bright: #e5e7eb;
+  --app-dim: rgba(154, 163, 181, 0.8);
+
+  --app-editor: #0b0d12;
+  --app-gutter: #14171f;
+
+  --app-success: #34d399;
+  --app-warn: #fbbf24;
+  --app-error: #f87171;
+
+  --app-on-solid: #0b0d12;
+}
+
+/* Accessibility — honour reduced-motion: drop transforms/slides, keep only
+   short opacity changes. Motion is feedback, never a gate. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: var(--motion-duration-fast) !important;
+    transition-property: opacity !important;
+    scroll-behavior: auto !important;
+  }
+}

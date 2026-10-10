@@ -1,0 +1,219 @@
+openapi: 3.1.0
+info:
+  title: Planner Plan API
+  version: 1.0.0
+  description: >-
+    Read a Planner task's thought (the plan) and read, add, replace, edit or
+    delete the comments on it. Every call runs as the user who owns the API key.
+servers:
+  # Replace with the public HTTPS address of your Planner app.
+  # ChatGPT cannot reach localhost; use a deployment or a tunnel.
+  - url: https://YOUR-PLANNER-HOST
+components:
+  securitySchemes:
+    planKey:
+      type: http
+      scheme: bearer
+      description: Plan API key (pln_…) from Planner → Settings → API keys.
+  parameters:
+    todoId:
+      name: todoId
+      in: path
+      required: true
+      description: Task id, the segment after /api/plan/ in the pasted URL.
+      schema: { type: string }
+    commentId:
+      name: commentId
+      in: path
+      required: true
+      description: Comment id, the segment after /comment/ in the pasted URL.
+      schema: { type: string }
+    fileId:
+      name: fileId
+      in: query
+      required: false
+      description: >-
+        The fileId query value from the pasted URL. Always send it when known;
+        task ids are unique only per file and the API answers 409 without it
+        when ambiguous.
+      schema: { type: string }
+  schemas:
+    CommentBody:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          description: Comment text in Markdown. Must not be empty.
+    Thought:
+      type: object
+      properties:
+        thought:
+          type: string
+          description: The task's thought (the plan) in Markdown.
+    CommentItem:
+      type: object
+      properties:
+        id: { type: string }
+        comment: { type: string, description: Comment body in Markdown. }
+    Thread:
+      type: object
+      properties:
+        thought: { type: string }
+        comments:
+          type: array
+          description: Oldest first.
+          items: { $ref: "#/components/schemas/CommentItem" }
+        settled:
+          type: integer
+          description: With open=1 only, how many settled comments were left out.
+    CommentResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Only on addComment, the id the server generated.
+        thought: { type: string }
+        comment: { type: string }
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+  responses:
+    Error:
+      description: >-
+        401 bad or revoked key, 404 task or comment not found (or the task is not
+        synced yet), 409 ambiguous task id (send fileId), 400 empty body.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+security:
+  - planKey: []
+paths:
+  /api/plan/{todoId}:
+    get:
+      operationId: getThought
+      summary: Read the task's thought (the plan).
+      x-openai-isConsequential: false
+      parameters:
+        - $ref: "#/components/parameters/todoId"
+        - $ref: "#/components/parameters/fileId"
+      responses:
+        "200":
+          description: The thought.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Thought" }
+        default: { $ref: "#/components/responses/Error" }
+  /api/plan/{todoId}/comment:
+    get:
+      operationId: listComments
+      summary: Read the thought and its comments, oldest first.
+      x-openai-isConsequential: false
+      parameters:
+        - $ref: "#/components/parameters/todoId"
+        - $ref: "#/components/parameters/fileId"
+        - name: open
+          in: query
+          required: false
+          description: Send "1" to leave out settled comments (Done notes, fully resolved requests).
+          schema: { type: string, enum: ["1"] }
+      responses:
+        "200":
+          description: The thread.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Thread" }
+        default: { $ref: "#/components/responses/Error" }
+    post:
+      operationId: addComment
+      summary: Append a new comment; the server picks its id.
+      x-openai-isConsequential: false
+      parameters:
+        - $ref: "#/components/parameters/todoId"
+        - $ref: "#/components/parameters/fileId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentBody" }
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommentResult" }
+        default: { $ref: "#/components/responses/Error" }
+  /api/plan/{todoId}/comment/{commentId}:
+    get:
+      operationId: getComment
+      summary: Read one comment.
+      x-openai-isConsequential: false
+      parameters:
+        - $ref: "#/components/parameters/todoId"
+        - $ref: "#/components/parameters/commentId"
+        - $ref: "#/components/parameters/fileId"
+      responses:
+        "200":
+          description: The comment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommentResult" }
+        default: { $ref: "#/components/responses/Error" }
+    put:
+      operationId: putComment
+      summary: Create the comment with this id, or replace its body.
+      x-openai-isConsequential: false
+      parameters:
+        - $ref: "#/components/parameters/todoId"
+        - $ref: "#/components/parameters/commentId"
+        - $ref: "#/components/parameters/fileId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentBody" }
+      responses:
+        "200":
+          description: Replaced.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommentResult" }
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommentResult" }
+        default: { $ref: "#/components/responses/Error" }
+    patch:
+      operationId: editComment
+      summary: Replace the body of an existing comment (404 if it does not exist).
+      x-openai-isConsequential: false
+      parameters:
+        - $ref: "#/components/parameters/todoId"
+        - $ref: "#/components/parameters/commentId"
+        - $ref: "#/components/parameters/fileId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentBody" }
+      responses:
+        "200":
+          description: Edited.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommentResult" }
+        default: { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteComment
+      summary: Delete a comment. Not undoable.
+      x-openai-isConsequential: true
+      parameters:
+        - $ref: "#/components/parameters/todoId"
+        - $ref: "#/components/parameters/commentId"
+        - $ref: "#/components/parameters/fileId"
+      responses:
+        "204":
+          description: Deleted.
+        default: { $ref: "#/components/responses/Error" }

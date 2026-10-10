@@ -3,16 +3,18 @@
 import { ChevronDown, Pencil, Plus, X } from "lucide-react";
 import { useState } from "react";
 
+import { useConfirm } from "@/components/customs/ConfirmDialog";
 import { PromptDialog, type PromptState } from "@/components/customs/PromptDialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu-extras";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/cn";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import {
   addProgressOption,
@@ -25,18 +27,19 @@ import { renameProgressValue, updateTodo } from "@/stores/slices/todoSlice";
 const DEFAULTS = new Set<string>(DEFAULT_PROGRESS_OPTIONS);
 
 const PROGRESS_COLOR: Record<string, string> = {
-  done: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  inprogress: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
-  "in progress": "bg-blue-500/15 text-blue-600 dark:text-blue-400",
-  "not started": "bg-muted text-muted-foreground",
+  done: "text-app-success border tint-current",
+  inprogress: "text-app-accent border tint-current",
+  "in progress": "text-app-accent border tint-current",
+  "not started": "bg-app-sidebar text-app-dim",
 };
 
 function colorFor(p: string): string {
-  return PROGRESS_COLOR[p.toLowerCase()] ?? "bg-violet-500/15 text-violet-600 dark:text-violet-400";
+  return PROGRESS_COLOR[p.toLowerCase()] ?? "text-app-dim border tint-current";
 }
 
 export function ProgressCell({ id, progress }: { id: string; progress: string | null }) {
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
   const options = useAppSelector((s) => s.settings.progressOptions);
   const [draft, setDraft] = useState("");
   const [prompt, setPrompt] = useState<PromptState>({ open: false, title: "" });
@@ -76,25 +79,21 @@ export function ProgressCell({ id, progress }: { id: string; progress: string | 
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => e.stopPropagation()}
-              className="h-7 w-full justify-between gap-1 px-2 text-xs font-normal"
-            >
-              {progress ? (
-                <span className={cn("rounded-md px-1.5 py-0.5", colorFor(progress))}>
-                  {progress}
-                </span>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-              <ChevronDown className="size-3 text-muted-foreground" />
-            </Button>
-          }
-        />
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => e.stopPropagation()}
+            className="h-7 w-full justify-between gap-1 px-2 text-xs font-normal"
+          >
+            {progress ? (
+              <span className={cn("rounded-md px-1.5 py-0.5", colorFor(progress))}>{progress}</span>
+            ) : (
+              <span className="text-app-dim">—</span>
+            )}
+            <ChevronDown className="size-3 text-app-dim" />
+          </Button>
+        </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
           {options.map((p) => (
             <DropdownMenuItem
@@ -113,7 +112,7 @@ export function ProgressCell({ id, progress }: { id: string; progress: string | 
                       e.stopPropagation();
                       openRename(p);
                     }}
-                    className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="rounded p-0.5 text-app-dim hover:bg-app-hover hover:text-app-bright"
                     aria-label={`Rename ${p}`}
                   >
                     <Pencil className="size-3" />
@@ -122,12 +121,20 @@ export function ProgressCell({ id, progress }: { id: string; progress: string | 
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      dispatch(removeProgressOption(p));
-                      if (progress === p) {
-                        setProgress(null);
-                      }
+                      confirm({
+                        title: `Delete progress "${p}"?`,
+                        description: "It will be removed from the progress options.",
+                        confirmLabel: "Delete",
+                        destructive: true,
+                        onConfirm: () => {
+                          dispatch(removeProgressOption(p));
+                          if (progress === p) {
+                            setProgress(null);
+                          }
+                        },
+                      });
                     }}
-                    className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    className="rounded p-0.5 text-app-dim hover:bg-app-error/10 hover:text-app-error"
                     aria-label={`Remove ${p}`}
                   >
                     <X className="size-3" />
@@ -144,7 +151,7 @@ export function ProgressCell({ id, progress }: { id: string; progress: string | 
           )}
           <DropdownMenuSeparator />
           <div className="flex items-center gap-1 px-1.5 py-1" onClick={(e) => e.stopPropagation()}>
-            <input
+            <Input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -155,7 +162,6 @@ export function ProgressCell({ id, progress }: { id: string; progress: string | 
                 e.stopPropagation();
               }}
               placeholder="Add new..."
-              className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             />
             <Button size="icon-sm" variant="ghost" onClick={addNew} aria-label="Add progress">
               <Plus className="size-3.5" />

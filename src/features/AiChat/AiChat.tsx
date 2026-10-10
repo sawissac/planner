@@ -2,9 +2,9 @@
 
 import {
   Bot,
+  BrainCircuit,
   Check,
   ChevronsUpDown,
-  KeyRound,
   Lightbulb,
   RotateCcw,
   Sparkles,
@@ -30,6 +30,7 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
+import { useConfirm } from "@/components/customs/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -42,6 +43,7 @@ import {
 } from "@/components/ui/command";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -50,111 +52,31 @@ import {
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  getApiKey,
-  listOllamaModels,
-  listOpenrouterFreeModels,
-  PROVIDER_KEY_URL,
-  PROVIDER_LABEL,
-  setApiKey,
-} from "@/lib/ai/providers";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AI_PROVIDERS } from "@/features/AiChat/AiProviderSettings";
+import { useAuth } from "@/hooks/useAuth";
+import { keyName, listKeys } from "@/lib/ai/key-store";
+import { listOpenrouterFreeModels, PROVIDER_LABEL } from "@/lib/ai/providers";
 import { retryChat, runChat } from "@/lib/ai/runner";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
+import * as ui from "@/lib/ui-styles";
 import { useAppDispatch, useAppSelector, useAppStore } from "@/stores/hooks";
 import {
   clearChat,
   getAllModels,
-  type ProviderId,
+  resolveKey,
+  selectKey,
+  setKeys,
   setModel,
-  setOllamaModels,
   setOpen,
   setOpenrouterModels,
+  showAiProviders,
 } from "@/stores/slices/aiSlice";
-
-const PROVIDERS: ProviderId[] = ["gemini", "huggingface", "openrouter", "ollama"];
-
-function ApiKeysForm({ onClose }: { onClose: () => void }) {
-  const [keys, setKeys] = useState<Record<ProviderId, string>>(() => ({
-    gemini: getApiKey("gemini"),
-    ollama: getApiKey("ollama"),
-    huggingface: getApiKey("huggingface"),
-    openrouter: getApiKey("openrouter"),
-  }));
-
-  const save = () => {
-    for (const p of PROVIDERS) {
-      setApiKey(p, keys[p].trim());
-    }
-    onClose();
-  };
-
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>AI providers</DialogTitle>
-        <DialogDescription>
-          Keys / endpoints stored in your browser localStorage. Ollama runs locally and needs no key
-          — just a base URL.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="flex flex-col gap-3">
-        {PROVIDERS.map((p) => {
-          const isOllama = p === "ollama";
-          return (
-            <div key={p} className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">{PROVIDER_LABEL[p]}</label>
-                <a
-                  href={PROVIDER_KEY_URL[p]}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-primary hover:underline"
-                >
-                  {isOllama ? "Install" : "Get key"}
-                </a>
-              </div>
-              <input
-                type={isOllama ? "text" : "password"}
-                autoComplete="off"
-                value={keys[p]}
-                onChange={(e) => setKeys((s) => ({ ...s, [p]: e.target.value }))}
-                placeholder={
-                  isOllama ? "http://localhost:11434 (default)" : `${PROVIDER_LABEL[p]} API key`
-                }
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
-              {isOllama && (
-                <p className="text-xs text-muted-foreground">
-                  Base URL of your local Ollama server. Leave blank for default. Start it with{" "}
-                  <code className="rounded bg-muted px-1">ollama serve</code>.
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <DialogFooter>
-        <Button variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button onClick={save}>Save</Button>
-      </DialogFooter>
-    </>
-  );
-}
-
-function ApiKeysDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>{open && <ApiKeysForm onClose={() => onOpenChange(false)} />}</DialogContent>
-    </Dialog>
-  );
-}
 
 const EXAMPLE_PROMPTS = [
   "Plan a 3-day trip to Chiang Mai for me and Alice.",
@@ -183,7 +105,7 @@ function ExamplePromptsDialog({
           <DialogTitle>Example prompts</DialogTitle>
           <DialogDescription>Pick one to fill the chat box. Edit before sending.</DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-2 max-h-[50vh] overflow-auto">
+        <DialogBody className="flex max-h-[50vh] flex-col gap-2">
           {EXAMPLE_PROMPTS.map((p) => (
             <button
               key={p}
@@ -192,12 +114,12 @@ function ExamplePromptsDialog({
                 onPick(p);
                 onOpenChange(false);
               }}
-              className="text-left text-sm rounded-md border border-border bg-background hover:bg-accent px-3 py-2 transition-colors"
+              className={cn(ui.row, "text-[12px] text-app-text")}
             >
               {p}
             </button>
           ))}
-        </div>
+        </DialogBody>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Close
@@ -214,33 +136,24 @@ export function AiChat() {
   const isStreaming = useAppSelector((s) => s.ai.isStreaming);
   const error = useAppSelector((s) => s.ai.error);
   const modelId = useAppSelector((s) => s.ai.modelId);
-  const ollamaModels = useAppSelector((s) => s.ai.ollamaModels);
   const openrouterModels = useAppSelector((s) => s.ai.openrouterModels);
+  const keys = useAppSelector((s) => s.ai.keys);
+  const selectedKeyIds = useAppSelector((s) => s.ai.selectedKeyIds);
+  const defaultProvider = useAppSelector((s) => s.ai.defaultProvider);
+  const { user } = useAuth();
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
   const store = useAppStore();
   const [input, setInput] = useState("");
-  const [keysOpen, setKeysOpen] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
 
-  const allModels = useMemo(
-    () => getAllModels(ollamaModels, openrouterModels),
-    [ollamaModels, openrouterModels],
-  );
+  const allModels = useMemo(() => getAllModels(openrouterModels), [openrouterModels]);
   const model = useMemo(
     () => allModels.find((m) => m.id === modelId) ?? allModels[0],
     [allModels, modelId],
   );
-
-  const refreshOllama = async () => {
-    try {
-      const names = await listOllamaModels();
-      dispatch(setOllamaModels(names));
-    } catch {
-      dispatch(setOllamaModels([]));
-    }
-  };
 
   const refreshOpenrouter = async () => {
     try {
@@ -252,9 +165,22 @@ export function AiChat() {
   };
 
   useEffect(() => {
-    void refreshOllama();
     void refreshOpenrouter();
   }, []);
+
+  // Reload keys whenever the account changes: sign-in swaps browser keys for
+  // the account's (moving any browser keys up first), sign-out swaps back.
+  useEffect(() => {
+    listKeys()
+      .then((k) => dispatch(setKeys(k)))
+      .catch(() => dispatch(setKeys([])));
+  }, [dispatch, user?.id]);
+
+  // Default provider's models first in the picker.
+  const pickerProviders = [defaultProvider, ...AI_PROVIDERS.filter((p) => p !== defaultProvider)];
+
+  const providerKeys = keys.filter((k) => k.provider === model.provider);
+  const activeKey = resolveKey({ keys, selectedKeyIds }, model.provider);
 
   const handleSubmit = async (message: PromptInputMessage) => {
     const text = message.text?.trim();
@@ -303,15 +229,15 @@ export function AiChat() {
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 32 }}
             className={cn(
-              "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(96vw,640px)] flex flex-col rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-hidden",
+              "fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(96vw,640px)] flex flex-col rounded-2xl border border-app-border bg-app-panel text-app-bright overflow-hidden",
               visibleMessages.length === 0 ? "max-h-[70vh]" : "h-[70vh]",
             )}
           >
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
-              <Sparkles className="size-4 text-primary" />
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-app-border shrink-0">
+              <Sparkles className="size-4 text-app-accent" />
               <Popover open={modelPickerOpen} onOpenChange={setModelPickerOpen}>
                 <PopoverTrigger
-                  className="inline-flex items-center gap-1 h-7 px-2 text-xs rounded-md hover:bg-accent"
+                  className="inline-flex items-center gap-1 h-7 px-2 text-xs rounded-md hover:bg-app-hover"
                   aria-label="Select model"
                 >
                   <span className="truncate max-w-[16rem]">{model.label}</span>
@@ -322,23 +248,16 @@ export function AiChat() {
                     <CommandInput placeholder="Search models…" />
                     <CommandList className="max-h-72">
                       <CommandEmpty>No matching model.</CommandEmpty>
-                      {PROVIDERS.map((p, idx) => {
+                      {pickerProviders.map((p, idx) => {
                         const models = allModels.filter((m) => m.provider === p);
                         return (
                           <div key={p}>
                             {idx > 0 && <CommandSeparator />}
-                            <CommandGroup heading={PROVIDER_LABEL[p]}>
-                              {models.length === 0 && p === "ollama" && (
-                                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                                  No models. Run{" "}
-                                  <code className="rounded bg-muted px-1">
-                                    ollama pull &lt;name&gt;
-                                  </code>
-                                  .
-                                </div>
-                              )}
+                            <CommandGroup
+                              heading={`${PROVIDER_LABEL[p]}${p === defaultProvider ? " · default" : ""}`}
+                            >
                               {models.length === 0 && p === "openrouter" && (
-                                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                <div className="px-2 py-1.5 text-xs text-app-dim">
                                   Loading free models…
                                 </div>
                               )}
@@ -369,20 +288,62 @@ export function AiChat() {
                   </Command>
                 </PopoverContent>
               </Popover>
+              {providerKeys.length > 0 ? (
+                <Select
+                  value={activeKey?.id}
+                  onValueChange={(id) => dispatch(selectKey({ provider: model.provider, id }))}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    aria-label="API key"
+                    title="API key used for this chat"
+                    className="h-7 max-w-[10rem] gap-1 border-0 bg-transparent px-2 text-xs hover:bg-app-hover"
+                    data-testid="ai-chat-key-select"
+                  >
+                    <BrainCircuit className="size-3" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {providerKeys.map((k) => (
+                      <SelectItem key={k.id} value={k.id} className="text-xs">
+                        {keyName(k, keys)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => dispatch(showAiProviders())}
+                  className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs text-app-warn hover:bg-app-hover"
+                  data-testid="ai-chat-add-key"
+                >
+                  <BrainCircuit className="size-3" />
+                  Add {PROVIDER_LABEL[model.provider]} key
+                </button>
+              )}
               <div className="flex-1" />
               <Button
                 size="icon-sm"
                 variant="ghost"
-                onClick={() => setKeysOpen(true)}
-                aria-label="API keys"
-                title="API keys"
+                onClick={() => dispatch(showAiProviders())}
+                aria-label="AI provider settings"
+                title="AI provider settings"
               >
-                <KeyRound />
+                <BrainCircuit />
               </Button>
               <Button
                 size="icon-sm"
                 variant="ghost"
-                onClick={() => dispatch(clearChat())}
+                onClick={() =>
+                  confirm({
+                    title: "Clear chat?",
+                    description: "All messages in this chat will be deleted.",
+                    confirmLabel: "Clear",
+                    destructive: true,
+                    onConfirm: () => dispatch(clearChat()),
+                  })
+                }
                 disabled={messages.length === 0}
                 aria-label="Clear chat"
                 title="Clear chat"
@@ -408,8 +369,8 @@ export function AiChat() {
                     title="Plan something"
                     description={'Example: "Plan a 3-day trip to Chiang Mai for me and Alice."'}
                   >
-                    <Bot className="size-8 opacity-40 text-muted-foreground" />
-                    <p className="text-sm max-w-sm text-muted-foreground">
+                    <Bot className="size-8 opacity-40 text-app-dim" />
+                    <p className="text-sm max-w-sm text-app-dim">
                       Plan something. Example: &quot;Plan a 3-day trip to Chiang Mai for me and
                       Alice.&quot;
                     </p>
@@ -436,14 +397,14 @@ export function AiChat() {
                 })}
 
                 {error && (
-                  <div className="text-xs text-destructive bg-destructive/10 rounded-md p-2 flex items-start justify-between gap-2">
+                  <div className="text-xs text-app-error bg-app-error/10 rounded-md p-2 flex items-start justify-between gap-2">
                     <span className="flex-1">{error}</span>
                     {canRetry && !isStreaming && (
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={retry}
-                        className="h-6 px-2 text-xs text-destructive hover:bg-destructive/10"
+                        className="h-6 px-2 text-xs text-app-error hover:bg-app-error/10"
                         aria-label="Retry"
                       >
                         <RotateCcw className="size-3" />
@@ -456,7 +417,7 @@ export function AiChat() {
               <ConversationScrollButton />
             </Conversation>
 
-            <div className="p-2 border-t border-border shrink-0">
+            <div className="p-2 border-t border-app-border shrink-0">
               <PromptInput onSubmit={handleSubmit}>
                 <PromptInputBody>
                   <PromptInputTextarea
@@ -487,16 +448,6 @@ export function AiChat() {
           </motion.div>
         )}
       </AnimatePresence>
-      <ApiKeysDialog
-        open={keysOpen}
-        onOpenChange={(o) => {
-          setKeysOpen(o);
-          if (!o) {
-            void refreshOllama();
-            void refreshOpenrouter();
-          }
-        }}
-      />
       <ExamplePromptsDialog open={examplesOpen} onOpenChange={setExamplesOpen} onPick={setInput} />
     </>
   );

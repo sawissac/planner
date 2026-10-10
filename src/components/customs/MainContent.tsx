@@ -5,18 +5,18 @@ import {
   CalendarRange,
   ChartArea,
   Columns3,
+  Ellipsis,
   Keyboard,
   LayoutList,
   Maximize2,
   Minimize2,
   NotebookPen,
-  PanelRight,
+  PanelLeft,
   Settings,
   UsersRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { AccentPicker } from "@/components/customs/AccentPicker";
 import { AnalyticsChart } from "@/components/customs/AnalyticsChart";
 import {
   DateRangeFilter,
@@ -24,8 +24,8 @@ import {
   presetRange,
 } from "@/components/customs/DateRangeFilter";
 import { PageHeading } from "@/components/customs/PageHeading";
-import { TitleStyleControls } from "@/components/customs/TitleFontDropdown";
 import { preloadThoughtEditor } from "@/components/customs/TodoRowActions";
+import { ToolbarTip } from "@/components/customs/ToolbarTip";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -39,17 +39,62 @@ import { ThoughtsView } from "@/features/ThoughtsView/ThoughtsView";
 import { TimelineView } from "@/features/TimelineView/TimelineView";
 import { TodoTable } from "@/features/TodoTable/TodoTable";
 import { UserTable } from "@/features/UserTable/UserTable";
+import { cn } from "@/lib/cn";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import { setActiveTab, setBoardCompact, setFocusMode } from "@/stores/slices/settingsSlice";
+
+/** Square icon segment sized to sit flush inside a {@link TOOL_GROUP}. */
+const TOOL_BTN =
+  "size-7.5 rounded-none border-0 text-app-dim hover:bg-app-hover hover:text-app-bright focus-visible:ring-inset data-active:bg-app-accent-faint data-active:text-app-accent";
+
+/** Bordered button-group cluster; children are split by hairlines. */
+const TOOL_GROUP =
+  "flex h-8 shrink-0 items-stretch divide-x divide-app-border overflow-hidden rounded-md border border-app-border bg-app-bg";
+
+/** The five views, with the copy their tooltips show. */
+const VIEW_TABS = [
+  {
+    value: "todo",
+    icon: BadgeCheck,
+    title: "Tasks",
+    hint: "Home base. Capture it, sort it, check it off.",
+  },
+  {
+    value: "board",
+    icon: Columns3,
+    title: "Board",
+    hint: "Drag cards across columns as the work moves.",
+  },
+  {
+    value: "analytics",
+    icon: ChartArea,
+    title: "Analytics",
+    hint: "Trends and heatmaps of what actually got done.",
+  },
+  {
+    value: "timeline",
+    icon: CalendarRange,
+    title: "Timeline",
+    hint: "Every group stretched across the calendar.",
+  },
+  {
+    value: "users",
+    icon: UsersRound,
+    title: "People",
+    hint: "Who's on the hook for what, and how it's going.",
+  },
+] as const;
 
 export function MainContent({
   onToggleSidebar,
   sidebarOpen,
   onOpenShortcuts,
+  onOpenSettings,
 }: {
   onToggleSidebar?: () => void;
   sidebarOpen?: boolean;
   onOpenShortcuts?: () => void;
+  onOpenSettings?: () => void;
 } = {}) {
   const dispatch = useAppDispatch();
   const tab = useAppSelector((s) => s.settings.activeTab);
@@ -64,45 +109,26 @@ export function MainContent({
   const boardCompact = useAppSelector((s) => s.settings.boardCompact);
 
   const tabList = (
-    <TabsList className="w-max shrink-0">
-      <TabsTrigger value="todo" className="gap-1">
-        <span title="Todo" className="flex items-center gap-1">
-          <BadgeCheck className="size-4" />
-        </span>
-      </TabsTrigger>
-      <TabsTrigger value="board" className="gap-1">
-        <span title="Board" className="flex items-center gap-1">
-          <Columns3 className="size-4" />
-        </span>
-      </TabsTrigger>
-      <TabsTrigger value="analytics" className="gap-1">
-        <span title="Analytics" className="flex items-center gap-1">
-          <ChartArea className="size-4" />
-        </span>
-      </TabsTrigger>
-      <TabsTrigger value="timeline" className="gap-1">
-        <span title="Timeline" className="flex items-center gap-1">
-          <CalendarRange className="size-4" />
-        </span>
-      </TabsTrigger>
-      <TabsTrigger value="users" className="gap-1">
-        <span title="Users" className="flex items-center gap-1">
-          <UsersRound className="size-4" />
-        </span>
-      </TabsTrigger>
+    <TabsList variant="segmented" className="w-max shrink-0">
+      {VIEW_TABS.map(({ value, icon: Icon, title, hint }) => (
+        <ToolbarTip key={value} icon={Icon} title={title} hint={hint}>
+          <TabsTrigger value={value} aria-label={title} data-testid={`main-tab-${value}`}>
+            <Icon className="size-4" />
+          </TabsTrigger>
+        </ToolbarTip>
+      ))}
       <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <button
-              type="button"
-              title="Options"
-              aria-label="Options"
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium text-muted-foreground transition-all hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <Settings className="size-4" />
-            </button>
-          }
-        />
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label="More"
+            className={TOOL_BTN}
+            data-testid="main-more-menu-trigger"
+          >
+            <Ellipsis className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto">
           <DropdownMenuItem
             onClick={() => setTab("thoughts")}
@@ -114,49 +140,83 @@ export function MainContent({
             <NotebookPen className="size-4" />
             Thought Editor
           </DropdownMenuItem>
+          {onOpenSettings && (
+            <DropdownMenuItem onClick={onOpenSettings} className="whitespace-nowrap">
+              <Settings className="size-4" />
+              Settings
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </TabsList>
   );
 
   const focusSwitch = tab === "todo" && (
-    <Button
-      size="icon-sm"
-      variant={focusMode ? "secondary" : "ghost"}
-      onClick={() => dispatch(setFocusMode(!focusMode))}
-      aria-label={focusMode ? "Disable focus mode" : "Enable focus mode"}
-      aria-pressed={focusMode}
-      title="Focus mode (Shift+Z)"
-      className={focusMode ? "text-primary" : ""}
+    <ToolbarTip
+      icon={LayoutList}
+      title={focusMode ? "Leave focus mode" : "Focus mode"}
+      hint={
+        focusMode
+          ? "Bring the filters and done tasks back."
+          : "Mute the noise — only open tasks stay on stage."
+      }
+      keys={["Shift", "Z"]}
     >
-      <LayoutList className="size-4" />
-    </Button>
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        data-active={focusMode || undefined}
+        onClick={() => dispatch(setFocusMode(!focusMode))}
+        aria-label={focusMode ? "Disable focus mode" : "Enable focus mode"}
+        aria-pressed={focusMode}
+        className={TOOL_BTN}
+      >
+        <LayoutList className="size-4" />
+      </Button>
+    </ToolbarTip>
   );
 
   const boardCompactSwitch = tab === "board" && (
-    <Button
-      size="icon-sm"
-      variant={boardCompact ? "secondary" : "ghost"}
-      onClick={() => dispatch(setBoardCompact(!boardCompact))}
-      aria-label={boardCompact ? "Show card details" : "Show titles only"}
-      aria-pressed={boardCompact}
+    <ToolbarTip
+      icon={boardCompact ? Maximize2 : Minimize2}
       title={boardCompact ? "Show details" : "Compact cards"}
-      className={boardCompact ? "text-primary" : ""}
+      hint={
+        boardCompact
+          ? "Unfold every card — dates, people and progress."
+          : "Titles only, so the whole board fits in one glance."
+      }
     >
-      {boardCompact ? <Maximize2 className="size-4" /> : <Minimize2 className="size-4" />}
-    </Button>
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        data-active={boardCompact || undefined}
+        onClick={() => dispatch(setBoardCompact(!boardCompact))}
+        aria-label={boardCompact ? "Show card details" : "Show titles only"}
+        aria-pressed={boardCompact}
+        className={TOOL_BTN}
+      >
+        {boardCompact ? <Maximize2 className="size-4" /> : <Minimize2 className="size-4" />}
+      </Button>
+    </ToolbarTip>
   );
 
   const shortcutsBtn = onOpenShortcuts && (
-    <Button
-      size="icon-sm"
-      variant="ghost"
-      onClick={onOpenShortcuts}
-      aria-label="Keyboard shortcuts"
-      title="Keyboard shortcuts (?)"
+    <ToolbarTip
+      icon={Keyboard}
+      title="Keyboard shortcuts"
+      hint="Leave the mouse behind — every key worth knowing."
+      keys={["?"]}
     >
-      <Keyboard className="size-4" />
-    </Button>
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        onClick={onOpenShortcuts}
+        aria-label="Keyboard shortcuts"
+        className={TOOL_BTN}
+      >
+        <Keyboard className="size-4" />
+      </Button>
+    </ToolbarTip>
   );
 
   const sidebarBtn = onToggleSidebar && (
@@ -167,7 +227,7 @@ export function MainContent({
       aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
       title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
     >
-      <PanelRight className={sidebarOpen ? "" : "rotate-180"} />
+      <PanelLeft className={sidebarOpen ? "" : "rotate-180"} />
     </Button>
   );
 
@@ -175,23 +235,35 @@ export function MainContent({
     <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <img src="/logo.svg" alt="Logo" className="size-7 shrink-0" />
+          <div className="shrink-0 lg:hidden">{sidebarBtn}</div>
           <div className="min-w-0 flex-1">
             <PageHeading />
           </div>
-          <div className="shrink-0 lg:hidden">{sidebarBtn}</div>
         </div>
         <div className="-mx-3 px-3 overflow-x-auto">
-          <div className="flex items-center gap-2 w-max pb-1">
+          {/* Button-group clusters: view tabs | view tools | help */}
+          <div
+            role="toolbar"
+            aria-label="View"
+            data-testid="main-toolbar"
+            className="mb-1 flex w-max items-center gap-2"
+          >
             {tabList}
-            {focusSwitch}
-            {boardCompactSwitch}
-            {tab === "todo" && <TitleStyleControls compact />}
-            <AccentPicker compact />
-            {(tab === "analytics" || tab === "board") && (
-              <DateRangeFilter value={range} onChange={setRange} compact />
+            {(focusSwitch || boardCompactSwitch || tab === "analytics" || tab === "board") && (
+              <div className={TOOL_GROUP}>
+                {focusSwitch}
+                {boardCompactSwitch}
+                {(tab === "analytics" || tab === "board") && (
+                  <DateRangeFilter
+                    value={range}
+                    onChange={setRange}
+                    compact
+                    triggerClassName={cn(TOOL_BTN, "bg-transparent")}
+                  />
+                )}
+              </div>
             )}
-            {shortcutsBtn}
+            {shortcutsBtn && <div className={TOOL_GROUP}>{shortcutsBtn}</div>}
           </div>
         </div>
       </div>
