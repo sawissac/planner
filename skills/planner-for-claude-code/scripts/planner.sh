@@ -8,12 +8,19 @@
 # File id: --file <id> or $PLANNER_FILE_ID (needed only when a task id
 # exists in more than one file; the API answers 409 otherwise).
 # Agent name shown with live progress (`event`): $PLANNER_AGENT (default
-# "Claude Code").
+# "Cursor" when installed under .cursor/, else "Claude Code").
 set -euo pipefail
 
 BASE="${PLANNER_URL:-http://localhost:3000}"
-# Repo root: this script lives in <root>/.claude/skills/<skill>/scripts/.
+# Root: this script lives in <root>/.claude/skills/<skill>/scripts/ (or
+# <root>/.cursor/skills/<skill>/scripts/), where <root> is $HOME for a global
+# install (~/.claude/planner-token) or a repo for a per-project one
+# (<repo>/.claude/planner-token).
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+case "${BASH_SOURCE[0]}" in
+  */.cursor/*) AGENT="${PLANNER_AGENT:-Cursor}" ;;
+  *) AGENT="${PLANNER_AGENT:-Claude Code}" ;;
+esac
 TOKEN_FILE="${PLANNER_TOKEN_FILE:-$ROOT/.claude/planner-token}"
 FILE_ID="${PLANNER_FILE_ID:-}"
 COMMENT_ID=""
@@ -174,7 +181,8 @@ case "$cmd" in
       -) t="$(extract_token "$(cat)")" ;;
       *) t="$(extract_token "$1")" ;;
     esac
-    if [[ "$TOKEN_FILE" == "$ROOT"/* ]] && ! git -C "$ROOT" check-ignore -q "$TOKEN_FILE"; then
+    if [[ "$TOKEN_FILE" == "$ROOT"/* ]] && git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+      && ! git -C "$ROOT" check-ignore -q "$TOKEN_FILE"; then
       die "$TOKEN_FILE is not git-ignored; refusing to save a key there"
     fi
     mkdir -p "$(dirname "$TOKEN_FILE")"
@@ -211,7 +219,7 @@ case "$cmd" in
     case "$2" in start|step|ask|done|fail) ;; *) usage ;; esac
     text="${3:-}"
     [[ "$text" == "-" ]] && text="$(cat)"
-    b="$(jq -n --arg t "$2" --arg x "$text" --arg a "${PLANNER_AGENT:-Claude Code}" --arg c "$COMMENT_ID" \
+    b="$(jq -n --arg t "$2" --arg x "$text" --arg a "$AGENT" --arg c "$COMMENT_ID" \
       '{type: $t, text: $x, agent: $a} + (if $c == "" then {} else {commentId: $c} end)')"
     u="$BASE/api/plan/$(urlencode "$1")/event"
     [[ -n "$FILE_ID" ]] && u="$u?fileId=$(urlencode "$FILE_ID")"

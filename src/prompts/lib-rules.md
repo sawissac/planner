@@ -35,7 +35,6 @@ Before generating code, you must:
 
 1. Break down the feature requirements
 2. Map each part to the required library:
-
    - Global state → Redux Toolkit
    - API calls → React Query
    - Forms → React Form
@@ -43,4 +42,5 @@ Before generating code, you must:
    - Charts → D3
    - Icons → Lucide
    - Client persistence → localForage (wired to Redux)
+
 3. Only then proceed to implementation

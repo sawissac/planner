@@ -26,9 +26,30 @@ export type RunStatus = "running" | "waiting" | "done" | "failed";
  * - `result` — its one-line outcome.
  * - `error`  — why it stopped.
  */
-export type StepKind = "info" | "step" | "ask" | "result" | "error";
+export type StepKind = "info" | "step" | "ask" | "permission" | "result" | "error";
 
-export type RunStep = { kind: StepKind; text: string; at: number };
+/** `permission` steps also carry the tool and the approval they belong to. */
+export type RunStep = {
+  kind: StepKind;
+  text: string;
+  at: number;
+  tool?: string;
+  requestId?: string;
+};
+
+/**
+ * A tool call the agent is waiting on the user to Allow or Deny (Run agent
+ * runs only — the bridge pauses it). Answered through the bridge
+ * (`answerPermission`), so only on the computer running the agent.
+ */
+export type Approval = {
+  tool: string;
+  detail: string;
+  /** The bridge's id for the run, needed to answer. */
+  bridgeRunId: string;
+  state: "pending" | "allowed" | "denied";
+  at: number;
+};
 
 export type AgentRun = {
   runId: string;
@@ -40,6 +61,7 @@ export type AgentRun = {
   endedAt?: number;
   result?: string;
   steps?: Record<string, RunStep>;
+  approvals?: Record<string, Approval>;
 };
 
 /** Runs whose "finished" toast was already shown, so two panels don't both pop it. */

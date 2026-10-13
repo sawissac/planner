@@ -33,9 +33,10 @@ close the tunnel when you are done.
 
 ## Use
 
-Press **Copy context** on a task or comment in Planner and paste the curl into
+Press **Copy context** on a task or comment in Planner and paste the link into
 the GPT, alone or with "do this plan". It reads the ids from the URL and
-ignores the host and the `$(cat .claude/planner-token)` part.
+ignores the host. While it works, its progress shows live under the task's
+comments (as "ChatGPT") through the `reportProgress` action.
 
 `deleteComment` is marked consequential, so ChatGPT asks before running it.
 The other actions may ask once for permission to call your domain.
@@ -46,3 +47,6 @@ The other actions may ask once for permission to call your domain.
 - `404 Task not found.`: the task is not synced yet. Press **Sync** in Planner.
 - `409`: the task id is in more than one file; include the `fileId` from the
   copied URL.
+
+After changing `openapi.yaml` (for example when `reportProgress` was added),
+paste it into the action's **Schema** again.

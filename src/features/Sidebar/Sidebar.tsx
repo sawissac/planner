@@ -7,6 +7,7 @@ import {
   Download,
   Eraser,
   FileText,
+  FolderGit2,
   ListChecks,
   ListTodo,
   Maximize,
@@ -55,11 +56,17 @@ import {
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AiProviderSettings } from "@/features/AiChat/AiProviderSettings";
+import { ProjectPaths } from "@/features/ProjectPaths/ProjectPaths";
 import { cn } from "@/lib/cn";
 import { isTodoFile } from "@/lib/persistence";
 import * as ui from "@/lib/ui-styles";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
-import { setOpen as setAiOpen, setSidebarView, showAiProviders } from "@/stores/slices/aiSlice";
+import {
+  setOpen as setAiOpen,
+  setSidebarView,
+  showAiProviders,
+  showProjects,
+} from "@/stores/slices/aiSlice";
 import { setSidebarWidth } from "@/stores/slices/settingsSlice";
 import {
   clearAll,
@@ -296,6 +303,16 @@ export function AppSidebar({
           );
         })}
       </SidebarRailTablist>
+      <RailButton
+        label="Projects"
+        data-active={(open && view === "projects") || undefined}
+        onClick={() =>
+          dispatch(open && view === "projects" ? setSidebarView("files") : showProjects())
+        }
+        testId="sidebar-rail-projects"
+      >
+        <FolderGit2 />
+      </RailButton>
       <SidebarRailSpacer />
       <RailButton
         label="AI chat"
@@ -378,7 +395,9 @@ export function AppSidebar({
           </div>
         )}
 
-        {view === "ai" ? (
+        {view === "projects" ? (
+          <ProjectPaths onClose={() => dispatch(setSidebarView("files"))} />
+        ) : view === "ai" ? (
           <>
             <SidebarHeader>
               <SidebarTitle>AI providers</SidebarTitle>

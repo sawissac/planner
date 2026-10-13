@@ -36,7 +36,7 @@ export type ChatMessage = {
 };
 
 /** Which panel the sidebar pane shows; each has a tab on the rail. */
-export type SidebarView = "files" | "ai";
+export type SidebarView = "files" | "ai" | "projects";
 
 export type AiState = {
   open: boolean;
@@ -50,10 +50,10 @@ export type AiState = {
   selectedKeyIds: Partial<Record<ProviderId, string>>;
   /** Provider a chat starts on; picking it switches the chat model to it. */
   defaultProvider: ProviderId;
-  /** What the sidebar pane shows: the file list or AI provider settings. */
+  /** What the sidebar pane shows: the file list, AI provider settings or project folders. */
   sidebarView: SidebarView;
   /**
-   * Bumped by {@link showAiProviders}; the app shell
+   * Bumped by {@link showAiProviders} and {@link showProjects}; the app shell
    * watches it to open a closed sidebar. A counter, so asking twice still
    * re-opens.
    */
@@ -170,6 +170,11 @@ const aiSlice = createSlice({
       state.sidebarView = "ai";
       state.providersRequest += 1;
     },
+    /** Show the saved project folders in the sidebar, opening it if closed. */
+    showProjects(state) {
+      state.sidebarView = "projects";
+      state.providersRequest += 1;
+    },
     addMessage: {
       prepare(msg: Omit<ChatMessage, "id">) {
         return { payload: { ...msg, id: nanoid() } satisfies ChatMessage };
@@ -244,6 +249,7 @@ export const {
   setDefaultProvider,
   setSidebarView,
   showAiProviders,
+  showProjects,
 } = aiSlice.actions;
 
 export default aiSlice.reducer;

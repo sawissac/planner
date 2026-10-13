@@ -6,6 +6,7 @@ dist
 coverage
 pnpm-lock.yaml
 graphify-out
+execute-cli/claude/bun.lock
 public
 next-env.d.ts
 tsconfig.tsbuildinfo

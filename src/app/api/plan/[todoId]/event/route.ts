@@ -22,7 +22,20 @@ import { ApiError, authenticate, findTodo, handle, readJsonObject } from "@/lib/
  *   - `done`  — finished (`text`: one-line outcome); the app pops a dialog.
  *   - `fail`  — gave up or is blocked (`text`: why).
  *   A `step`/`ask`/`done`/`fail` with no running record starts one first.
- *   Responds `{ "status": "<run status>" }`.
+ * - Flags, for Planner's own Run agent dialog, which launches the agent:
+ *   - `"launch": true` on its `start` marks the run as launched; the agent's
+ *     own `start` then joins that run instead of replacing it, so the
+ *     "Starting…" line stays.
+ *   - `"ifActive": true` makes the event a no-op unless a run is active —
+ *     the dialog's closing `done`/`fail` after the agent already finished.
+ * - Approvals, relayed by the tab that launched the run (the bridge pauses
+ *   a tool call that needs permission until the user answers):
+ *   - `permission` `{ requestId, bridgeRunId, tool, text }` — the agent wants
+ *     to run `tool` (`text`: its command / file); status `waiting`. Kept
+ *     under `approvals/<requestId>` with `state: "pending"`.
+ *   - `permission-result` `{ requestId, allow }` — answered (or timed out):
+ *     the approval's `state` becomes `allowed` / `denied`; status `running`.
+ *   Responds `{ "status": "<run status>" }` (`"none"` for a skipped event).
  */
 
 type Ctx = RouteContext<"/api/plan/[todoId]/event">;
@@ -33,6 +46,8 @@ const KIND = {
   ask: "ask",
   done: "result",
   fail: "error",
+  permission: "permission",
+  "permission-result": "info",
 } as const;
 
 type EventType = keyof typeof KIND;
@@ -43,6 +58,8 @@ const STATUS: Record<EventType, string> = {
   ask: "waiting",
   done: "done",
   fail: "failed",
+  permission: "waiting",
+  "permission-result": "running",
 };
 
 const MAX_TEXT = 4000;
@@ -76,7 +93,10 @@ export async function POST(request: NextRequest, ctx: Ctx) {
 
     const type = body.type as EventType;
     if (!(typeof type === "string" && type in KIND)) {
-      throw new ApiError(400, "`type` must be one of start, step, ask, done, fail.");
+      throw new ApiError(
+        400,
+        "`type` must be one of start, step, ask, done, fail, permission, permission-result.",
+      );
     }
     const text = readString(body, "text", type === "done" ? MAX_RESULT : MAX_TEXT);
     if ((type === "step" || type === "ask") && !text) {
@@ -84,6 +104,15 @@ export async function POST(request: NextRequest, ctx: Ctx) {
     }
     const agent = readString(body, "agent", 40) || "Agent";
     const commentId = readString(body, "commentId", 200) || null;
+    const launch = body.launch === true;
+    const ifActive = body.ifActive === true;
+    const approval = type === "permission" || type === "permission-result";
+    const requestId = readString(body, "requestId", 100);
+    if (approval && !/^[\w-]+$/.test(requestId)) {
+      throw new ApiError(400, "`requestId` is required for approvals.");
+    }
+    const tool = readString(body, "tool", 100) || "tool";
+    const allow = body.allow === true;
 
     const path = ["agentRuns", api.userId, row.file_id, row.id];
     const start = () =>
@@ -92,22 +121,53 @@ export async function POST(request: NextRequest, ctx: Ctx) {
         agent,
         status: "running",
         commentId,
+        launched: launch,
         startedAt: SERVER_TIME,
         updatedAt: SERVER_TIME,
       });
 
+    let skipped = false;
     await write(async () => {
-      if (type === "start") {
+      const current = launch
+        ? null
+        : ((await rtdb("GET", path)) as { status?: string; launched?: boolean } | null);
+      const active = current?.status === "running" || current?.status === "waiting";
+      if (ifActive && !active) {
+        skipped = true;
+        return;
+      }
+      if (type === "start" && active && current?.launched) {
+        // The launched agent reporting in: keep the run, mark it joined.
+        await rtdb("PATCH", path, { launched: false });
+      } else if (type === "start" || !active) {
         await start();
-      } else {
-        const status = await rtdb("GET", [...path, "status"]);
-        if (status !== "running" && status !== "waiting") {
-          await start();
-        }
+      }
+      if (type === "permission") {
+        await rtdb("PUT", [...path, "approvals", requestId], {
+          tool,
+          detail: text,
+          bridgeRunId: readString(body, "bridgeRunId", 100),
+          state: "pending",
+          at: SERVER_TIME,
+        });
+      }
+      let stepText = text || (type === "start" ? "Started" : type === "done" ? "Done" : "");
+      if (type === "permission-result") {
+        const asked = (await rtdb("GET", [...path, "approvals", requestId])) as {
+          tool?: string;
+          detail?: string;
+        } | null;
+        await rtdb("PATCH", [...path, "approvals", requestId], {
+          state: allow ? "allowed" : "denied",
+        });
+        stepText = `${allow ? "Allowed" : "Denied"}: ${asked?.tool ?? tool}${
+          asked?.detail ? ` · ${asked.detail}` : ""
+        }${!allow && text ? ` (${text})` : ""}`.slice(0, MAX_TEXT);
       }
       await rtdb("POST", [...path, "steps"], {
         kind: KIND[type],
-        text: text || (type === "start" ? "Started" : type === "done" ? "Done" : ""),
+        text: stepText,
+        ...(type === "permission" ? { tool, requestId } : {}),
         at: SERVER_TIME,
       });
       const ended = type === "done" || type === "fail";
@@ -119,6 +179,6 @@ export async function POST(request: NextRequest, ctx: Ctx) {
       });
     });
 
-    return Response.json({ status: STATUS[type] });
+    return Response.json({ status: skipped ? "none" : STATUS[type] });
   });
 }

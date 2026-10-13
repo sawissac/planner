@@ -1,0 +1,15 @@
+{
+  "host": "127.0.0.1",
+  "port": 4319,
+  "token": "",
+  "allowedOrigins": ["http://localhost:3000", "https://planner-alpha-green.vercel.app"],
+  "timeoutMinutes": 30,
+  "approvalTimeoutMinutes": 10,
+  "claude": {
+    "bin": "claude",
+    "permissionMode": "acceptEdits",
+    "model": "",
+    "allowedTools": [],
+    "extraArgs": []
+  }
+}

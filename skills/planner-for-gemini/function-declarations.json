@@ -99,5 +99,26 @@
       },
       "required": ["todo_id", "comment_id"]
     }
+  },
+  {
+    "name": "report_progress",
+    "description": "Show what you are doing live under the task's comments. start: after reading the task, before any work. step: each plan item or open section. ask: when you stop to ask the user. done: after posting the Done comment or rewriting the comment. fail: when blocked. Every run ends with done or fail. If it fails, carry on; don't retry.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "todo_id": { "type": "string", "description": "Task id." },
+        "file_id": { "type": "string", "description": "File id from the pasted URL." },
+        "comment_id": {
+          "type": "string",
+          "description": "Comment id from the pasted URL, when the link was a comment."
+        },
+        "type": { "type": "string", "enum": ["start", "step", "ask", "done", "fail"] },
+        "text": {
+          "type": "string",
+          "description": "One plain line, never a key. start: what you are about to do. step: present tense. ask: the question. done: the one-line result. fail: why, and what the user should do. Required for step and ask."
+        }
+      },
+      "required": ["todo_id", "type"]
+    }
   }
 ]

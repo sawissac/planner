@@ -8,6 +8,7 @@ import { AgentRunPanel } from "@/components/customs/AgentRunPanel";
 import { useConfirm } from "@/components/customs/ConfirmDialog";
 import { CopyApiUrlButton } from "@/components/customs/CopyApiUrlButton";
 import { RefreshThoughtButton } from "@/components/customs/RefreshThoughtButton";
+import { RunAgentButton } from "@/components/customs/RunAgentButton";
 import { TokenCount } from "@/components/customs/TokenCount";
 import { Button } from "@/components/ui/button";
 import { useDraftSaver } from "@/hooks/useDraftSaver";
@@ -97,6 +98,7 @@ const CommentItem = memo(function CommentItem({
               data-testid={`thought-comment-${comment.id}-token-count`}
             />
             <CopyApiUrlButton todoId={todoId} commentId={comment.id} />
+            <RunAgentButton todoId={todoId} commentId={comment.id} />
             <button
               type="button"
               aria-label="Edit comment"

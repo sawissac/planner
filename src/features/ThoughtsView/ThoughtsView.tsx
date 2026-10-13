@@ -7,6 +7,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import { ConfirmDialog, type ConfirmState } from "@/components/customs/ConfirmDialog";
 import { CopyApiUrlButton } from "@/components/customs/CopyApiUrlButton";
 import { RefreshThoughtButton } from "@/components/customs/RefreshThoughtButton";
+import { RunAgentButton } from "@/components/customs/RunAgentButton";
 import { ThoughtComments } from "@/components/customs/ThoughtComments";
 import { TokenCount } from "@/components/customs/TokenCount";
 import { Button } from "@/components/ui/button";
@@ -124,6 +125,7 @@ const ThoughtEditorPane = forwardRef<
         </span>
         <RefreshThoughtButton showLabel data-testid="thought-refresh-button" />
         <CopyApiUrlButton todoId={todo.id} showLabel />
+        <RunAgentButton todoId={todo.id} showLabel />
       </div>
       <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-app-bg">
         {editorReady ? (

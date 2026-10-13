@@ -10,10 +10,13 @@
 // Env: GEMINI_API_KEY (required; aistudio.google.com → Get API key),
 // GEMINI_MODEL (default gemini-flash-latest), PLANNER_URL (default
 // http://localhost:3000), PLANNER_TOKEN or PLANNER_TOKEN_FILE (default
-// .claude/planner-token under the current directory, as written by
-// `planner.sh login --clipboard`). Needs Node 18+. No dependencies.
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+// .claude/planner-token under the current directory, else
+// ~/.claude/planner-token, as written by `planner.sh login --clipboard`).
+// Live progress shows in the app as "Gemini" (PLANNER_AGENT to change it).
+// Needs Node 18+. No dependencies.
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 
 const here = new URL(".", import.meta.url);
@@ -25,6 +28,7 @@ const functionDeclarations = JSON.parse(
 const geminiKey = process.env.GEMINI_API_KEY;
 const model = process.env.GEMINI_MODEL || "gemini-flash-latest";
 const base = (process.env.PLANNER_URL || "http://localhost:3000").replace(/\/+$/, "");
+const agent = process.env.PLANNER_AGENT || "Gemini";
 
 function die(message) {
   console.error(`planner-gemini: ${message}`);
@@ -35,7 +39,12 @@ function plannerToken() {
   if (process.env.PLANNER_TOKEN) {
     return process.env.PLANNER_TOKEN.trim();
   }
-  const file = resolve(process.env.PLANNER_TOKEN_FILE || ".claude/planner-token");
+  const local = resolve(".claude/planner-token");
+  const file = process.env.PLANNER_TOKEN_FILE
+    ? resolve(process.env.PLANNER_TOKEN_FILE)
+    : existsSync(local)
+      ? local
+      : join(homedir(), ".claude", "planner-token");
   try {
     return readFileSync(file, "utf8").trim();
   } catch {
@@ -69,7 +78,21 @@ const routes = {
   put_comment: ["PUT", (a) => [a.todo_id, "comment", a.comment_id], true],
   edit_comment: ["PATCH", (a) => [a.todo_id, "comment", a.comment_id], true],
   delete_comment: ["DELETE", (a) => [a.todo_id, "comment", a.comment_id]],
+  report_progress: ["POST", (a) => [a.todo_id, "event"], true],
 };
+
+// Request body for a function call that sends one.
+function requestBody(name, args) {
+  if (name === "report_progress") {
+    return {
+      type: args.type,
+      text: args.text ?? "",
+      agent,
+      ...(args.comment_id && { commentId: args.comment_id }),
+    };
+  }
+  return { body: args.body ?? "" };
+}
 
 async function callPlanner(name, args) {
   const route = routes[name];
@@ -102,7 +125,7 @@ async function callPlanner(name, args) {
         Authorization: `Bearer ${token}`,
         ...(hasBody && { "Content-Type": "application/json" }),
       },
-      body: hasBody ? JSON.stringify({ body: args.body ?? "" }) : undefined,
+      body: hasBody ? JSON.stringify(requestBody(name, args)) : undefined,
     });
   } catch {
     return { error: `Request failed: is the app running at ${base}?` };

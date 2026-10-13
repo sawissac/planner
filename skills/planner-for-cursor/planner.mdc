@@ -1,14 +1,20 @@
 ---
-description: Planner Plan API — use when the user pastes a Planner "Copy context" curl or an /api/plan/... URL (alone or with "do this plan"), says "login planner", or asks to read, reply to, add, edit or delete comments on a Planner task/thought. Carries out the plan in the thought, solves open **Bug**/**Fix** sections in a comment, and posts the result back as a comment.
+description: Work on tasks from the Planner app. Paste a task link and the agent reads the plan written on it, does the work, shows its progress live in the app, and leaves a "Done" comment when finished. Paste a link to a comment and the agent fixes whatever is still open in it (like a **Bug** list) and marks it **Resolved**. Also reads, adds, edits, and deletes comments on a task. Use when the user pastes a Planner "Copy context" link (a URL containing /api/plan/, or an older curl command wrapping one), says "do this plan", or asks about comments on a Planner task. When the user says "login planner", save their API key by running `planner.sh login --clipboard`.
 globs:
 alwaysApply: false
 ---
 
 # Planner for Cursor
 
-Talk to the Planner app's Plan API (`src/app/api/plan/**`) by running
-`.cursor/skills/planner-for-cursor/scripts/planner.sh` in the terminal (path
-relative to the repo root). Every call runs as the signed-in Planner user.
+Work with Planner tasks through `planner.sh`, which calls the app's Plan API
+(`src/app/api/plan/**`) as the signed-in user.
+
+- **Task**: one row in Planner (`todoId`).
+- **Thought**: the plan written on a task, in Markdown.
+- **Comment**: a note under a task (`commentId`).
+- **File**: the Planner file the task lives in (`fileId`).
+
+Run the script in the terminal from the repo root, by this path:
 
 ```bash
 S=.cursor/skills/planner-for-cursor/scripts/planner.sh
@@ -16,88 +22,133 @@ S=.cursor/skills/planner-for-cursor/scripts/planner.sh
 
 ## Setup
 
-1. The app must be running (default `http://localhost:3000`; override with
-   `PLANNER_URL` or `--base <url>`). Check:
-   `curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/`.
-2. Token. The app's **Copy context** button copies a curl with no secret in it:
-   `curl "http://localhost:3000/api/plan/<todoId>/comment/<commentId>?fileId=<fileId>" -H "Authorization: Bearer $(cat .claude/planner-token)"`.
-   The key lives in `.claude/planner-token` (mode 600, git-ignored;
-   `PLANNER_TOKEN` overrides it). Never read, cat, grep or print that file —
-   use the script. It is a Plan API key (`pln_…`) that lasts until revoked.
-   - **"login planner"**: the user just pressed Settings → API keys →
-     **Copy key for CLI**. Run `$S login --clipboard` and report its output
-     (path and last four characters only).
-   - **No token** (`planner: no token`) or `HTTP 401`: ask the user to press
-     **Copy key for CLI** and type "login planner".
-   - A curl with a literal key (`Bearer pln_…`) pasted in chat: `$S login '<curl>'`
-     still works, but tell the user the key is now in the chat history and they
-     should revoke it and use the clipboard flow.
-3. IDs. `$S parse '<url>'` prints `todoId=… commentId=… fileId=…`. Always pass
-   `--file <fileId>` when known (task ids are unique only per file; the API
-   answers `409` without it when ambiguous).
+1. **App running.** Default `http://localhost:3000`; change it with
+   `PLANNER_URL` or `--base <url>`. Check:
+   `curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/`
+2. **API key.** The user's "Copy context" button copies a request line plus a
+   link with no secret in it (older versions wrapped it in curl; treat the
+   same):
 
-Never print the token, commit it, or put it in a URL.
+   ```
+   Solve this comment
+   http://localhost:3000/api/plan/<todoId>/comment/<commentId>?fileId=<fileId>
+   ```
+
+   Never curl the link yourself; the script adds the key. The key (`pln_…`,
+   valid until revoked) lives in the repo's `.claude/planner-token`
+   (git-ignored), or `PLANNER_TOKEN_FILE` / `PLANNER_TOKEN` if set. Never read,
+   print, or commit it, or put it in a URL.
+   - **"login planner"**, **`planner: no token`**, or **`HTTP 401`**: if the
+     user has not just copied the key, ask them to press Settings → API keys →
+     **Copy key for CLI** and say "login planner". Then run
+     `$S login --clipboard` and report its output (path and last four
+     characters only). It reads, saves, and clears the clipboard.
+   - **Old curl with the key in it** (`Bearer pln_…` or a JWT):
+     `$S login '<curl>'` works, but tell the user the key is now in the chat
+     and they should revoke it. A JWT expires in about an hour.
+   - **`HTTP 503` with a `pln_` key**: the server lacks `SUPABASE_SECRET_KEY`.
+
+3. **Ids.** `$S parse '<url>'` prints `todoId=… commentId=… fileId=… base=…`.
+   Always pass `--file <fileId>` (task ids repeat across files → `409`), and
+   `--base <base>` when it is not localhost:3000.
 
 ## Commands
 
-Options go before the command: `$S [--file <fileId>] [--base <url>] [--full] <command> …`
+`planner.sh [--file <fileId>] [--base <url>] [--comment <commentId>] [--full] <command> …`
 
-| Command | API | Result |
-|---|---|---|
-| `thought <todoId>` | `GET /api/plan/<todoId>` | `{thought}` |
-| `list <todoId> [--open]` | `GET …/comment[?open=1]` | `{thought, comments:[{id, comment}]}`, oldest first; `--open` drops settled comments and adds `settled: <n>` |
-| `get <todoId> <commentId>` | `GET …/comment/<id>` | `{comment}` |
-| `open <todoId> <commentId>` | `GET …/comment/<id>` | plain text: only the open sections, or `no open sections` |
-| `add <todoId> <body\|->` | `POST …/comment` | `{id, comment}` (201) |
-| `put <todoId> <commentId> <body\|->` | `PUT …/comment/<id>` | creates (201) or replaces (200) |
-| `edit <todoId> <commentId> <body\|->` | `PATCH …/comment/<id>` | edits existing; 404 if missing |
-| `delete <todoId> <commentId>` | `DELETE …/comment/<id>` | `{"status": 204}` |
+| Command                               | Does                                    | Returns                                                                                  |
+| ------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `thought <todoId>`                    | Read the plan                           | `{thought}`                                                                              |
+| `list <todoId> [--open]`              | Read plan + comments, oldest first      | `{thought, comments:[{id, comment}]}`; `--open` hides finished ones, adds `settled: <n>` |
+| `get <todoId> <commentId>`            | Read one comment                        | `{comment}`                                                                              |
+| `open <todoId> <commentId>`           | Show a comment's unfinished sections    | Plain text, or `no open sections`                                                        |
+| `add <todoId> <body\|->`              | Add a comment (app picks id)            | `{id, comment}`                                                                          |
+| `put <todoId> <commentId> <body\|->`  | Create with this id, or replace         | `201` / `200`                                                                            |
+| `edit <todoId> <commentId> <body\|->` | Replace an existing comment's full text | `404` if missing                                                                         |
+| `delete <todoId> <commentId>`         | Delete a comment                        | `{"status": 204}`                                                                        |
+| `event <todoId> <type> [text\|-]`     | Report live progress                    | See **Live progress**                                                                    |
 
-Bodies are Markdown. Use `-` and a heredoc for anything multi-line:
+- **Comment text** is Markdown in a JSX-aware editor: a bare `<word>` outside
+  backticks breaks the comment. Wrap it in backticks. For multi-line text or
+  quotes, pass `-` and a heredoc:
+
+  ```bash
+  $S --file default add 9wdlMuuBTE0NJ5_NehdsO - <<'EOF'
+  Reply from Cursor:
+
+  - point one
+  EOF
+  ```
+
+- `get` and write commands omit the plan text; `--full` keeps it.
+- Errors print `HTTP <status>: {"error": …}` and exit 1: `401` bad key, `404`
+  not found, `409` ambiguous task (add `--file`), `400` empty body or unknown
+  field.
+- The API reads the cloud copy. `404 Task not found.` on a task the user can
+  see → not synced yet; ask them to press **Sync** and resend the link.
+
+## Live progress
+
+The app shows your progress live under the task's comments, and a "finished"
+pop-up on `done` / `fail`. Send `event` with the same `--file`, plus
+`--comment <commentId>` when the link was a comment.
+
+| Type    | When                                                      | Text                                        |
+| ------- | --------------------------------------------------------- | ------------------------------------------- |
+| `start` | After reading the task, before any work                   | What you are about to do                    |
+| `step`  | Each plan item or open section, and before running checks | Present tense: `Running typecheck and lint` |
+| `ask`   | When you stop to ask or wait on the user                  | The question                                |
+| `done`  | After posting the "Done" comment or rewriting the comment | Its one-line result                         |
+| `fail`  | When blocked and ending your turn                         | Why, and what the user should do            |
 
 ```bash
-$S --file default add <todoId> - <<'EOF'
-**Done** — one-line outcome
-
-- point one
-EOF
+$S --file <fileId> event <todoId> step "Adding ExportButton to the toolbar"
 ```
 
-Errors print `HTTP <status>: {"error": …}` and exit 1: 401 bad token, 404 task
-or comment not found, 409 ambiguous task id (add `--file`), 400 empty body.
-A `404 Task not found.` for a task the user can see usually means it is not
-synced yet: ask them to press **Sync** and resend the curl.
+- One line, plain text, no code, never the key. Not one per tool call.
+- Every run ends with `done` or `fail`, even after an answered `ask`.
+- If it prints `event not recorded`, carry on; don't retry.
 
 ## Workflow
 
-Route the pasted curl first with `$S parse '<url>'`.
+Run `$S parse '<url>'`. Link has a `commentId` → **Fix a comment**. Otherwise
+(or "do this plan") → **Do a plan**.
 
-### URL has a commentId → solve the comment's open sections
+In both: send `start` first, `step` as you go, check your work (typecheck,
+lint, running app), then `done` or `fail`. On `401` when saving, keep your
+text, ask the user to re-copy the key (Setup 2), and save once login works.
 
-Users write new asks into an existing comment as a bold heading line plus items:
+### Fix a comment
+
+Users add requests to a comment as a bold heading plus a list. A section is
+**open** until marked `(Resolved)`:
 
 ```markdown
 **Bug**
 
-* update the ai key provider icon
+- update the ai key provider icon
+- it ui feel a little odd. make it combined styles.
 ```
 
-1. `$S --file <fileId> open <todoId> <commentId>` prints only the open sections
-   (a line that is only `**Heading**`, not marked `(Resolved)`, with its items;
-   a `(Partly resolved)` section's **Resolved Message** says what stays open).
-2. `no open sections` → change nothing; tell the user it is fully resolved.
-3. Otherwise do the items now, without asking — the user put them there for
-   you. Read the thought (`thought <todoId>`) for context. Ask only when an item
-   is genuinely ambiguous in a way the code can't settle.
-4. Verify (typecheck, lint, the running app).
-5. Rewrite **that same comment** with `get` then `edit` (full body). Keep
-   everything outside the open sections byte-for-byte; replace each open section with:
+1. `$S --file <fileId> open <todoId> <commentId>` prints only open sections
+   (`**Bug**`, `**Fix**`, `**Request**`, …), plus the Resolved Message of any
+   `(Partly resolved)` section, which says what is left.
+2. `no open sections` → change nothing, tell the user, send
+   `done "Nothing open in this comment"`.
+3. Otherwise do each item now, without asking first. Read `thought <todoId>`
+   for context, other comments only if an item mentions them. Ask only if the
+   code can't settle an unclear item; else pick a sensible reading and state
+   it in the Resolved Message. Don't redo the task's whole plan.
+4. **Rewrite that same comment** (`get` it now, then `edit` with the full
+   text; never `add`). Keep everything outside the open sections exactly as
+   is. Replace each open section with:
+
    ```markdown
    **Bug (Resolved)**
 
-   > <original item 1, verbatim>
+   > <original item 1, word for word>
    >
-   > <original item 2, verbatim>
+   > <original item 2, word for word>
 
    **Resolved Message**
 
@@ -105,29 +156,37 @@ Users write new asks into an existing comment as a bold heading line plus items:
 
    Verified: <checks run>. Not committed.
    ```
-   Reuse the section's own heading word plus ` (Resolved)`. If some items were
-   skipped, use `(Partly resolved)` and say which stay open.
 
-### No commentId (or "do this plan") → carry out the plan
+   Quote the user exactly, typos included. Keep their heading word (`Bug`,
+   `Fix`, …). If items were skipped or blocked, use `(Partly resolved)` and
+   say which stay open.
 
-1. `$S --file <fileId> list <todoId> --open` — the thought is the plan; the
-   comments left may amend it.
-2. Do the work in the repo and verify it.
-3. Post a completion comment with `add`:
-   ```markdown
-   **Done** — <one-line outcome>
+### Do a plan
+
+1. `list <todoId> --open`: the thought is the plan; remaining comments may
+   amend it. Use plain `list` only if the plan refers to earlier history.
+2. Do the work in the repo and check it.
+3. Post a completion comment with `add`, written for the task's reader:
+
+   ```bash
+   $S --file <fileId> add <todoId> - <<'EOF'
+   **Done** — <one-line result>
 
    - <each plan item → what changed, with key file paths>
-   - <anything left for the user>
+   - <anything left for the user: commands, decisions, follow-ups>
 
    Verified: <checks run>. Not committed.
+   EOF
    ```
-   One bullet per plan item, no code dumps, never the token. Say so if part of
-   the plan was skipped or blocked.
 
-### Other actions
+   One bullet per plan item, no code dumps. If part was skipped or blocked,
+   say so instead of calling it done.
 
-- Read a thread: `list <todoId>`; summarize the thought and each comment by id.
-- Edit: `get` first, then `edit` with the full new body (it replaces).
-- Delete is not undoable — confirm with the user first unless they named the
-  exact comment. Clean up any test comments you create.
+### Other requests
+
+- **Read a thread**: `list <todoId>` (`--open` for what still needs work);
+  summarize the plan and each comment by id.
+- **Add**: use `add`. Use `put` only when you need a fixed id of your own.
+- **Edit**: `get` first, then `edit` with the full new text (no merge).
+- **Delete**: cannot be undone. Confirm first unless the user named the exact
+  comment. Delete any test comments you create.

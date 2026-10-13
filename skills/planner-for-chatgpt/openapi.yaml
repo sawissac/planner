@@ -3,8 +3,9 @@ info:
   title: Planner Plan API
   version: 1.0.0
   description: >-
-    Read a Planner task's thought (the plan) and read, add, replace, edit or
-    delete the comments on it. Every call runs as the user who owns the API key.
+    Read the plan written on a Planner task, read, add, edit, replace or delete
+    the comments on that task, and show live progress while working on it. Every call acts as the person whose API
+    key is used, and can only reach what that person can.
 servers:
   # Replace with the public HTTPS address of your Planner app.
   # ChatGPT cannot reach localhost; use a deployment or a tunnel.
@@ -75,6 +76,34 @@ components:
           description: Only on addComment, the id the server generated.
         thought: { type: string }
         comment: { type: string }
+    Event:
+      type: object
+      required: [type, agent]
+      properties:
+        type:
+          type: string
+          enum: [start, step, ask, done, fail]
+          description: >-
+            start: about to begin. step: what you are doing now. ask: you are
+            waiting on the user. done: finished. fail: blocked or gave up.
+        text:
+          type: string
+          description: >-
+            One plain line. start: what you are about to do. step: present
+            tense. ask: the question. done: the one-line result. fail: why, and
+            what the user should do. Required for step and ask.
+        agent:
+          type: string
+          description: Your name as shown in the app. Always "ChatGPT".
+        commentId:
+          type: string
+          description: The commentId from the pasted URL, when the link was a comment.
+    EventResult:
+      type: object
+      properties:
+        status:
+          type: string
+          description: The run's status after this event (running, waiting, done, failed).
     Error:
       type: object
       properties:
@@ -216,4 +245,26 @@ paths:
       responses:
         "204":
           description: Deleted.
+        default: { $ref: "#/components/responses/Error" }
+  /api/plan/{todoId}/event:
+    post:
+      operationId: reportProgress
+      summary: >-
+        Show what you are doing live under the task's comments. Never let a
+        failed call stop the work.
+      x-openai-isConsequential: false
+      parameters:
+        - $ref: "#/components/parameters/todoId"
+        - $ref: "#/components/parameters/fileId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Event" }
+      responses:
+        "200":
+          description: Recorded.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EventResult" }
         default: { $ref: "#/components/responses/Error" }

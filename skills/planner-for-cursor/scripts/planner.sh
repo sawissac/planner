@@ -7,22 +7,32 @@
 # Base URL: $PLANNER_URL (default http://localhost:3000).
 # File id: --file <id> or $PLANNER_FILE_ID (needed only when a task id
 # exists in more than one file; the API answers 409 otherwise).
+# Agent name shown with live progress (`event`): $PLANNER_AGENT (default
+# "Cursor" when installed under .cursor/, else "Claude Code").
 set -euo pipefail
 
 BASE="${PLANNER_URL:-http://localhost:3000}"
-# Repo root: this script lives in <root>/.claude/skills/<skill>/scripts/.
+# Root: this script lives in <root>/.claude/skills/<skill>/scripts/ (or
+# <root>/.cursor/skills/<skill>/scripts/), where <root> is $HOME for a global
+# install (~/.claude/planner-token) or a repo for a per-project one
+# (<repo>/.claude/planner-token).
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+case "${BASH_SOURCE[0]}" in
+  */.cursor/*) AGENT="${PLANNER_AGENT:-Cursor}" ;;
+  *) AGENT="${PLANNER_AGENT:-Claude Code}" ;;
+esac
 TOKEN_FILE="${PLANNER_TOKEN_FILE:-$ROOT/.claude/planner-token}"
 FILE_ID="${PLANNER_FILE_ID:-}"
+COMMENT_ID=""
 FULL=0
 
 usage() {
   cat <<'EOF'
-usage: planner.sh [--file <fileId>] [--base <url>] [--full] <command> [args]
+usage: planner.sh [--file <fileId>] [--base <url>] [--comment <commentId>] [--full] <command> [args]
 
   login --clipboard                  save the key from the clipboard (chmod 600), then clear it
   login <token|->                    save an access token given directly
-  parse <url|curl>                   print todoId / commentId / fileId of a Plan API URL
+  parse <url|curl>                   print todoId / commentId / fileId / base of a Plan API URL
   thought <todoId>                   read the task's thought (markdown)
   list <todoId> [--open]             read thought + comments, oldest first;
                                      --open leaves out settled ones
@@ -32,6 +42,10 @@ usage: planner.sh [--file <fileId>] [--base <url>] [--full] <command> [args]
   put <todoId> <commentId> <body|->  create comment with this id, or replace it
   edit <todoId> <commentId> <body|-> edit an existing comment
   delete <todoId> <commentId>        delete a comment
+  event <todoId> <type> [text|-]     report live progress to the app; type is
+                                     start | step | ask | done | fail
+                                     (--comment marks a run on that comment).
+                                     Never fails the caller: a lost event only warns.
 
 A body of "-" is read from stdin. Output is the JSON response; get/add/put/edit
 drop the echoed "thought" unless --full is given.
@@ -150,6 +164,7 @@ while [[ $# -gt 0 && "$1" == --* ]]; do
   case "$1" in
     --file) FILE_ID="${2:?--file needs a value}"; shift 2 ;;
     --base) BASE="${2:?--base needs a value}"; shift 2 ;;
+    --comment) COMMENT_ID="${2:?--comment needs a value}"; shift 2 ;;
     --full) FULL=1; shift ;;
     *) usage ;;
   esac
@@ -166,7 +181,8 @@ case "$cmd" in
       -) t="$(extract_token "$(cat)")" ;;
       *) t="$(extract_token "$1")" ;;
     esac
-    if [[ "$TOKEN_FILE" == "$ROOT"/* ]] && ! git -C "$ROOT" check-ignore -q "$TOKEN_FILE"; then
+    if [[ "$TOKEN_FILE" == "$ROOT"/* ]] && git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+      && ! git -C "$ROOT" check-ignore -q "$TOKEN_FILE"; then
       die "$TOKEN_FILE is not git-ignored; refusing to save a key there"
     fi
     mkdir -p "$(dirname "$TOKEN_FILE")"
@@ -179,7 +195,8 @@ case "$cmd" in
     u="$(grep -oE '/api/plan/[^"'"'"'[:space:]]+' <<<"$1" | head -n1)" || true
     [[ -n "$u" ]] || die "no /api/plan/ URL found"
     printf '%s' "${u%%\?*}" | sed -nE 's#^/api/plan/([^/]+)(/comment/([^/]+))?/?$#todoId=\1 commentId=\3 #p' | tr -d '\n'
-    printf 'fileId=%s\n' "$(sed -nE 's/.*[?&]fileId=([^&]*).*/\1/p' <<<"$u")"
+    printf 'fileId=%s ' "$(sed -nE 's/.*[?&]fileId=([^&]*).*/\1/p' <<<"$u")"
+    printf 'base=%s\n' "$(grep -oE 'https?://[^/"'"'"'[:space:]]+/api/plan/' <<<"$1" | head -n1 | sed 's#/api/plan/$##')"
     ;;
   thought) [[ $# -eq 1 ]] || usage; call GET "$(url "$1")" ;;
   list)
@@ -197,5 +214,17 @@ case "$cmd" in
   put)     [[ $# -eq 3 ]] || usage; b="$(body_json "$3")"; call PUT "$(url "$1" comment "$2")" "$b" "$brief" ;;
   edit)    [[ $# -eq 3 ]] || usage; b="$(body_json "$3")"; call PATCH "$(url "$1" comment "$2")" "$b" "$brief" ;;
   delete)  [[ $# -eq 2 ]] || usage; call DELETE "$(url "$1" comment "$2")" ;;
+  event)
+    [[ $# -eq 2 || $# -eq 3 ]] || usage
+    case "$2" in start|step|ask|done|fail) ;; *) usage ;; esac
+    text="${3:-}"
+    [[ "$text" == "-" ]] && text="$(cat)"
+    b="$(jq -n --arg t "$2" --arg x "$text" --arg a "$AGENT" --arg c "$COMMENT_ID" \
+      '{type: $t, text: $x, agent: $a} + (if $c == "" then {} else {commentId: $c} end)')"
+    u="$BASE/api/plan/$(urlencode "$1")/event"
+    [[ -n "$FILE_ID" ]] && u="$u?fileId=$(urlencode "$FILE_ID")"
+    # Progress is a nicety: never let it stop the work.
+    ( call POST "$u" "$b" '.status' ) || echo "planner: event not recorded; carry on" >&2
+    ;;
   *) usage ;;
 esac

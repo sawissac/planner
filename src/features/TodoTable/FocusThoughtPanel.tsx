@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { CopyApiUrlButton } from "@/components/customs/CopyApiUrlButton";
 import { RefreshThoughtButton } from "@/components/customs/RefreshThoughtButton";
+import { RunAgentButton } from "@/components/customs/RunAgentButton";
 import { ThoughtComments } from "@/components/customs/ThoughtComments";
 import { TokenCount } from "@/components/customs/TokenCount";
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,8 @@ export function FocusThoughtPanel({
     >
       <div className="flex shrink-0 items-center justify-end gap-2 border-b border-app-border px-3 py-2">
         <RefreshThoughtButton showLabel data-testid="focus-thought-panel-refresh-button" />
-        <CopyApiUrlButton todoId={todo.id} showLabel className="mr-auto" />
+        <CopyApiUrlButton todoId={todo.id} showLabel />
+        <RunAgentButton todoId={todo.id} showLabel className="mr-auto" />
         <TokenCount text={value} data-testid="thought-token-count" />
         <Button
           size="sm"

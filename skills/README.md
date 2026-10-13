@@ -2,8 +2,11 @@
 
 Agent skills that work on Planner tasks through the Plan API
 (`src/app/api/plan/**`): read a task's thought (the plan), carry it out, solve
-open **Bug**/**Fix** sections in a comment, and post the result back as a
-comment.
+open **Bug**/**Fix** sections in a comment, show progress live under the
+task's comments, and post the result back as a comment.
+
+All four follow the same workflow, written out in
+[planner-for-claude-code/SKILL.md](planner-for-claude-code/SKILL.md).
 
 | Folder                                              | Platform                          | Can edit your repo | Reaches `localhost`                                          |
 | --------------------------------------------------- | --------------------------------- | ------------------ | ------------------------------------------------------------ |
@@ -20,11 +23,16 @@ code in the chat and say in their comment that it still has to be applied.
 Every platform authenticates with a Plan API key (`pln_…`) from Planner →
 **Settings → API keys**. The key acts as you until you revoke it.
 
-- Claude Code, Cursor and `run.mjs` read it from `.claude/planner-token`
-  (git-ignored, mode 600). Save it there without pasting it anywhere: press
+- Claude Code (installed globally) reads it from `~/.claude/planner-token`
+  (mode 600). Save it there without pasting it anywhere: press
   **Copy key for CLI**, then run
-  `.claude/skills/planner-for-claude-code/scripts/planner.sh login --clipboard`
-  (or the Cursor copy of the script), or type "login planner" to the agent.
+  `~/.claude/skills/planner-for-claude-code/scripts/planner.sh login --clipboard`,
+  or type "login planner" to the agent.
+- Cursor reads it from the project's `.claude/planner-token` (git-ignored,
+  mode 600); point it at the global one with
+  `PLANNER_TOKEN_FILE=~/.claude/planner-token`.
+- `run.mjs` reads the project's `.claude/planner-token` if there is one, else
+  `~/.claude/planner-token`.
 - ChatGPT keeps it in the GPT's action settings.
 
 Never commit a key or paste it into a chat. If one leaks, revoke it.
@@ -33,12 +41,18 @@ Never commit a key or paste it into a chat. If one leaks, revoke it.
 
 ### Claude Code
 
+Install it once for every project:
+
 ```bash
-mkdir -p .claude/skills
-cp -R skills/planner-for-claude-code .claude/skills/
+mkdir -p ~/.claude/skills
+cp -R skills/planner-for-claude-code ~/.claude/skills/
 ```
 
-Then paste a **Copy context** curl into Claude Code. See
+Re-run the `cp` after changing the skill here. (A per-project copy in
+`<repo>/.claude/skills/` also works; its key then lives in
+`<repo>/.claude/planner-token`.)
+
+Then paste a **Copy context** link into Claude Code. See
 [SKILL.md](planner-for-claude-code/SKILL.md).
 
 ### Cursor, ChatGPT, Gemini
@@ -48,9 +62,12 @@ See each folder's README.
 ## Keeping copies in step
 
 `planner-for-claude-code/scripts/planner.sh` and
-`planner-for-cursor/scripts/planner.sh` are the same file, and the ChatGPT and
-Gemini instructions describe the same workflow as `SKILL.md`. When the Plan API
-or the workflow changes, update all four:
+`planner-for-cursor/scripts/planner.sh` are the same file (it reports progress
+as "Cursor" when installed under `.cursor/`, else "Claude Code").
+`planner.mdc` mirrors `SKILL.md` with Cursor's paths, and the ChatGPT and
+Gemini instructions describe the same workflow with their own action /
+function names (`reportProgress`, `report_progress` for live progress). When
+the Plan API or the workflow changes, update all four:
 
 ```bash
 diff skills/planner-for-claude-code/scripts/planner.sh skills/planner-for-cursor/scripts/planner.sh

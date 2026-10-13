@@ -7,22 +7,29 @@ import {
   ChevronRight,
   Loader2,
   MessageCircleQuestion,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldX,
+  Square,
   X,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 import { MessageResponse } from "@/components/ai-elements/message";
 import { useAgentRun } from "@/hooks/useAgentRun";
 import { useSignedIn } from "@/hooks/useSignedIn";
+import { onOwnedRunsChange, ownsAgentRun, stopAgentRun } from "@/lib/agent-launch";
 import {
   type AgentRun,
+  type Approval,
   clearAgentRun,
   isActive,
   type RunStatus,
   type RunStep,
   sortedSteps,
 } from "@/lib/agent-runs";
+import { answerPermission, getServer } from "@/lib/agent-servers";
 import { cn } from "@/lib/cn";
 import * as ui from "@/lib/ui-styles";
 import { useAppSelector } from "@/stores/hooks";
@@ -72,6 +79,20 @@ function StepRow({ step }: { step: RunStep }) {
           </div>
         </div>
       );
+    case "permission":
+      return (
+        <div
+          className="flex min-w-0 items-start gap-1.5 text-xs text-app-warn"
+          title={`Asked to run ${step.tool ?? "a tool"}`}
+        >
+          <ShieldAlert className="mt-px size-3.5 shrink-0" />
+          <span className="min-w-0 font-mono break-all whitespace-pre-wrap">
+            <span className="sr-only">Asked to run </span>
+            <span className="font-semibold">{step.tool ?? "Tool"}</span>
+            {step.text && <span className="text-app-dim"> · {step.text}</span>}
+          </span>
+        </div>
+      );
     case "result":
       return (
         <div className="flex items-start gap-1.5 rounded-md border border-app-border-accent bg-app-accent-faint p-2 text-xs">
@@ -87,6 +108,92 @@ function StepRow({ step }: { step: RunStep }) {
         </p>
       );
   }
+}
+
+/**
+ * A tool call the agent is paused on (Run agent runs): what it wants to run
+ * and Allow / Deny. The answer goes straight to the Claude Code bridge on
+ * this computer (`answerPermission`); the run's own tab then records it, and
+ * the prompt goes away once the record says it was answered.
+ */
+function ApprovalPrompt({ requestId, approval }: { requestId: string; approval: Approval }) {
+  const [busy, setBusy] = useState<"allow" | "deny" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const answer = async (allow: boolean) => {
+    setBusy(allow ? "allow" : "deny");
+    setError(null);
+    try {
+      const server = await getServer("claude-code");
+      if (!server) {
+        throw new Error("No Claude Code server in Settings → API keys.");
+      }
+      await answerPermission(server, approval.bridgeRunId, requestId, allow);
+    } catch (e) {
+      setError(
+        `${e instanceof Error ? e.message : String(e)} Answer from the computer running the agent.`,
+      );
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div
+      className="flex flex-col gap-2 rounded-md border border-app-warn bg-app-warn/10 p-2.5"
+      role="alertdialog"
+      aria-label={`Allow ${approval.tool}?`}
+      data-testid={`agent-run-approval-${requestId}`}
+    >
+      <div className="flex min-w-0 items-start gap-1.5 text-xs">
+        <ShieldAlert className="mt-px size-3.5 shrink-0 text-app-warn" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="font-semibold text-app-text">
+            Allow {approval.tool}? The agent is waiting for you.
+          </span>
+          {approval.detail && (
+            <code className="rounded bg-app-bg px-1.5 py-1 font-mono text-[11px] break-all whitespace-pre-wrap text-app-text">
+              {approval.detail}
+            </code>
+          )}
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => void answer(false)}
+          disabled={busy !== null}
+          className={cn(ui.ghostBtn, "h-7 text-app-error")}
+          data-testid={`agent-run-approval-${requestId}-deny`}
+        >
+          {busy === "deny" ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <ShieldX className="size-3" />
+          )}
+          Deny
+        </button>
+        <button
+          type="button"
+          onClick={() => void answer(true)}
+          disabled={busy !== null}
+          className={cn(ui.solidBtn, "h-7")}
+          data-testid={`agent-run-approval-${requestId}-allow`}
+        >
+          {busy === "allow" ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <ShieldCheck className="size-3" />
+          )}
+          Allow
+        </button>
+      </div>
+      {error && (
+        <p className="text-xs text-app-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
 }
 
 /** How long a "done" toast stays up, counted only while the tab is visible and the toast isn't hovered or focused. */
@@ -228,7 +335,8 @@ function AgentRunFinishedToast({
  * thread: what the agent is doing, what it needs from you, and its outcome —
  * as its skill reports them (`planner.sh event`), streamed from the Firebase
  * Realtime Database (`@/lib/agent-runs`), so every open tab or device sees
- * them. When a run ends while shown here, a toast pops bottom right with its
+ * them. A run started from this tab's Run agent dialog can be stopped here.
+ * When a run ends while shown here, a toast pops bottom right with its
  * outcome and a Close button. Clear drops a finished run. Hidden while signed out or
  * when the task has no run.
  *
@@ -241,6 +349,12 @@ export function AgentRunPanel({ todoId, title }: { todoId: string; title?: strin
   const { run, error, finished, dismissFinished } = useAgentRun(fileId, todoId, signed);
   const listRef = useRef<HTMLOListElement>(null);
   const steps = run ? sortedSteps(run) : [];
+  // This tab started the run from the Run agent dialog: it can stop it.
+  const owns = useSyncExternalStore(
+    onOwnedRunsChange,
+    () => ownsAgentRun(fileId, todoId),
+    () => false,
+  );
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
@@ -269,6 +383,12 @@ export function AgentRunPanel({ todoId, title }: { todoId: string; title?: strin
   }
 
   const active = isActive(run.status);
+  // Tool calls the agent is paused on; a finished run has none left to answer.
+  const pending = active
+    ? Object.entries(run.approvals ?? {})
+        .filter(([, a]) => a.state === "pending")
+        .sort(([, a], [, b]) => a.at - b.at)
+    : [];
 
   return (
     <>
@@ -294,6 +414,17 @@ export function AgentRunPanel({ todoId, title }: { todoId: string; title?: strin
             {" · "}
             {fmtTime(run.endedAt ?? run.updatedAt)}
           </span>
+          {active && owns && (
+            <button
+              type="button"
+              onClick={() => stopAgentRun(fileId, todoId)}
+              className={cn(ui.ghostBtn, "h-6 text-app-error")}
+              data-testid="agent-run-panel-stop"
+            >
+              <Square className="size-3" />
+              Stop
+            </button>
+          )}
           {!active && (
             <button
               type="button"
@@ -325,6 +456,16 @@ export function AgentRunPanel({ todoId, title }: { todoId: string; title?: strin
             </li>
           )}
         </ol>
+        {pending.length > 0 && (
+          <div
+            className="flex flex-col gap-2 border-t border-app-border px-3 py-2"
+            data-testid="agent-run-panel-approvals"
+          >
+            {pending.map(([id, approval]) => (
+              <ApprovalPrompt key={id} requestId={id} approval={approval} />
+            ))}
+          </div>
+        )}
       </div>
       {toast}
     </>
