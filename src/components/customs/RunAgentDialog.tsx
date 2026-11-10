@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { launchAgentRun } from "@/lib/agent-launch";
 import {
@@ -35,6 +36,7 @@ type Step = "project" | "details";
 type Phase = "idle" | "syncing" | "starting";
 
 const LAST_PROJECT_KEY = "runAgent.lastProjectId";
+const AUTO_MODE_KEY = "runAgent.autoMode";
 
 function readLastProject(): string | null {
   try {
@@ -47,6 +49,22 @@ function readLastProject(): string | null {
 function saveLastProject(id: string) {
   try {
     localStorage.setItem(LAST_PROJECT_KEY, id);
+  } catch {
+    // Private mode: just don't remember.
+  }
+}
+
+function readAutoMode(): boolean {
+  try {
+    return localStorage.getItem(AUTO_MODE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveAutoMode(on: boolean) {
+  try {
+    localStorage.setItem(AUTO_MODE_KEY, on ? "1" : "0");
   } catch {
     // Private mode: just don't remember.
   }
@@ -179,6 +197,7 @@ function RunAgentForm({
   const [step, setStep] = useState<Step>("project");
   const [project, setProject] = useState<ProjectPath | null>(null);
   const [extra, setExtra] = useState("");
+  const [auto, setAuto] = useState(readAutoMode);
   const [phase, setPhase] = useState<Phase>("idle");
   const [runError, setRunError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -216,6 +235,7 @@ function RunAgentForm({
         projectPath: project.path,
         context,
         extraContext: extra,
+        auto,
       });
     } catch (e) {
       setRunError(e instanceof Error ? e.message : String(e));
@@ -291,6 +311,25 @@ function RunAgentForm({
                   data-testid="run-agent-extra"
                 />
               </div>
+              <div className="flex items-start justify-between gap-3">
+                <label htmlFor="run-agent-auto" className="flex min-w-0 flex-col gap-0.5">
+                  <span className={ui.fieldLabel}>Auto mode</span>
+                  <span className={ui.help}>
+                    Claude Code approves routine tool calls itself and blocks risky ones; only the
+                    rest ask you here.
+                  </span>
+                </label>
+                <Switch
+                  id="run-agent-auto"
+                  checked={auto}
+                  onCheckedChange={(v) => {
+                    setAuto(v);
+                    saveAutoMode(v);
+                  }}
+                  disabled={busy}
+                  data-testid="run-agent-auto"
+                />
+              </div>
             </>
           )))
         )}
@@ -349,7 +388,8 @@ function RunAgentForm({
  * the OS picker); then it shows what is sent — 1. the "Copy context" text
  * (`planContext`) and 2. optional extra context — and runs the agent through
  * the local server set in Settings → API keys (`execute-cli/claude` for
- * Claude Code).
+ * Claude Code). The Auto mode switch (remembered per browser) runs it with
+ * `--permission-mode auto`, so fewer tool calls stop for Allow / Deny.
  *
  * Like "Copy context", it saves open drafts and syncs before sending, since
  * the agent reads the task from the cloud copy. Once the server accepts the

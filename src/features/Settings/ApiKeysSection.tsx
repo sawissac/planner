@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "@/components/customs/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { AgentServerSettings } from "@/features/Settings/AgentServerSettings";
+import { ImageServerSettings } from "@/features/Settings/ImageServerSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/cn";
@@ -219,6 +220,9 @@ export function ApiKeysSection() {
       )}
       <div className="mt-4 border-t border-app-border pt-4">
         <AgentServerSettings />
+      </div>
+      <div className="mt-4 border-t border-app-border pt-4">
+        <ImageServerSettings />
       </div>
     </div>
   );

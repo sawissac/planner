@@ -72,6 +72,7 @@ export function launchAgentRun(args: {
   projectPath: string;
   context: string;
   extraContext: string;
+  auto: boolean;
 }): Promise<void> {
   const key = keyOf(args.fileId, args.todoId);
   if (owned.has(key)) {
@@ -100,13 +101,14 @@ export function launchAgentRun(args: {
       projectPath: args.projectPath,
       context: args.context,
       extraContext: args.extraContext,
+      auto: args.auto,
       signal: controller.signal,
       onOpen: () => {
         opened = true;
         void event({
           type: "start",
           launch: true,
-          text: `Starting ${agent} in ${folderOf(args.projectPath)}`,
+          text: `Starting ${agent} in ${folderOf(args.projectPath)}${args.auto ? " (auto mode)" : ""}`,
         });
         resolve();
       },

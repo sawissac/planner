@@ -97,6 +97,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Standalone Bun bridge with its own tsconfig.
     "execute-cli/**",
+    "images/**",
     // compacto-ui copies — kept byte-identical to the registry (see .prettierignore).
     "src/lib/cn.ts",
     "src/lib/ui-styles.ts",

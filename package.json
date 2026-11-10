@@ -12,7 +12,14 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "conventions": "node scripts/check-conventions.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "supabase:up": "docker compose -f docker/docker-compose.yml up -d",
+    "supabase:down": "docker compose -f docker/docker-compose.yml down",
+    "supabase:logs": "docker compose -f docker/docker-compose.yml logs -f",
+    "claude-server": "bun run --cwd execute-cli/claude start",
+    "claude-server:dev": "bun run --cwd execute-cli/claude dev",
+    "image-server": "bun run --cwd images start",
+    "image-server:dev": "bun run --cwd images dev"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
@@ -43,7 +50,6 @@
     "d3": "^7.9.0",
     "d3-cloud": "^1.2.9",
     "date-fns": "^4.1.0",
-    "firebase": "^13.0.0",
     "lexical": "0.35.0",
     "localforage": "^1.10.0",
     "lucide-react": "^1.14.0",

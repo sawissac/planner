@@ -1,0 +1,17 @@
+{
+  "name": "planner-images",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun --env-file=../.env --env-file=../.env.local run server.ts",
+    "dev": "bun --env-file=../.env --env-file=../.env.local --watch run server.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "nanoid": "^5.1.11"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2"
+  }
+}

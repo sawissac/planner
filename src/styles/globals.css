@@ -445,3 +445,70 @@
   color: color-mix(in oklab, currentColor 35%, transparent);
   user-select: none;
 }
+
+/* Images in thoughts and comments are thumbnails (ThoughtEditor opens the
+   full size in ImagePreviewDialog). Content that holds an image becomes a
+   two-column grid: every block spans both columns except a paragraph holding
+   an image, which takes one cell — so consecutive image paragraphs tile two
+   to a row (2x2 for four) and any other block starts a new row. The columns
+   are thumbnail-sized, so spanning blocks size to the content box instead
+   (`100cqw`) and overflow the two tracks. Text in the same paragraph stays
+   in the cell as its caption. */
+.mdxeditor [contenteditable]:has(> p [data-editor-block-type="image"]) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 18rem));
+  column-gap: 0.75rem;
+  align-items: start;
+  container-type: inline-size;
+}
+
+.mdxeditor [contenteditable]:has(> p [data-editor-block-type="image"]) > * {
+  grid-column: 1 / -1;
+  width: 100cqw;
+}
+
+.mdxeditor
+  [contenteditable]:has(> p [data-editor-block-type="image"])
+  > p:has([data-editor-block-type="image"]) {
+  grid-column: auto;
+  width: auto;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.mdxeditor [contenteditable] > p:has([data-editor-block-type="image"]) > br {
+  display: none;
+}
+
+/* Read-only: a caption line folded into the image cell below it
+   (ThoughtEditor marks both). */
+.mdxeditor [contenteditable] > p[data-image-caption] {
+  display: none;
+}
+
+.mdxeditor [contenteditable] > p[data-caption]::before {
+  /* A CSS string ThoughtEditor sets; `attr()` breaks this CSS pipeline. */
+  content: var(--image-caption);
+  display: block;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--app-bright);
+}
+
+.mdxeditor [data-editor-block-type="image"] {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.mdxeditor [data-editor-block-type="image"] img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: contain;
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  background: var(--app-sidebar);
+  cursor: zoom-in;
+}

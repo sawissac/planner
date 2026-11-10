@@ -3,7 +3,10 @@
 Agent skills that work on Planner tasks through the Plan API
 (`src/app/api/plan/**`): read a task's thought (the plan), carry it out, solve
 open **Bug**/**Fix** sections in a comment, show progress live under the
-task's comments, and post the result back as a comment.
+task's comments, and post the result back as a comment. Claude Code and
+Cursor also manage images through the image server (`images/`, a Bun server
+with its own token, found through the Settings you saved): upload screenshots, attach them to
+a comment or thought, and download images the user attached.
 
 All four follow the same workflow, written out in
 [planner-for-claude-code/SKILL.md](planner-for-claude-code/SKILL.md).

@@ -13,7 +13,7 @@
  * Routes:
  *   GET  /health                    → { ok, name, version }   (token required)
  *   POST /api/claude-code/execute   → NDJSON stream           (token required)
- *        body: { projectPath, context, extraContext? }
+ *        body: { projectPath, context, extraContext?, auto? }
  *   POST /api/claude-code/permission → { ok }                 (token required)
  *        body: { runId, requestId, allow }
  *   POST /api/local/pick-folder     → { path | null }         (token required)
@@ -28,6 +28,11 @@
  * stream (Planner shows Allow / Deny under the task's comments), holds the
  * request until `/api/claude-code/permission` answers it (or
  * `approvalTimeoutMinutes` passes: deny), and streams `permission_resolved`.
+ *
+ * Auto mode: `auto: true` runs that one with `--permission-mode auto`
+ * instead of `claude.permissionMode`. Claude Code's classifier then approves
+ * routine actions itself and blocks risky ones; only what it can't settle
+ * reaches the Allow / Deny prompt in Planner.
  *
  * The folder routes let a deployed Planner (whose own `/api/local/*` routes
  * refuse to run off localhost) pick and open folders on this machine.
@@ -67,9 +72,10 @@ type ExecutePayload = {
   projectPath: string;
   context: string;
   extraContext?: string;
+  auto?: boolean;
 };
 
-const VERSION = "1.2.0";
+const VERSION = "1.3.0";
 const HERE = dirname(new URL(import.meta.url).pathname);
 const CONFIG_PATH = process.env.PLANNER_CLAUDE_CONFIG ?? join(HERE, "config.json");
 const EXAMPLE_PATH = join(HERE, "config.example.json");
@@ -181,7 +187,7 @@ function parsePayload(raw: unknown): ExecutePayload | string {
   if (!raw || typeof raw !== "object") {
     return "Body must be a JSON object.";
   }
-  const { projectPath, context, extraContext } = raw as Record<string, unknown>;
+  const { projectPath, context, extraContext, auto } = raw as Record<string, unknown>;
   if (typeof projectPath !== "string" || !isAbsolute(projectPath)) {
     return "projectPath must be an absolute path.";
   }
@@ -191,10 +197,13 @@ function parsePayload(raw: unknown): ExecutePayload | string {
   if (extraContext !== undefined && typeof extraContext !== "string") {
     return "extraContext must be a string.";
   }
+  if (auto !== undefined && typeof auto !== "boolean") {
+    return "auto must be a boolean.";
+  }
   if (context.length + (extraContext?.length ?? 0) > MAX_BODY_CHARS) {
     return "context is too long.";
   }
-  return { projectPath: resolve(projectPath), context, extraContext };
+  return { projectPath: resolve(projectPath), context, extraContext, auto: auto === true };
 }
 
 /** 1. Copy context text, 2. Extra context — the order the Run agent dialog shows. */
@@ -224,15 +233,21 @@ function plannerRules(projectPath: string): string[] {
 }
 
 /** What a headless run must know that the skill alone doesn't say. */
-function plannerSystemPrompt(projectPath: string): string {
+function plannerSystemPrompt(projectPath: string, auto: boolean): string {
   const lines = [
     "This run was started from Planner's Run agent dialog, in the project folder the user picked:",
     `  ${projectPath}`,
     "Work in that folder. Use the planner-for-claude-code skill for the task link, and report live",
     "progress with its `event` command (start, a step per milestone, then done or fail): the user",
-    "watches it in Planner. Tool calls that need permission are sent to the user in Planner to",
-    "Allow or Deny; just make the call and wait. Nobody can answer a free-form question: if you are",
-    "blocked or denied, say what you need in the completion comment and report `fail`.",
+    "watches it in Planner.",
+    auto
+      ? "Auto mode is on: routine tool calls are approved for you, risky ones may be blocked, and " +
+        "the rest are sent to the user in Planner to Allow or Deny. If a call is blocked, find a " +
+        "safer way rather than retrying it."
+      : "Tool calls that need permission are sent to the user in Planner to Allow or Deny; just " +
+        "make the call and wait.",
+    "Nobody can answer a free-form question: if you are blocked or denied, say what you need in",
+    "the completion comment and report `fail`.",
     "Never curl or WebFetch the Plan API link yourself: the skill's script adds the key.",
   ];
   if (!existsSync(join(projectPath, PLANNER_SCRIPT)) && GLOBAL_SCRIPT) {
@@ -261,16 +276,18 @@ function mcpConfig(runId: string): string {
 
 const APPROVE_TOOL = "mcp__planner__approve";
 
-function claudeArgs(prompt: string, projectPath: string, runId: string): string[] {
+function claudeArgs(payload: ExecutePayload, runId: string): string[] {
   const c = config.claude;
-  const args = ["-p", prompt, "--output-format", "stream-json", "--verbose"];
-  if (c.permissionMode) {
-    args.push("--permission-mode", c.permissionMode);
+  const { projectPath, auto = false } = payload;
+  const args = ["-p", buildPrompt(payload), "--output-format", "stream-json", "--verbose"];
+  const mode = auto ? "auto" : c.permissionMode;
+  if (mode) {
+    args.push("--permission-mode", mode);
   }
   if (c.model) {
     args.push("--model", c.model);
   }
-  args.push("--append-system-prompt", plannerSystemPrompt(projectPath));
+  args.push("--append-system-prompt", plannerSystemPrompt(projectPath, auto));
   args.push("--mcp-config", mcpConfig(runId), "--permission-prompt-tool", APPROVE_TOOL);
   const allowed = [...plannerRules(projectPath), APPROVE_TOOL, ...c.allowedTools];
   args.push("--allowedTools", allowed.join(","));
@@ -305,21 +322,20 @@ function childEnv(): Record<string, string | undefined> {
 
 function execute(payload: ExecutePayload, signal: AbortSignal, cors: Record<string, string>) {
   const runId = randomUUID();
-  const proc = Bun.spawn(
-    [config.claude.bin, ...claudeArgs(buildPrompt(payload), payload.projectPath, runId)],
-    {
-      cwd: payload.projectPath,
-      env: childEnv(),
-      stdin: "ignore",
-      stdout: "pipe",
-      stderr: "pipe",
-    },
-  );
+  const proc = Bun.spawn([config.claude.bin, ...claudeArgs(payload, runId)], {
+    cwd: payload.projectPath,
+    env: childEnv(),
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
   const handle = { kill: () => proc.kill() };
   running.add(handle);
   const timer = setTimeout(() => proc.kill(), config.timeoutMinutes * 60_000);
   signal.addEventListener("abort", () => proc.kill());
-  console.log(`[planner-claude] pid ${proc.pid} in ${payload.projectPath}`);
+  console.log(
+    `[planner-claude] pid ${proc.pid} in ${payload.projectPath}${payload.auto ? " (auto mode)" : ""}`,
+  );
 
   const encoder = new TextEncoder();
   const line = (o: unknown) => encoder.encode(`${JSON.stringify(o)}\n`);
@@ -336,7 +352,14 @@ function execute(payload: ExecutePayload, signal: AbortSignal, cors: Record<stri
       const pending = new Map<string, (d: Decision) => void>();
       runs.set(runId, { send: (o) => send(line(o)), pending });
       send(
-        line({ type: "planner", event: "start", runId, pid: proc.pid, cwd: payload.projectPath }),
+        line({
+          type: "planner",
+          event: "start",
+          runId,
+          pid: proc.pid,
+          cwd: payload.projectPath,
+          auto: payload.auto === true,
+        }),
       );
       const stderr = new Response(proc.stderr).text();
       // Claude already writes one JSON object per line: pass it through.
@@ -452,7 +475,11 @@ const server = Bun.serve({
     }
 
     if (url.pathname === "/health" && request.method === "GET") {
-      return json({ ok: true, name: "planner-claude-code", version: VERSION }, 200, cors);
+      return json(
+        { ok: true, name: "planner-claude-code", version: VERSION, autoMode: true },
+        200,
+        cors,
+      );
     }
 
     if (url.pathname === "/internal/permission" && request.method === "POST") {

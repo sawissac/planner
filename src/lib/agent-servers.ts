@@ -147,14 +147,17 @@ export type AgentEvent = { type: string; [key: string]: unknown };
 /**
  * POST the run and call `onEvent` per streamed event until the agent exits.
  * Payload order is the prompt order: 1. the "Copy context" text,
- * 2. the extra context. `onOpen` fires once the bridge accepted the run,
- * before the first event. Abort `signal` to stop the agent.
+ * 2. the extra context. `auto` runs it in Claude Code's auto mode (a
+ * classifier approves routine tool calls; only the rest ask in Planner).
+ * `onOpen` fires once the bridge accepted the run, before the first event.
+ * Abort `signal` to stop the agent.
  */
 export async function executeAgent(args: {
   server: AgentServer;
   projectPath: string;
   context: string;
   extraContext: string;
+  auto: boolean;
   signal: AbortSignal;
   onOpen?: () => void;
   onEvent: (event: AgentEvent) => void;
@@ -169,6 +172,7 @@ export async function executeAgent(args: {
         projectPath: args.projectPath,
         context: args.context,
         extraContext: args.extraContext,
+        auto: args.auto,
       }),
       signal: args.signal,
     });

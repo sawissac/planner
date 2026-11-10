@@ -1,6 +1,6 @@
 ---
 name: planner-for-claude-code
-description: Work on tasks from the Planner app. Paste a task link and Claude reads the plan written on it, does the work, shows its progress live in the app, and leaves a "Done" comment when finished. Paste a link to a comment and Claude fixes whatever is still open in it (like a **Bug** list) and marks it **Resolved**. Also reads, adds, edits, and deletes comments on a task. Use when the user pastes a Planner "Copy context" link (a URL containing /api/plan/, or an older curl command wrapping one), says "do this plan", or asks about comments on a Planner task. When the user says "login planner", save their API key by running `planner.sh login --clipboard`.
+description: Work on tasks from the Planner app. Paste a task link and Claude reads the plan written on it, does the work, shows its progress live in the app, and leaves a "Done" comment when finished. Paste a link to a comment and Claude fixes whatever is still open in it (like a **Bug** list) and marks it **Resolved**. Also reads, adds, edits, and deletes comments on a task, and uploads, lists, replaces, renames, downloads, and deletes images — attaching screenshots or diagrams to a comment or the task's thought, and viewing images the user attached. Use when the user pastes a Planner "Copy context" link (a URL containing /api/plan/, or an older curl command wrapping one), says "do this plan", or asks about comments on a Planner task. When the user says "login planner", save their API key by running `planner.sh login --clipboard`.
 ---
 
 # Planner for Claude Code
@@ -12,6 +12,8 @@ Work with Planner tasks through `planner.sh`, which calls the app's Plan API
 - **Thought**: the plan written on a task, in Markdown.
 - **Comment**: a note under a task (`commentId`).
 - **File**: the Planner file the task lives in (`fileId`).
+- **Image**: a picture stored on Planner's image server (`imageId`),
+  embedded in a thought or comment as `![alt](<server>/images/<imageId>/file)`.
 
 The script is installed globally. Always call it by this path:
 
@@ -65,6 +67,8 @@ S=~/.claude/skills/planner-for-claude-code/scripts/planner.sh
 | `edit <todoId> <commentId> <body\|->` | Replace an existing comment's full text | `404` if missing                                                                         |
 | `delete <todoId> <commentId>`         | Delete a comment                        | `{"status": 204}`                                                                        |
 | `event <todoId> <type> [text\|-]`     | Report live progress                    | See **Live progress**                                                                    |
+| `attach <todoId> <path> [alt]`        | Upload + append image to comment/plan   | `{id, url, markdown, attachedTo}`; see **Images**                                        |
+| `image <sub> …`                       | Image CRUD                              | See **Images**                                                                           |
 
 - **Comment text** is Markdown in a JSX-aware editor: a bare `<word>` outside
   backticks breaks the comment. Wrap it in backticks. For multi-line text or
@@ -84,6 +88,60 @@ S=~/.claude/skills/planner-for-claude-code/scripts/planner.sh
   field.
 - The API reads the cloud copy. `404 Task not found.` on a task the user can
   see → not synced yet; ask them to press **Sync** and resend the link.
+
+## Images
+
+Images live on Planner's image server, a separate Bun server (`images/` in
+the Planner repo) with its own token. The script finds its URL and token in
+the user's Settings → API keys → Image server (through the Plan API, with
+your key), so there is nothing to log in to; `--images <url>`,
+`PLANNER_IMAGES_URL` and `PLANNER_IMAGES_TOKEN` override them. Never read,
+print or paste the image token. PNG, JPEG, GIF, WebP or AVIF, ≤ 10 MB. An
+image is `{id, name, type, size, fileId, todoId, url, markdown}`: `url` is
+its file on the server, `markdown` the embed of it; reading `url` needs the
+token, so never paste it anywhere outside Planner.
+
+- `HTTP 404: No image server set` → ask the user to start it
+  (`pnpm image-server` in the Planner repo), then paste its URL and the token
+  from `images/config.json` under Settings → Image server and press Save.
+- `request failed (is the image server at … running?)` → ask them to run
+  `pnpm image-server`.
+- `HTTP 409: Not paired yet` → ask them to press Test under Settings → Image
+  server.
+
+| Command                        | Does                                                                             |
+| ------------------------------ | -------------------------------------------------------------------------------- |
+| `image upload <path> [todoId]` | Upload (linked to the task if given) → image                                     |
+| `image list [todoId]`          | List images, newest first (one task's if given)                                  |
+| `image get <image>`            | Read one image's record                                                          |
+| `image download <image> [out]` | Save its bytes (default: temp file) and print the path                           |
+| `image replace <image> <path>` | Swap its bytes; id and embeds stay, so they show the new one                     |
+| `image rename <image> <name>`  | Rename it                                                                        |
+| `image delete <image>`         | Delete it; every embed of it breaks. Confirm first                               |
+| `attach <todoId> <path> [alt]` | Upload for the task; append its embed to `--comment`'s comment, else the thought |
+
+`<image>` is an image id, or the `src` from an embed
+(`…/images/<id>/file`) as is. Pass `--file <fileId>` with a `todoId`.
+
+- **Images in a plan or comment** (`![…](…/images/…/file)`): when one
+  matters to the work (a screenshot of a bug, a mockup), `image download` it
+  and Read the printed path to see it.
+- **Show your result**: after a visual change, take a screenshot if you can.
+  Either `attach` it to the comment you are resolving, or upload it with
+  `image upload <path> <todoId>` and put its `markdown` in the "Done" comment.
+- **New comment with an image**: `image upload` first, then `add` a body that
+  includes the returned `markdown`.
+- **Several images**: put them one per paragraph, back to back — the app
+  shows them as thumbnails two to a row (pressing one opens it full size).
+  Label one with a short plain or italic line right above it (`*Hero*`, then
+  the image); the app folds that line into the thumbnail. Don't use a
+  bold-only line as a label in a comment you resolve: `**Hero**` reads as an
+  open section.
+- **Update a picture everywhere**: `image replace`, not upload + edit.
+- `attach` rewrites the whole comment / thought with the embed appended
+  (same as `edit`); the user's unsynced edits in the app may conflict.
+- Errors: `413` too big, `415` not an accepted image type, `404` unknown
+  image or task.
 
 ## Live progress
 
@@ -155,7 +213,8 @@ Users add requests to a comment as a bold heading plus a list. A section is
    Verified: <checks run>. Not committed.
    ```
 
-   Quote the user exactly, typos included. Keep their heading word (`Bug`,
+   To show the fix, `image upload` a screenshot and put its `markdown` under
+   the Resolved Message. Quote the user exactly, typos included. Keep their heading word (`Bug`,
    `Fix`, …). If items were skipped or blocked, use `(Partly resolved)` and
    say which stay open.
 
@@ -187,4 +246,4 @@ Users add requests to a comment as a bold heading plus a list. A section is
 - **Add**: use `add`. Use `put` only when you need a fixed id of your own.
 - **Edit**: `get` first, then `edit` with the full new text (no merge).
 - **Delete**: cannot be undone. Confirm first unless the user named the exact
-  comment. Delete any test comments you create.
+  comment or image. Delete any test comments and images you create.

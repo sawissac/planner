@@ -31,7 +31,7 @@ export class ApiError extends Error {
 }
 
 /** Tables the Plan API touches; all are keyed by `user_id`. */
-export type PlanTable = "planner_todos" | "planner_thought_comments";
+export type PlanTable = "planner_todos" | "planner_thought_comments" | "planner_agent_servers";
 
 function scopedTable(client: SupabaseClient, userId: string, name: PlanTable) {
   return {
@@ -51,10 +51,23 @@ function scopedTable(client: SupabaseClient, userId: string, name: PlanTable) {
   };
 }
 
+/** RPCs the Plan API calls; each takes `p_user_id` (see {@link ApiContext.rpc}). */
+export type PlanRpc = "planner_agent_run_event";
+
+function scopedRpc(client: SupabaseClient, userId: string) {
+  return (fn: PlanRpc, args: Record<string, unknown>) =>
+    client.rpc(fn, { ...args, p_user_id: userId });
+}
+
 export type ApiContext = {
   userId: string;
   /** Query `name` as the caller: filtered to, and inserting as, `userId`. */
   table: (name: PlanTable) => ReturnType<typeof scopedTable>;
+  /**
+   * Call `fn` as the caller. The function trusts `p_user_id` only with the
+   * secret key (API-key path); with a session JWT it uses `auth.uid()`.
+   */
+  rpc: ReturnType<typeof scopedRpc>;
 };
 
 const NO_SESSION = { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false };
@@ -94,7 +107,11 @@ async function authenticateApiKey(key: string): Promise<ApiContext> {
     .update({ last_used_at: new Date().toISOString() })
     .eq("user_id", userId)
     .eq("id", data.id);
-  return { userId, table: (name) => scopedTable(admin, userId, name) };
+  return {
+    userId,
+    table: (name) => scopedTable(admin, userId, name),
+    rpc: scopedRpc(admin, userId),
+  };
 }
 
 async function authenticateJwt(token: string): Promise<ApiContext> {
@@ -108,7 +125,11 @@ async function authenticateJwt(token: string): Promise<ApiContext> {
     throw new ApiError(401, "Invalid or expired access token.");
   }
   const userId = data.user.id;
-  return { userId, table: (name) => scopedTable(supabase, userId, name) };
+  return {
+    userId,
+    table: (name) => scopedTable(supabase, userId, name),
+    rpc: scopedRpc(supabase, userId),
+  };
 }
 
 /** Resolve the bearer token (API key or session JWT) to the user it acts as. */

@@ -34,19 +34,19 @@ and your Plan API key saved with `planner.sh login --clipboard`
 
 ## Config (`config.json`)
 
-| Key                      | Default                                   | What it does                                                                                                       |
-| ------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `host`                   | `127.0.0.1`                               | Bind address. Loopback only; anything else is refused.                                                             |
-| `port`                   | `4319`                                    |                                                                                                                    |
-| `token`                  | generated                                 | Bearer token Planner must send. Rotate by clearing it and restarting.                                              |
-| `allowedOrigins`         | `localhost:3000` and the deployed Planner | Planner origins allowed to call the server (CORS). Add yours if you deploy elsewhere.                              |
-| `approvalTimeoutMinutes` | `10`                                      | How long a paused tool call waits for Allow / Deny in Planner before it is denied.                                 |
-| `timeoutMinutes`         | `30`                                      | A run is killed after this long.                                                                                   |
-| `claude.bin`             | `claude`                                  | Path to the Claude Code CLI.                                                                                       |
-| `claude.permissionMode`  | `acceptEdits`                             | `--permission-mode`. Headless runs cannot answer permission prompts, so pick what the agent may do without asking. |
-| `claude.model`           | `""`                                      | `--model`, empty for your default.                                                                                 |
-| `claude.allowedTools`    | `[]`                                      | `--allowedTools`, e.g. `["Bash(pnpm:*)", "Bash(git:*)"]`.                                                          |
-| `claude.extraArgs`       | `[]`                                      | Any other CLI flags, appended as-is.                                                                               |
+| Key                      | Default                                   | What it does                                                                                                      |
+| ------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `host`                   | `127.0.0.1`                               | Bind address. Loopback only; anything else is refused.                                                            |
+| `port`                   | `4319`                                    |                                                                                                                   |
+| `token`                  | generated                                 | Bearer token Planner must send. Rotate by clearing it and restarting.                                             |
+| `allowedOrigins`         | `localhost:3000` and the deployed Planner | Planner origins allowed to call the server (CORS). Add yours if you deploy elsewhere.                             |
+| `approvalTimeoutMinutes` | `10`                                      | How long a paused tool call waits for Allow / Deny in Planner before it is denied.                                |
+| `timeoutMinutes`         | `30`                                      | A run is killed after this long.                                                                                  |
+| `claude.bin`             | `claude`                                  | Path to the Claude Code CLI.                                                                                      |
+| `claude.permissionMode`  | `acceptEdits`                             | `--permission-mode` (`acceptEdits`, `auto`, `bypassPermissions`, …). A run with Auto mode on uses `auto` instead. |
+| `claude.model`           | `""`                                      | `--model`, empty for your default.                                                                                |
+| `claude.allowedTools`    | `[]`                                      | `--allowedTools`, e.g. `["Bash(pnpm:*)", "Bash(git:*)"]`.                                                         |
+| `claude.extraArgs`       | `[]`                                      | Any other CLI flags, appended as-is.                                                                              |
 
 `planner.sh` (the skill's script) is always allowed, so the agent can read
 the task, report its progress and post its completion comment.
@@ -66,6 +66,19 @@ To skip asking for things you always allow, list them in `allowedTools`
 (`["Bash(pnpm:*)", "Bash(node:*)"]`), the project's `.claude/settings.json`,
 or use `"permissionMode": "bypassPermissions"` for a trusted project.
 
+### Auto mode
+
+Turn on **Auto mode** in the Run agent dialog (Planner remembers it per
+browser) to run that task with `--permission-mode auto` instead of
+`claude.permissionMode`. Claude Code's safety classifier then approves
+routine tool calls itself and blocks risky ones (force pushes, deleting
+outside the project, piping downloads into a shell…); only what it can't
+settle still comes to Planner as Allow / Deny. It needs a Claude Code
+version and plan that support auto mode: if yours doesn't, the run fails at
+start and the CLI's error shows on the task. Set
+`"permissionMode": "auto"` in `config.json` to make it the default for
+every run.
+
 Your normal Claude Code setup still applies: the CLI's login, `~/.claude`
 settings and skills, and the project's own `.claude/settings.json` and
 `CLAUDE.md`. Set `PLANNER_CLAUDE_CONFIG=/path/to/config.json` to use a config
@@ -78,7 +91,7 @@ must come from `allowedOrigins`; the `Host` must be loopback.
 
 ### `GET /health`
 
-`200 { "ok": true, "name": "planner-claude-code", "version": "1.1.0" }`
+`200 { "ok": true, "name": "planner-claude-code", "version": "1.3.0", "autoMode": true }`
 
 ### `POST /api/claude-code/execute`
 
@@ -86,13 +99,15 @@ must come from `allowedOrigins`; the `Host` must be loopback.
 {
   "projectPath": "/Users/me/code/my-app",
   "context": "Do this plan\nhttp://localhost:3000/api/plan/<todoId>?fileId=<fileId>",
-  "extraContext": "Use pnpm. Don't touch the migrations."
+  "extraContext": "Use pnpm. Don't touch the migrations.",
+  "auto": true
 }
 ```
 
 - `projectPath` — absolute path of an existing folder; the agent's working directory.
 - `context` — the **Copy context** text (one-line ask + Plan API link).
 - `extraContext` — optional free text.
+- `auto` — optional; `true` runs with `--permission-mode auto` (see [Auto mode](#auto-mode)).
 
 The prompt is the two in that order:
 
@@ -108,7 +123,7 @@ Response: `application/x-ndjson`, one JSON object per line: Claude's
 bridge's own:
 
 ```json
-{"type":"planner","event":"start","pid":123,"cwd":"/Users/me/code/my-app"}
+{"type":"planner","event":"start","runId":"…","pid":123,"cwd":"/Users/me/code/my-app","auto":true}
 {"type":"planner","event":"exit","code":0}
 ```
 

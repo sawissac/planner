@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { useStore } from "react-redux";
 
 import { MessageResponse } from "@/components/ai-elements/message";
 import { useAgentRun } from "@/hooks/useAgentRun";
@@ -30,9 +31,11 @@ import {
   sortedSteps,
 } from "@/lib/agent-runs";
 import { answerPermission, getServer } from "@/lib/agent-servers";
+import { refreshFromRemote } from "@/lib/cloud-sync";
 import { cn } from "@/lib/cn";
 import * as ui from "@/lib/ui-styles";
 import { useAppSelector } from "@/stores/hooks";
+import type { AppStore } from "@/stores/store";
 
 const STATUS_LABEL: Record<RunStatus, string> = {
   running: "Working…",
@@ -333,11 +336,13 @@ function AgentRunFinishedToast({
 /**
  * Live progress of the task's latest agent run, at the top of its comment
  * thread: what the agent is doing, what it needs from you, and its outcome —
- * as its skill reports them (`planner.sh event`), streamed from the Firebase
- * Realtime Database (`@/lib/agent-runs`), so every open tab or device sees
- * them. A run started from this tab's Run agent dialog can be stopped here.
+ * as its skill reports them (`planner.sh event`), streamed from Supabase
+ * Realtime (`@/lib/agent-runs`), so every open tab or device sees them. A run started from this tab's Run agent dialog can be stopped here.
  * When a run ends while shown here, a toast pops bottom right with its
- * outcome and a Close button. Clear drops a finished run. Hidden while signed out or
+ * outcome and a Close button. Clear drops a finished run. While the run
+ * reports progress the task's comments are re-pulled from the cloud copy
+ * (`refreshFromRemote`, silent), and again just after it ends, so the
+ * agent's comments appear without pressing Refresh. Hidden while signed out or
  * when the task has no run.
  *
  * @param todoId - Task whose run is shown (in the active file).
@@ -345,6 +350,7 @@ function AgentRunFinishedToast({
  */
 export function AgentRunPanel({ todoId, title }: { todoId: string; title?: string }) {
   const signed = useSignedIn();
+  const store = useStore() as AppStore;
   const fileId = useAppSelector((s) => s.todos.activeFileId);
   const { run, error, finished, dismissFinished } = useAgentRun(fileId, todoId, signed);
   const listRef = useRef<HTMLOListElement>(null);
@@ -355,6 +361,22 @@ export function AgentRunPanel({ todoId, title }: { todoId: string; title?: strin
     () => ownsAgentRun(fileId, todoId),
     () => false,
   );
+
+  // The agent writes comments through the Plan API; pull them as it reports.
+  const runKey = run ? `${run.runId}/${run.status}/${steps.length}` : null;
+  const ended = run ? !isActive(run.status) : false;
+  useEffect(() => {
+    if (!runKey) {
+      return;
+    }
+    void refreshFromRemote(store);
+    if (!ended) {
+      return;
+    }
+    // The completion comment can land just after the final report.
+    const t = window.setTimeout(() => void refreshFromRemote(store), 3000);
+    return () => window.clearTimeout(t);
+  }, [runKey, ended, store]);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });

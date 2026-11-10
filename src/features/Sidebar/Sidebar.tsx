@@ -8,6 +8,7 @@ import {
   Eraser,
   FileText,
   FolderGit2,
+  Images,
   ListChecks,
   ListTodo,
   Maximize,
@@ -56,6 +57,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AiProviderSettings } from "@/features/AiChat/AiProviderSettings";
+import { ImageGallery } from "@/features/ImageGallery/ImageGallery";
 import { ProjectPaths } from "@/features/ProjectPaths/ProjectPaths";
 import { cn } from "@/lib/cn";
 import { isTodoFile } from "@/lib/persistence";
@@ -65,6 +67,7 @@ import {
   setOpen as setAiOpen,
   setSidebarView,
   showAiProviders,
+  showImages,
   showProjects,
 } from "@/stores/slices/aiSlice";
 import { setSidebarWidth } from "@/stores/slices/settingsSlice";
@@ -313,6 +316,14 @@ export function AppSidebar({
       >
         <FolderGit2 />
       </RailButton>
+      <RailButton
+        label="Images"
+        data-active={(open && view === "images") || undefined}
+        onClick={() => dispatch(open && view === "images" ? setSidebarView("files") : showImages())}
+        testId="sidebar-rail-images"
+      >
+        <Images />
+      </RailButton>
       <SidebarRailSpacer />
       <RailButton
         label="AI chat"
@@ -397,6 +408,8 @@ export function AppSidebar({
 
         {view === "projects" ? (
           <ProjectPaths onClose={() => dispatch(setSidebarView("files"))} />
+        ) : view === "images" ? (
+          <ImageGallery onClose={() => dispatch(setSidebarView("files"))} />
         ) : view === "ai" ? (
           <>
             <SidebarHeader>
